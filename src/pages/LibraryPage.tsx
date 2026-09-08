@@ -10,7 +10,7 @@ export default function LibraryPage({
   onDelete,
 }: {
   items: SavedProfile[];
-  onOpen: (item: SavedProfile) => void;
+  onOpen: (item: SavedProfile, mode: "edit" | "base") => void;
   onToggleFavorite: (id: string) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
@@ -30,7 +30,7 @@ export default function LibraryPage({
           {sorted.map((item) => (
             <Card key={item.id} className="p-4">
               <div className="flex items-start justify-between gap-3">
-                <button type="button" className="text-left" onClick={() => onOpen(item)}>
+                <button type="button" className="text-left" onClick={() => onOpen(item, "edit")}>
                   <div className="text-[16px] font-semibold">{item.curveName}</div>
                   <div className="text-[12px] text-muted">
                     {item.name} · {new Date(item.createdAt).toLocaleString()}
@@ -41,6 +41,12 @@ export default function LibraryPage({
                 </button>
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-[13px]">
+                <button type="button" className="text-blue" onClick={() => onOpen(item, "edit")}>
+                  Edit in Generate
+                </button>
+                <button type="button" className="text-blue" onClick={() => onOpen(item, "base")}>
+                  Use as base
+                </button>
                 <button type="button" className="text-blue" onClick={() => downloadText(`${item.name}.kpro`, item.kproText)}>
                   Download
                 </button>

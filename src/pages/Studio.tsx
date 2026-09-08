@@ -1,17 +1,30 @@
 import { useMemo } from "react";
-import { PreviewChart } from "../components/RoastChart";
+import { BoostZones } from "../components/BoostZones";
+import { InteractiveCurve } from "../components/InteractiveCurve";
 import { Card, Field, Pill, Row, Select, Toggle } from "../components/ui";
 import { formatClock } from "../lib/curve";
-import { downloadText, generateProfile, signed, type RoastIntent } from "../lib/generate";
+import {
+  downloadText,
+  generateProfile,
+  inferFlavorsFromAdjustment,
+  inferStyleFromCurve,
+  formatZoneSummary,
+  isAutoDensity,
+  signed,
+  type RoastIntent,
+} from "../lib/generate";
+import { activeZones } from "../lib/kpro";
 import {
   BREWS,
   FLAVORS,
   ORIGINS,
   PROCESSES,
   STYLES,
+  VARIETIES,
   flavorById,
   originById,
   recommendFlavor,
+  varietyById,
   type FlavorId,
 } from "../lib/knowledge";
 
@@ -32,9 +45,12 @@ export default function Studio({
 }) {
   const generated = useMemo(() => generateProfile(intent), [intent]);
   const origin = originById(intent.originId);
+  const variety = varietyById(intent.varietyId);
 
   function patch(partial: Partial<RoastIntent>) {
-    setIntent({ ...intent, ...partial });
+    const next: RoastIntent = { ...intent, ...partial };
+    if (!("manualAnchors" in partial)) next.manualAnchors = undefined;
+    setIntent(next);
   }
 
   function toggleFlavor(id: FlavorId) {
@@ -76,11 +92,25 @@ export default function Studio({
                 <Row label="Origin">
                   <Select value={intent.originId} onChange={(id) => {
                     const o = originById(id);
-                    patch({ originId: id, process: o.typicalProcess, altitudeM: o.typicalAltitude });
+                    patch({
+                      originId: id,
+                      process: o.typicalProcess,
+                      altitudeM: o.typicalAltitude,
+                      varietyId: o.suggestedVarietyId ?? "unknown",
+                    });
                   }}>
                     {ORIGINS.map((o) => (
                       <option key={o.id} value={o.id}>
                         {o.name} ({o.regions})
+                      </option>
+                    ))}
+                  </Select>
+                </Row>
+                <Row label="Variety">
+                  <Select value={intent.varietyId || "unknown"} onChange={(id) => patch({ varietyId: id })}>
+                    {VARIETIES.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
                       </option>
                     ))}
                   </Select>
@@ -102,10 +132,41 @@ export default function Studio({
                     className="w-24 bg-transparent text-right text-[15px] text-white outline-none"
                   />
                 </Row>
+                <Row label="Density from altitude">
+                  <Toggle
+                    on={isAutoDensity(intent)}
+                    onChange={(on) =>
+                      patch({
+                        autoDensity: on,
+                        densityGL: on ? undefined : generated.resolvedDensityGL,
+                      })
+                    }
+                  />
+                </Row>
+                <Row label="Density (g/L)">
+                  <input
+                    type="number"
+                    min={550}
+                    max={820}
+                    step={1}
+                    value={isAutoDensity(intent) ? generated.resolvedDensityGL : (intent.densityGL ?? "")}
+                    onChange={(e) => {
+                      if (e.target.value === "") {
+                        patch({ autoDensity: true, densityGL: undefined });
+                        return;
+                      }
+                      patch({ autoDensity: false, densityGL: Number(e.target.value) });
+                    }}
+                    className="w-24 bg-transparent text-right text-[15px] text-white outline-none"
+                  />
+                </Row>
                 <Row label="Moisture (%, optional)">
                   <input
                     type="number"
-                    placeholder="Optional"
+                    min={6}
+                    max={16}
+                    step={0.1}
+                    placeholder="11 typ."
                     value={intent.moisture ?? ""}
                     onChange={(e) => patch({ moisture: e.target.value === "" ? undefined : Number(e.target.value) })}
                     className="w-24 bg-transparent text-right text-[15px] text-white outline-none placeholder:text-muted"
@@ -130,15 +191,88 @@ export default function Studio({
                   </Select>
                 </Row>
               </Card>
+              <div className="mt-2 space-y-2 px-1 text-[12px] leading-relaxed text-muted">
+                {origin.notes && (
+                  <p>
+                    <span className="text-label">{origin.cup ? `${origin.cup}. ` : ""}</span>
+                    {origin.notes}
+                  </p>
+                )}
+                {variety.notes && variety.id !== "unknown" && (
+                  <p>
+                    <span className="text-label">
+                      {variety.name}
+                      {variety.cup ? ` · ${variety.cup}. ` : ". "}
+                    </span>
+                    {variety.notes} Seed {variety.beanSize}, {variety.density} density.
+                  </p>
+                )}
+                {isAutoDensity(intent) ? (
+                  <p>
+                    <span className="text-label">
+                      {generated.resolvedDensityGL} g/L · {generated.densityClass} from {intent.altitudeM} m.{" "}
+                    </span>
+                    Higher elevation cools the tree, cherries ripen slower, and the seed packs tighter.
+                    A Nepal 2021 study went from ~620 g/L at 850 m to ~688 g/L at 1450 m. Changing
+                    altitude updates this number; type a reading if you measured the lot.
+                  </p>
+                ) : (
+                  <p>
+                    <span className="text-label">
+                      Measured {generated.resolvedDensityGL} g/L · {generated.densityClass}.{" "}
+                    </span>
+                    Heat follows this reading. Turn “Density from altitude” back on to let elevation
+                    drive it again.
+                  </p>
+                )}
+                {intent.moisture != null && (
+                  <p>
+                    <span className="text-label">Moisture {intent.moisture}%. </span>
+                    {intent.moisture > 11
+                      ? "Wetter than typical export green — longer drying, more preheat and fan so the water leaves before Maillard."
+                      : intent.moisture < 11
+                        ? "Drier than typical — less preheat and a shorter dry so the front does not race (monsoon / old crop / decaf-like)."
+                        : "At the 11% reference. No extra moisture adjustment."}
+                  </p>
+                )}
+              </div>
             </section>
 
             <section>
               <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Roast level</h2>
               <Card>
-                <Row label="Auto level (roast-style default)" last>
+                <Row label="Auto level (roast-style default)">
                   <Toggle on={intent.autoLevel} onChange={(on) => patch({ autoLevel: on })} />
                 </Row>
+                <Row label="Expected first crack (°C)" last>
+                  <input
+                    type="number"
+                    min={185}
+                    max={222}
+                    step={0.1}
+                    placeholder={`${generated.autoFirstCrackTemp.toFixed(1)} auto`}
+                    value={intent.expectFc ?? ""}
+                    onChange={(e) =>
+                      patch({ expectFc: e.target.value === "" ? undefined : Number(e.target.value) })
+                    }
+                    className="w-24 bg-transparent text-right text-[15px] text-white outline-none placeholder:text-muted"
+                  />
+                </Row>
               </Card>
+              <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
+                {intent.expectFc != null ? (
+                  <>
+                    <span className="text-label">Manual expect_fc {generated.firstCrackTemp.toFixed(1)} °C. </span>
+                    The red marker, development time, and fan drop follow this temperature on the curve.
+                  </>
+                ) : (
+                  <>
+                    Leave empty to estimate from origin, variety, and flavor (
+                    {generated.autoFirstCrackTemp.toFixed(1)} °C). Set it when you already know where this
+                    lot cracks on the Nano 7 probe.
+                  </>
+                )}
+              </p>
               {!intent.autoLevel && (
                 <Card className="mt-2 px-4 py-3">
                   <div className="mb-2 flex justify-between text-[13px] text-label">
@@ -157,6 +291,12 @@ export default function Studio({
                 </Card>
               )}
             </section>
+
+            <BoostZones
+              intent={intent}
+              generated={generated}
+              onChange={(partial) => setIntent({ ...intent, ...partial })}
+            />
           </div>
         ) : (
           <div className="space-y-4">
@@ -172,7 +312,14 @@ export default function Studio({
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {FLAVORS.map((f) => {
-                  const rec = recommendFlavor(f.id, intent.process, intent.roastStyle, origin);
+                  const rec = recommendFlavor(
+                    f.id,
+                    intent.process,
+                    intent.roastStyle,
+                    origin,
+                    variety,
+                    generated.densityClass,
+                  );
                   const idx = intent.flavors.findIndex((x) => x.id === f.id);
                   const selected = idx >= 0;
                   return (
@@ -202,7 +349,14 @@ export default function Studio({
 
             {intent.flavors.map((pick) => {
               const f = flavorById(pick.id);
-              const rec = recommendFlavor(f.id, intent.process, intent.roastStyle, origin);
+              const rec = recommendFlavor(
+                f.id,
+                intent.process,
+                intent.roastStyle,
+                origin,
+                variety,
+                generated.densityClass,
+              );
               return (
                 <Card key={f.id} className="p-4">
                   <div className="mb-3 flex items-center justify-between">
@@ -270,40 +424,71 @@ export default function Studio({
         <Card className="p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-[15px] font-semibold">Curve preview</h2>
-            <button type="button" className="text-[13px] text-blue lg:hidden" onClick={() => setTab("curve")}>
-              Expand
-            </button>
+            <span className="text-[12px] text-muted">Walk, Add point, drag, then Smooth</span>
           </div>
-          <PreviewChart
-            roast={generated.roastPoly}
+          <InteractiveCurve
+            poly={generated.roastPoly}
+            anchors={generated.profile.roast.anchors}
             ror={generated.rorPoly}
-            fan={generated.fanPoly}
             fcTime={generated.firstCrackTime}
             endTime={generated.totalTime}
+            zones={activeZones(generated.profile.raw)}
+            onAnchorsChange={(anchors) => {
+              const next: RoastIntent = { ...intent, manualAnchors: anchors };
+              const preview = generateProfile(next);
+              next.flavors = inferFlavorsFromAdjustment(preview.breakdown.flavor);
+              next.roastStyle = inferStyleFromCurve(preview.dtr, anchors[anchors.length - 1]?.v ?? 212);
+              setIntent(next);
+            }}
           />
-          <div className="mt-2 flex gap-4 text-[12px] text-muted">
-            <span className="text-blue">Bean</span>
-            <span className="text-orange">RoR</span>
-            <span>Red = first crack · Green = drop</span>
+          {generated.manual && (
+            <p className="mt-2 text-[12px] text-blue">
+              Curve is manual. Flavor goals and the result table follow the shape you drew.
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-4 text-[12px] text-muted">
+            <span className="text-blue">Bean · handles</span>
+            <span className="text-orange">RoR (reference)</span>
+            <span className="text-[#BF5AF2]">Boost zones</span>
+            <span className="text-red">First crack</span>
+            <span className="text-green">Drop</span>
           </div>
         </Card>
 
         <Card>
           <h2 className="px-4 pt-3 text-[13px] font-semibold uppercase tracking-wide text-muted">Result</h2>
           <Field label="Curve name" value={generated.curveName} />
-          <Field label="First crack temp" value={`${generated.firstCrackTemp.toFixed(1)} °C`} />
+          <Field
+            label="First crack temp"
+            value={`${generated.firstCrackTemp.toFixed(1)} °C${intent.expectFc != null ? " · set" : ""}`}
+          />
           <Field label="First crack time" value={formatClock(generated.firstCrackTime)} />
           <Field label="Total time" value={formatClock(generated.totalTime)} />
           <Field label="DTR" value={`${(generated.dtr * 100).toFixed(1)}%`} />
           <Field label="Preheat power" value={`${generated.preheatPower} W`} />
+          <Field label="Density" value={`${generated.resolvedDensityGL} g/L · ${generated.densityClass}`} />
+          <Field label="Zone 1 · drying" value={formatZoneSummary(generated.zones.zone1)} />
+          <Field label="Zone 2 · into crack" value={formatZoneSummary(generated.zones.zone2)} />
+          <Field label="Zone 3 · after crack" value={formatZoneSummary(generated.zones.zone3)} />
         </Card>
 
         <Card className="p-4">
           <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-muted">Adjustment breakdown</h2>
-          <div className="grid gap-3 text-[12px] sm:grid-cols-3">
+          <div className="grid gap-3 text-[12px] sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             {(
               [
                 ["Origin baseline", generated.breakdown.origin],
+                [`Variety (${variety.name})`, generated.breakdown.variety],
+                [
+                  intent.moisture != null
+                    ? `Moisture (${intent.moisture}% · 11% ref)`
+                    : "Moisture (not set)",
+                  generated.breakdown.moisture,
+                ],
+                [
+                  `Density (${generated.resolvedDensityGL} g/L · ${generated.densityClass})`,
+                  generated.breakdown.density,
+                ],
                 [
                   `Flavor (${intent.flavors.map((f) => flavorById(f.id).name).join(" + ") || "none"})`,
                   generated.breakdown.flavor,
@@ -319,7 +504,7 @@ export default function Studio({
                   <div>Drying {signed(adj.dryingS, "s")}</div>
                   <div>Mid {signed(adj.midS, "s")}</div>
                   <div>Development {signed(adj.developmentS, "s")}</div>
-                  <div>Fan {signed(adj.fanS, "s")}</div>
+                  <div>Fan {signed(adj.fanRpm, " RPM")}</div>
                 </div>
               </div>
             ))}

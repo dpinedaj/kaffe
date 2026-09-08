@@ -9,15 +9,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { clockTick, ROR_TICKS, TEMP_TICKS, timeTicks } from "../lib/chart";
 import { expandCurve } from "../lib/curve";
 import { KLOG_COL } from "../lib/klog";
 import { type OverlayTrack, trackZones } from "../lib/overlay";
-
-function clock(s: number): string {
-  const m = Math.floor(s / 60);
-  const sec = Math.round(s % 60);
-  return `${m}:${String(sec).padStart(2, "0")}`;
-}
 
 export function PreviewChart({
   roast,
@@ -44,23 +39,45 @@ export function PreviewChart({
   const end = roast.find((p) => endTime != null && Math.abs(p.t - endTime) < 2);
 
   return (
-    <div className="h-[280px] w-full">
+    <div className="h-[320px] w-full">
       <ResponsiveContainer>
-        <ComposedChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+        <ComposedChart data={data} margin={{ top: 12, right: 8, left: 8, bottom: 18 }}>
           <CartesianGrid stroke="#2c2c2e" />
           <XAxis
             dataKey="t"
             type="number"
-            domain={["dataMin", "dataMax"]}
-            tickFormatter={clock}
+            domain={[0, "dataMax"]}
+            ticks={timeTicks(data[data.length - 1]?.t ?? 540)}
+            interval={0}
+            tickFormatter={clockTick}
             stroke="#8e8e93"
-            tick={{ fontSize: 11 }}
+            tick={{ fontSize: 10 }}
+            label={{ value: "Time", position: "insideBottom", offset: -12, fill: "#8e8e93", fontSize: 11 }}
           />
-          <YAxis yAxisId="temp" domain={[20, 230]} stroke="#8e8e93" tick={{ fontSize: 11 }} width={36} />
-          <YAxis yAxisId="ror" orientation="right" domain={[-5, 40]} stroke="#8e8e93" tick={{ fontSize: 11 }} width={28} />
+          <YAxis
+            yAxisId="temp"
+            domain={[20, 230]}
+            ticks={TEMP_TICKS}
+            interval={0}
+            stroke="#8e8e93"
+            tick={{ fontSize: 10 }}
+            width={40}
+            label={{ value: "°C", angle: -90, position: "insideLeft", fill: "#8e8e93", fontSize: 11 }}
+          />
+          <YAxis
+            yAxisId="ror"
+            orientation="right"
+            domain={[-5, 40]}
+            ticks={ROR_TICKS}
+            interval={0}
+            stroke="#8e8e93"
+            tick={{ fontSize: 10 }}
+            width={32}
+            label={{ value: "RoR", angle: 90, position: "insideRight", fill: "#8e8e93", fontSize: 11 }}
+          />
           <Tooltip
             contentStyle={{ background: "#1c1c1e", border: "1px solid #38383a", borderRadius: 12 }}
-            labelFormatter={(v) => clock(Number(v))}
+            labelFormatter={(v) => clockTick(Number(v))}
             formatter={(value, name) => {
               const n = typeof value === "number" ? value : Number(value);
               if (!Number.isFinite(n)) return ["—", String(name)];
@@ -116,15 +133,33 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
   }
 
   return (
-    <div className="h-[340px] w-full">
+    <div className="h-[380px] w-full">
       <ResponsiveContainer>
-        <ComposedChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <ComposedChart data={series} margin={{ top: 12, right: 12, left: 8, bottom: 18 }}>
           <CartesianGrid stroke="#2c2c2e" />
-          <XAxis dataKey="t" type="number" tickFormatter={clock} stroke="#8e8e93" tick={{ fontSize: 11 }} />
-          <YAxis domain={[20, 230]} stroke="#8e8e93" tick={{ fontSize: 11 }} width={36} />
+          <XAxis
+            dataKey="t"
+            type="number"
+            domain={[0, maxT]}
+            ticks={timeTicks(maxT)}
+            interval={0}
+            tickFormatter={clockTick}
+            stroke="#8e8e93"
+            tick={{ fontSize: 10 }}
+            label={{ value: "Time", position: "insideBottom", offset: -12, fill: "#8e8e93", fontSize: 11 }}
+          />
+          <YAxis
+            domain={[20, 230]}
+            ticks={TEMP_TICKS}
+            interval={0}
+            stroke="#8e8e93"
+            tick={{ fontSize: 10 }}
+            width={40}
+            label={{ value: "°C", angle: -90, position: "insideLeft", fill: "#8e8e93", fontSize: 11 }}
+          />
           <Tooltip
             contentStyle={{ background: "#1c1c1e", border: "1px solid #38383a", borderRadius: 12 }}
-            labelFormatter={(v) => clock(Number(v))}
+            labelFormatter={(v) => clockTick(Number(v))}
           />
           {tracks.flatMap((track) => {
             const zones = trackZones(track);

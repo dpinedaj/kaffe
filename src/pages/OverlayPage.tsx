@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { InteractiveCurve } from "../components/InteractiveCurve";
 import { OverlayChart } from "../components/RoastChart";
 import { Card } from "../components/ui";
-import { formatClock, formatClockFine } from "../lib/curve";
+import { expandCurve, formatClock, formatClockFine, rebuildFromAnchors, rorSeries, timeAtValue } from "../lib/curve";
+import { defaultIntent, downloadText, type RoastIntent } from "../lib/generate";
 import { parseKlog, type RoastLog } from "../lib/klog";
-import { parseKpro, type KproProfile } from "../lib/kpro";
+import { activeZones, encodeKpro, parseKpro, type KproProfile, type Point } from "../lib/kpro";
+import { newSavedId, type SavedProfile } from "../lib/storage";
 import {
   computeDeviationSummary,
   computePhases,
@@ -14,15 +17,33 @@ import {
   PALETTE,
   type OverlayTrack,
 } from "../lib/overlay";
-
 async function readFile(file: File): Promise<string> {
   return file.text();
 }
 
-export default function OverlayPage() {
-  const [tracks, setTracks] = useState<OverlayTrack[]>([]);
+export default function OverlayPage({
+  library,
+  tracks,
+  setTracks,
+  editId,
+  setEditId,
+  syncLevels,
+  setSyncLevels,
+  onSaveToLibrary,
+  onOpenInGenerate,
+}: {
+  library: SavedProfile[];
+  tracks: OverlayTrack[];
+  setTracks: Dispatch<SetStateAction<OverlayTrack[]>>;
+  editId: string | null;
+  setEditId: (id: string | null) => void;
+  syncLevels: boolean;
+  setSyncLevels: (on: boolean) => void;
+  onSaveToLibrary: (item: SavedProfile) => void;
+  onOpenInGenerate: (intent: RoastIntent, existingId?: string) => void;
+}) {
   const [error, setError] = useState<string | null>(null);
-  const [syncLevels, setSyncLevels] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function addFiles(files: FileList | File[]) {
     setError(null);
@@ -72,7 +93,46 @@ export default function OverlayPage() {
     }
   }
 
-  const logs = tracks.filter((t) => t.log).map((t) => t.log!) ;
+  const logs = tracks.filter((t) => t.log).map((t) => t.log!);
+  const profileTracks = tracks.filter((t) => t.kind === "profile");
+  const editTrack = profileTracks.find((t) => t.id === editId) ?? profileTracks[0];
+  const editPoly = editTrack ? expandCurve(editTrack.profile.roast) : [];
+  const editFcTemp = editTrack ? Number.parseFloat(editTrack.profile.raw.expect_fc ?? "") : NaN;
+  const editFcTime = Number.isFinite(editFcTemp) ? (timeAtValue(editPoly, editFcTemp) ?? undefined) : undefined;
+  const editEndTime = editPoly[editPoly.length - 1]?.t;
+  const editRor = editPoly.length ? rorSeries(editPoly) : [];
+  const editLibraryId = editTrack?.id.startsWith("lib-") ? editTrack.id.slice(4) : undefined;
+  const editLibraryItem = editLibraryId ? library.find((item) => item.id === editLibraryId) : undefined;
+
+  function intentFromEdit(): RoastIntent {
+    return {
+      ...(editLibraryItem?.intent ?? defaultIntent()),
+      name: editLibraryItem?.intent.name ?? editTrack?.profile.name,
+      manualAnchors: editTrack?.profile.roast.anchors.map((p) => ({ t: p.t, v: p.v })),
+    };
+  }
+
+  function savedFromEdit(): SavedProfile | null {
+    if (!editTrack) return null;
+    const profile = editTrack.profile;
+    return {
+      id: editLibraryItem?.id ?? newSavedId(),
+      name: profile.name,
+      favorite: editLibraryItem?.favorite ?? false,
+      createdAt: editLibraryItem?.createdAt ?? new Date().toISOString(),
+      kproText: encodeKpro(profile),
+      intent: intentFromEdit(),
+      curveName: editLibraryItem?.curveName ?? profile.name,
+    };
+  }
+
+  function applyEditAnchors(anchors: Point[]) {
+    if (!editTrack) return;
+    const roast = rebuildFromAnchors(anchors);
+    setTracks((prev) =>
+      prev.map((t) => (t.id === editTrack.id ? { ...t, profile: { ...t.profile, roast } } : t)),
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1400px] space-y-4 p-4">
@@ -104,9 +164,54 @@ export default function OverlayPage() {
             Example log
           </button>
           {tracks.length > 0 && (
-            <button type="button" className="rounded-lg px-3 py-2 text-[13px] text-red" onClick={() => setTracks([])}>
+            <button
+              type="button"
+              className="rounded-lg px-3 py-2 text-[13px] text-red"
+              onClick={() => {
+                setTracks([]);
+                setEditId(null);
+              }}
+            >
               Clear
             </button>
+          )}
+        </div>
+        <div className="mt-4">
+          <h3 className="mb-2 text-[13px] font-semibold text-label">From library</h3>
+          {library.length === 0 ? (
+            <p className="text-[13px] text-muted">Save a generated profile first, then load it here to compare.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {library.map((item) => {
+                const loaded = tracks.some((t) => t.id === `lib-${item.id}`);
+                return (
+                  <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-card2 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-[14px] font-medium">{item.curveName}</div>
+                      <div className="text-[11px] text-muted">{item.name}</div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={loaded}
+                      className="shrink-0 text-[13px] text-blue disabled:text-muted"
+                      onClick={() => {
+                        try {
+                          const profile = parseKpro(item.kproText, `${item.name}.kpro`);
+                          setTracks((prev) => [
+                            ...prev,
+                            trackFromProfile(`lib-${item.id}`, { ...profile, name: item.curveName }, PALETTE[prev.length % PALETTE.length]),
+                          ]);
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Could not load library profile");
+                        }
+                      }}
+                    >
+                      {loaded ? "Added" : "Add"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
         {error && <p className="mt-2 text-[13px] text-orange">{error}</p>}
@@ -125,6 +230,84 @@ export default function OverlayPage() {
               ))}
             </div>
           </Card>
+
+          {editTrack && (
+            <Card className="p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-[15px] font-semibold">Edit design</h3>
+                  <p className="mt-1 text-[12px] text-muted">
+                    Add or delete points on a .kpro, then Smooth curve so corners do not stay sharp.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={editTrack.id}
+                    onChange={(e) => setEditId(e.target.value)}
+                    className="rounded-lg bg-card2 px-3 py-2 text-[13px] text-white outline-none"
+                  >
+                    {profileTracks.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-card2 px-3 py-2 text-[13px] font-semibold text-white"
+                    onClick={() => {
+                      const item = savedFromEdit();
+                      if (!item || !editTrack) return;
+                      onSaveToLibrary(item);
+                      if (!editTrack.id.startsWith("lib-")) {
+                        setTracks((prev) =>
+                          prev.map((t) => (t.id === editTrack.id ? { ...t, id: `lib-${item.id}` } : t)),
+                        );
+                        setEditId(`lib-${item.id}`);
+                      }
+                      setNotice("Saved to library. Open it in Generate to edit bean info or fork it as a base.");
+                    }}
+                  >
+                    Save to library
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-card2 px-3 py-2 text-[13px] font-semibold text-white"
+                    onClick={() => onOpenInGenerate(intentFromEdit(), editLibraryItem?.id)}
+                  >
+                    Edit in Generate
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-card2 px-3 py-2 text-[13px] font-semibold text-white"
+                    onClick={() => onOpenInGenerate(intentFromEdit())}
+                  >
+                    Use as base
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-blue px-3 py-2 text-[13px] font-semibold text-white"
+                    onClick={() => {
+                      const text = encodeKpro(editTrack.profile);
+                      downloadText(editTrack.profile.fileName || `${editTrack.name}.kpro`, text);
+                    }}
+                  >
+                    Download edited .kpro
+                  </button>
+                </div>
+              </div>
+              {notice && <p className="mb-2 text-[12px] text-blue">{notice}</p>}
+              <InteractiveCurve
+                poly={editPoly}
+                anchors={editTrack.profile.roast.anchors}
+                ror={editRor}
+                fcTime={editFcTime}
+                endTime={editEndTime}
+                zones={activeZones(editTrack.profile.raw)}
+                onAnchorsChange={applyEditAnchors}
+              />
+            </Card>
+          )}
 
           <Card className="p-4">
             <div className="mb-3 flex items-center justify-between">

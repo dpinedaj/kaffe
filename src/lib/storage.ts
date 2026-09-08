@@ -1,5 +1,5 @@
-import type { KproProfile } from "./kpro";
-import type { RoastIntent } from "./generate";
+import { defaultIntent, type RoastIntent } from "./generate";
+import { parseKpro, type KproProfile } from "./kpro";
 
 export interface SavedProfile {
   id: string;
@@ -63,4 +63,25 @@ export function savedFromGenerated(
     intent,
     curveName,
   };
+}
+
+/** Restore bean settings and the exact saved curve so Generate can edit or fork it. */
+export function intentFromSaved(item: SavedProfile): RoastIntent {
+  const fallback = defaultIntent();
+  const intent: RoastIntent = {
+    ...fallback,
+    ...item.intent,
+    originId: item.intent?.originId || fallback.originId,
+    varietyId: item.intent?.varietyId || fallback.varietyId,
+    flavors: item.intent?.flavors ?? [],
+  };
+  try {
+    const profile = parseKpro(item.kproText, `${item.name}.kpro`);
+    if (profile.roast.anchors.length >= 3) {
+      intent.manualAnchors = profile.roast.anchors.map((p) => ({ t: p.t, v: p.v }));
+    }
+  } catch {
+    /* keep whatever anchors were stored on the intent */
+  }
+  return intent;
 }

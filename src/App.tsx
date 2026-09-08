@@ -3,7 +3,9 @@ import LibraryPage from "./pages/LibraryPage";
 import OverlayPage from "./pages/OverlayPage";
 import Studio from "./pages/Studio";
 import { defaultIntent, generateProfile, type RoastIntent } from "./lib/generate";
+import type { OverlayTrack } from "./lib/overlay";
 import {
+  intentFromSaved,
   loadLibrary,
   removeProfile,
   savedFromGenerated,
@@ -21,6 +23,9 @@ export default function App() {
   const [intent, setIntent] = useState<RoastIntent>(defaultIntent);
   const [library, setLibrary] = useState<SavedProfile[]>([]);
   const [savedId, setSavedId] = useState<string | undefined>();
+  const [overlayTracks, setOverlayTracks] = useState<OverlayTrack[]>([]);
+  const [overlayEditId, setOverlayEditId] = useState<string | null>(null);
+  const [overlaySyncLevels, setOverlaySyncLevels] = useState(false);
 
   useEffect(() => {
     setLibrary(loadLibrary());
@@ -36,15 +41,15 @@ export default function App() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-ink">
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-ink/90 px-4 py-3 backdrop-blur">
-        <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-20 flex w-full items-center border-b border-line bg-ink/90 px-4 py-3 backdrop-blur">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-card2 text-[15px] font-bold">K</span>
           <div>
             <div className="text-[17px] font-semibold leading-none">Kaffe</div>
             <div className="text-[11px] text-muted">Nano 7 profile studio</div>
           </div>
         </div>
-        <nav className="hidden gap-1 rounded-xl bg-card p-1 md:flex">
+        <nav className="hidden shrink-0 gap-1 rounded-xl bg-card p-1 md:flex">
           <NavButton active={route === "studio"} onClick={() => setRoute("studio")}>
             Generate
           </NavButton>
@@ -55,14 +60,7 @@ export default function App() {
             Library
           </NavButton>
         </nav>
-        <a
-          href="https://apps.apple.com/us/app/kl-profile/id6799672617"
-          className="hidden text-[12px] text-muted md:block"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Inspired by KL Profile
-        </a>
+        <div className="hidden flex-1 md:block" aria-hidden="true" />
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col pb-20 md:pb-0">
@@ -78,13 +76,30 @@ export default function App() {
             onSave={saveCurrent}
           />
         )}
-        {route === "overlay" && <OverlayPage />}
+        {route === "overlay" && (
+          <OverlayPage
+            library={library}
+            tracks={overlayTracks}
+            setTracks={setOverlayTracks}
+            editId={overlayEditId}
+            setEditId={setOverlayEditId}
+            syncLevels={overlaySyncLevels}
+            setSyncLevels={setOverlaySyncLevels}
+            onSaveToLibrary={(item) => setLibrary(upsertProfile(item))}
+            onOpenInGenerate={(next, existingId) => {
+              setIntent(next);
+              setSavedId(existingId);
+              setRoute("studio");
+              setStudioTab("parameters");
+            }}
+          />
+        )}
         {route === "library" && (
           <LibraryPage
             items={library}
-            onOpen={(item) => {
-              setIntent(item.intent);
-              setSavedId(item.id);
+            onOpen={(item, mode) => {
+              setIntent(intentFromSaved(item));
+              setSavedId(mode === "edit" ? item.id : undefined);
               setRoute("studio");
               setStudioTab("parameters");
             }}
