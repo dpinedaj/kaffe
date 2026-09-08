@@ -1,4 +1,4 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { InteractiveCurve } from "../components/InteractiveCurve";
 import { OverlayChart } from "../components/RoastChart";
 import { Card } from "../components/ui";
@@ -103,6 +103,17 @@ export default function OverlayPage({
   const editRor = editPoly.length ? rorSeries(editPoly) : [];
   const editLibraryId = editTrack?.id.startsWith("lib-") ? editTrack.id.slice(4) : undefined;
   const editLibraryItem = editLibraryId ? library.find((item) => item.id === editLibraryId) : undefined;
+  const overlayBaselines = useRef(new Map<string, Point[]>());
+  if (editTrack && !overlayBaselines.current.has(editTrack.id)) {
+    overlayBaselines.current.set(
+      editTrack.id,
+      editTrack.profile.roast.anchors.map((p) => ({ t: p.t, v: p.v })),
+    );
+  }
+  const overlayBaseline = editTrack ? overlayBaselines.current.get(editTrack.id) : undefined;
+  const overlayDirty =
+    Boolean(editTrack && overlayBaseline) &&
+    JSON.stringify(editTrack?.profile.roast.anchors) !== JSON.stringify(overlayBaseline);
 
   function intentFromEdit(): RoastIntent {
     return {
@@ -304,6 +315,11 @@ export default function OverlayPage({
                 fcTime={editFcTime}
                 endTime={editEndTime}
                 zones={activeZones(editTrack.profile.raw)}
+                canReset={overlayDirty}
+                onReset={() => {
+                  if (!overlayBaseline) return;
+                  applyEditAnchors(overlayBaseline.map((p) => ({ t: p.t, v: p.v })));
+                }}
                 onAnchorsChange={applyEditAnchors}
               />
             </Card>

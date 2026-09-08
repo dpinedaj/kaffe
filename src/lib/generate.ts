@@ -62,6 +62,8 @@ export interface ZoneIntent {
 
 export type ZoneSet = Record<ZoneId, ZoneIntent>;
 export type RoastFamily = "nordic" | "classic" | "slow";
+/** When the cup is meant to be drunk. Rest = degas 3–5 days; RTD = drink 1–3 days. */
+export type DrinkPlan = "rest" | "rtd";
 
 export interface RoastIntent {
   originId: string;
@@ -75,9 +77,11 @@ export interface RoastIntent {
   autoDensity?: boolean;
   /** Probe temperature for expect_fc. When omitted, estimated from bean + flavor. */
   expectFc?: number;
-  /** When true (default), boost windows are inferred from bean, flavor, and design RoR. */
+  /** When true (default), boost windows are inferred from bean, flavor, drink plan, and design RoR. */
   autoZones?: boolean;
   zones?: ZoneSet;
+  /** Rest (default) peaks at 3–5 days. RTD is drinkable from day 1. */
+  drinkPlan?: DrinkPlan;
   brew: BrewId;
   roastStyle: RoastStyleId;
   autoLevel: boolean;
@@ -311,6 +315,14 @@ function flavorMass(intent: RoastIntent, ids: FlavorId[]): number {
   return intent.flavors.filter((f) => ids.includes(f.id)).reduce((s, f) => s + f.weight, 0);
 }
 
+export function drinkPlanOf(intent: RoastIntent): DrinkPlan {
+  return intent.drinkPlan === "rtd" ? "rtd" : "rest";
+}
+
+export function isRtd(intent: RoastIntent): boolean {
+  return drinkPlanOf(intent) === "rtd";
+}
+
 function clampBoost(n: number, lo: number, hi: number): number {
   return Math.round(Math.max(lo, Math.min(hi, n)) * 2) / 2;
 }
@@ -353,8 +365,13 @@ export function zoneTemplate(role: ZoneRole, firstCrackTime: number, totalTime: 
  * KL (Chris Hilder): a boost is °C/min added to RoR-error to pre-empt endotherm/exotherm.
  * Official Nordic uses a short +3 into crack. Community uses a long mid-roast +zone for
  * crashy lots, and −6…−15 after FC on runaway espresso (official docs are cautious).
- * Rao: enter crack already decelerating; do not slam heat at FC. So +boost is before/at
+ *   Rao: enter crack already decelerating; do not slam heat at FC. So +boost is before/at
  * the moisture dump, −boost only after crack if the design RoR is still hot.
+ *
+ * RTD (KL core / Fnq): a RoR step after drying–Maillard plus sustained energy through
+ * first crack (“T through FC”) to force CO₂ out so the cup is drinkable in 1–3 days.
+ * Rest profiles do not drive through crack as hard — CO₂ stays in the seed and the cup
+ * peaks after 3–5 days of degassing.
  */
 export function suggestedZones(
   firstCrackTime: number,
@@ -363,6 +380,8 @@ export function suggestedZones(
   rorPoly: Point[] = [],
   densityClass: DensityClass = "medium",
 ): ZoneSet {
+  if (isRtd(intent)) return suggestedRtdZones(firstCrackTime, totalTime, intent, densityClass);
+
   const fc = Math.max(90, firstCrackTime);
   const end = Math.max(fc + 20, totalTime);
   const moisture = intent.moisture;
@@ -466,6 +485,73 @@ export function suggestedZones(
   };
 }
 
+/**
+ * Official RTD profiles (and Fnq’s write-up of RTD 1500–2000) put a RoR step
+ * right after drying/Maillard, then keep energy on through first crack so CO₂
+ * leaves during the roast. Nano only has three slots, so after-crack negative
+ * boost is skipped — that would hold gas in, which is the Rest idea.
+ */
+function suggestedRtdZones(
+  firstCrackTime: number,
+  totalTime: number,
+  intent: RoastIntent,
+  densityClass: DensityClass,
+): ZoneSet {
+  const fc = Math.max(90, firstCrackTime);
+  const end = Math.max(fc + 20, totalTime);
+  const moisture = intent.moisture;
+  let dryScore = 0;
+  if (moisture != null && moisture >= 12.5) dryScore += 3;
+  else if (moisture != null && moisture >= 12) dryScore += 1.5;
+  if (densityClass === "hard" && (intent.process === "natural" || intent.process === "anaerobic")) dryScore += 1;
+  const zone1Dry =
+    dryScore >= 2
+      ? {
+          ...zoneTemplate("drying", fc, end, clampBoost(2 + ((moisture ?? 11) - 11) * 0.5, 2, 4)),
+          reason:
+            moisture != null && moisture >= 12
+              ? `Wet green (${moisture}%). RTD still dries first so the later CO₂ step has a stable front.`
+              : "Dense natural/anaerobic lot. Extra RoR through the wet front before the RTD step.",
+        }
+      : null;
+
+  const altNudge = intent.altitudeM >= 1800 || densityClass === "hard" ? 0.5 : 0;
+  const mailBoost = clampBoost(2.5 + altNudge, 2, 4);
+  const intoBoost = clampBoost(
+    3.5 + (intent.roastStyle === "light" ? 0.5 : 0) + (densityClass === "hard" ? 0.5 : 0),
+    3,
+    5,
+  );
+  const mailStart = zone1Dry ? Math.round(zone1Dry.endS) : 90;
+  const mailEnd = Math.round(Math.max(mailStart + 24, Math.min(fc - 28, mailStart + 180)));
+  const zoneMail: ZoneIntent = {
+    enabled: true,
+    startS: mailStart,
+    endS: mailEnd,
+    boost: mailBoost,
+    kp: 1,
+    kd: 1,
+    role: "maillard",
+    reason:
+      "RTD RoR step after drying/Maillard (see KL RTD 1500–2000). Extra °C/min here moves CO₂ out so the cup is ready in 1–3 days, not 3–5.",
+  };
+  const intoStart = Math.round(Math.min(Math.max(mailEnd, fc - 32), fc - 8));
+  const zoneInto: ZoneIntent = {
+    enabled: true,
+    startS: intoStart,
+    endS: Math.round(Math.min(end, Math.max(intoStart + 16, fc + 18))),
+    boost: intoBoost,
+    kp: 1,
+    kd: 1,
+    role: "into-fc",
+    reason:
+      "RTD “T through crack”: keep energy on into and through first crack. Forces remaining CO₂ out and flattens the dip/flick. Rest profiles do this much less.",
+  };
+
+  if (zone1Dry) return { zone1: zone1Dry, zone2: zoneMail, zone3: zoneInto };
+  return { zone1: zoneMail, zone2: zoneInto, zone3: offZone("after-fc") };
+}
+
 export function resolveZones(
   intent: RoastIntent,
   firstCrackTime: number,
@@ -510,9 +596,10 @@ function curveName(intent: RoastIntent): string {
   const alt = intent.altitudeM >= 2000 ? "2-2.7k" : intent.altitudeM >= 1500 ? "1.5-2k" : "0-1.5k";
   const style = intent.roastStyle === "light" ? "L" : intent.roastStyle === "medium" ? "M" : "D";
   const brew = intent.brew === "filter" ? "F" : intent.brew === "espresso" ? "E" : intent.brew === "cupping" ? "C" : "O";
+  const drink = isRtd(intent) ? " RTD" : "";
   const code = origin.shortCode ?? origin.name.slice(0, 3).toUpperCase();
   const varCode = variety.id !== "unknown" && variety.shortCode ? `-${variety.shortCode}` : "";
-  return `${brew}-${proc} ${alt} ${style} ${code}${varCode}`;
+  return `${brew}-${proc} ${alt} ${style} ${code}${varCode}${drink}`;
 }
 
 const ADJ_KEYS: (keyof Adjustment)[] = ["fcTemp", "preheatW", "dryingS", "midS", "developmentS", "fanRpm"];
@@ -699,21 +786,24 @@ export function durationPlan(
     (intent.roastStyle === "light" ? 0.12 : 0) +
     (intent.roastStyle === "dark" ? -0.1 : 0) +
     (intent.brew === "filter" ? 0.05 : 0) +
-    (intent.brew === "espresso" ? -0.08 : 0);
+    (intent.brew === "espresso" ? -0.08 : 0) +
+    (isRtd(intent) ? (intent.altitudeM >= 1500 ? 0.08 : 0.03) : 0);
   const kMail =
     1 +
     0.2 * volatile -
     0.22 * heavy +
     (intent.roastStyle === "light" ? 0.18 : 0) +
     (intent.roastStyle === "dark" ? -0.12 : 0) +
-    (intent.process === "honey" ? -0.08 : 0);
+    (intent.process === "honey" ? -0.08 : 0) +
+    (isRtd(intent) ? 0.12 : 0);
   const kDev =
     1 +
     0.15 * volatile -
     0.2 * heavy +
     (intent.roastStyle === "light" ? 0.12 : 0) +
     (intent.roastStyle === "dark" ? -0.15 : 0) +
-    (intent.brew === "espresso" ? -0.1 : 0);
+    (intent.brew === "espresso" ? -0.1 : 0) +
+    (isRtd(intent) ? 0.06 : 0);
 
   const drySlope = clamp(ROR_DRY_REF * beanK * kDry, 28, 85);
   const mailSlope = clamp(ROR_MAIL_REF * beanK ** 0.5 * kMail, 7, 28);
@@ -853,6 +943,7 @@ export function defaultIntent(): RoastIntent {
     autoLevel: true,
     autoDensity: true,
     autoZones: true,
+    drinkPlan: "rest",
     level: 2.2,
     flavors: [],
   };
@@ -934,6 +1025,9 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
       intent.moisture != null ? ` · ${intent.moisture}% H₂O` : ""
     } · ${Math.round(resolvedDensityGL)} g/L · ${intent.brew} · ${intent.roastStyle}`,
     `Flavor: ${flavorsLabel}`,
+    isRtd(intent)
+      ? "Cup: RTD — brew 1–3 days. RoR step after Maillard and +boost through first crack to drive CO₂ out in the roast (KL core RTD / Fnq). Flavour drops hard around day 4."
+      : "Cup: Rest — peak 3–5 days after roast. Gentler through first crack so CO₂ degasses in the bag, not in the machine (KL core Rest).",
     `Generated by Kaffe for Nano 7.`,
   ].join("\n");
 

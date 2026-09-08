@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { clockTick, ROR_TICKS, TEMP_TICKS, timeTicks } from "../lib/chart";
+import { clockTick, ROR_TICKS, TEMP_TICKS, timeTickAnchor, timeTicks } from "../lib/chart";
 import { deleteAnchor, formatClock, insertAnchor, sampleAtTime, smoothAnchors } from "../lib/curve";
 import type { ActiveZone, Point } from "../lib/kpro";
 
@@ -12,7 +12,8 @@ const ZONE_FILL: Record<string, string> = {
 
 const W = 720;
 const H = 360;
-const PAD = { l: 52, r: 44, t: 18, b: 36 };
+const PAD = { l: 52, r: 48, t: 18, b: 46 };
+const PLOT_W = W - PAD.l - PAD.r;
 const ROR_MIN = -5;
 const ROR_MAX = 40;
 
@@ -23,7 +24,9 @@ export function InteractiveCurve({
   fcTime,
   endTime,
   zones = [],
+  canReset = false,
   onAnchorsChange,
+  onReset,
 }: {
   poly: Point[];
   anchors: Point[];
@@ -31,7 +34,9 @@ export function InteractiveCurve({
   fcTime?: number;
   endTime?: number;
   zones?: ActiveZone[];
+  canReset?: boolean;
   onAnchorsChange: (next: Point[]) => void;
+  onReset?: () => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<number | null>(null);
@@ -90,7 +95,7 @@ export function InteractiveCurve({
     }
   }
 
-  const ticks = timeTicks(tMax);
+  const ticks = timeTicks(tMax, PLOT_W);
   const path = poly.map((p, i) => `${i === 0 ? "M" : "L"} ${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join(" ");
   const rorPath = ror
     .map((p, i) => `${i === 0 ? "M" : "L"} ${x(p.t).toFixed(1)} ${yRor(p.v).toFixed(1)}`)
@@ -136,7 +141,19 @@ export function InteractiveCurve({
         >
           Smooth curve
         </button>
-        <span className="text-[11px] text-muted">Walk, then Add point · first/last stay fixed in time</span>
+        <button
+          type="button"
+          disabled={!canReset}
+          className="rounded-lg bg-card2 px-3 py-1.5 text-[12px] font-medium text-white disabled:text-muted"
+          onClick={() => {
+            setSelected(null);
+            setWalkT(null);
+            onReset?.();
+          }}
+        >
+          Reset
+        </button>
+        <span className="text-[11px] text-muted">Walk, then Add point · Smooth eases spikes · first/last stay fixed in time</span>
       </div>
 
       <div className="mb-2 grid grid-cols-3 gap-2 rounded-xl bg-card2 px-3 py-2 text-[12px]">
@@ -186,7 +203,7 @@ export function InteractiveCurve({
         {ticks.map((t) => (
           <g key={`x-${t}`}>
             <line x1={x(t)} x2={x(t)} y1={PAD.t} y2={H - PAD.b} stroke="#2c2c2e" />
-            <text x={x(t)} y={H - 12} textAnchor="middle" fill="#8e8e93" fontSize="11">
+            <text x={x(t)} y={H - 20} textAnchor={timeTickAnchor(t, tMax)} fill="#8e8e93" fontSize="11">
               {clockTick(t)}
             </text>
           </g>

@@ -69,8 +69,10 @@ export function BoostZones({
       </Card>
       <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
         A boost is °C/min added to the Nano’s RoR-error — extra energy through an endothermic dip,
-        or a brake after the bean goes exothermic. Recommendations use moisture, density, flavor,
-        roast style, and the design RoR into first crack. You can add, remove, or edit any window.
+        or a brake after the bean goes exothermic. Rest recommendations use moisture, density, flavor,
+        roast style, and design RoR. RTD always adds a Maillard RoR step and a through-crack +boost
+        to drive CO₂ out (KL Ready-to-Drink), and skips a negative after-crack brake. You can still
+        add, remove, or edit any window.
       </p>
       <div className="mt-3 space-y-2">
         {ZONE_IDS.map((id) => {

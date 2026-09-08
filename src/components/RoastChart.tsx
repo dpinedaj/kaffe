@@ -41,7 +41,7 @@ export function PreviewChart({
   return (
     <div className="h-[320px] w-full">
       <ResponsiveContainer>
-        <ComposedChart data={data} margin={{ top: 12, right: 8, left: 8, bottom: 18 }}>
+        <ComposedChart data={data} margin={{ top: 12, right: 8, left: 8, bottom: 28 }}>
           <CartesianGrid stroke="#2c2c2e" />
           <XAxis
             dataKey="t"
@@ -49,10 +49,13 @@ export function PreviewChart({
             domain={[0, "dataMax"]}
             ticks={timeTicks(data[data.length - 1]?.t ?? 540)}
             interval={0}
+            minTickGap={36}
             tickFormatter={clockTick}
             stroke="#8e8e93"
             tick={{ fontSize: 10 }}
-            label={{ value: "Time", position: "insideBottom", offset: -12, fill: "#8e8e93", fontSize: 11 }}
+            height={36}
+            padding={{ left: 8, right: 12 }}
+            label={{ value: "Time", position: "insideBottom", offset: -4, fill: "#8e8e93", fontSize: 11 }}
           />
           <YAxis
             yAxisId="temp"
@@ -135,7 +138,7 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
   return (
     <div className="h-[380px] w-full">
       <ResponsiveContainer>
-        <ComposedChart data={series} margin={{ top: 12, right: 12, left: 8, bottom: 18 }}>
+        <ComposedChart data={series} margin={{ top: 12, right: 12, left: 8, bottom: 28 }}>
           <CartesianGrid stroke="#2c2c2e" />
           <XAxis
             dataKey="t"
@@ -143,10 +146,13 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
             domain={[0, maxT]}
             ticks={timeTicks(maxT)}
             interval={0}
+            minTickGap={36}
             tickFormatter={clockTick}
             stroke="#8e8e93"
             tick={{ fontSize: 10 }}
-            label={{ value: "Time", position: "insideBottom", offset: -12, fill: "#8e8e93", fontSize: 11 }}
+            height={36}
+            padding={{ left: 8, right: 12 }}
+            label={{ value: "Time", position: "insideBottom", offset: -4, fill: "#8e8e93", fontSize: 11 }}
           />
           <YAxis
             domain={[20, 230]}

@@ -325,6 +325,51 @@ describe("generator", () => {
     expect(out.zones.zone3.startS).toBeGreaterThan(out.firstCrackTime);
   });
 
+  it("RTD adds a Maillard RoR step and through-crack boost, never a negative after-crack brake", () => {
+    const rest = generateProfile({
+      ...defaultIntent(),
+      originId: "brazil",
+      varietyId: "unknown",
+      altitudeM: 1100,
+      roastStyle: "medium",
+      drinkPlan: "rest",
+      flavors: [],
+    });
+    const rtd = generateProfile({
+      ...defaultIntent(),
+      originId: "brazil",
+      varietyId: "unknown",
+      altitudeM: 1100,
+      roastStyle: "medium",
+      drinkPlan: "rtd",
+      flavors: [],
+    });
+    expect(rest.zones.zone2.enabled).toBe(false);
+    expect(rtd.zones.zone1.enabled).toBe(true);
+    expect(rtd.zones.zone1.role).toBe("maillard");
+    expect(rtd.zones.zone1.boost).toBeGreaterThan(0);
+    expect(rtd.zones.zone2.enabled).toBe(true);
+    expect(rtd.zones.zone2.role).toBe("into-fc");
+    expect(rtd.zones.zone2.boost).toBeGreaterThan(0);
+    expect(rtd.zones.zone2.endS).toBeGreaterThan(rtd.firstCrackTime);
+    expect(rtd.zones.zone3.enabled).toBe(false);
+    expect(rtd.curveName).toContain("RTD");
+    expect(rtd.kproText).toMatch(/Cup: RTD/);
+    expect(rtd.mailSlope).toBeGreaterThan(rest.mailSlope);
+  });
+
+  it("RTD dark espresso still skips a negative after-crack boost", () => {
+    const out = generateProfile({
+      ...defaultIntent(),
+      roastStyle: "dark",
+      brew: "espresso",
+      drinkPlan: "rtd",
+      flavors: [{ id: "body", weight: 1 }],
+    });
+    expect(out.zones.zone3.boost).toBeGreaterThanOrEqual(0);
+    expect(out.kproText).toMatch(/Cup: RTD/);
+  });
+
   it("writes disabled boost zones as 0–0", () => {
     const off = offZone();
     const out = generateProfile({
@@ -386,9 +431,21 @@ describe("curve edit", () => {
     const smoothed = smoothAnchors(jagged);
     expect(smoothed[0]).toEqual(jagged[0]);
     expect(smoothed[3]).toEqual(jagged[3]);
-    expect(Math.abs(smoothed[1].v - 200)).toBeGreaterThan(5);
-    expect(smoothed[1].t).toBeGreaterThan(smoothed[0].t);
-    expect(smoothed[2].t).toBeLessThan(smoothed[3].t);
+    expect(smoothed[1].t).toBe(jagged[1].t);
+    expect(smoothed[1].v).toBeLessThan(200);
+    expect(smoothed[2].v).toBeGreaterThan(80);
+
+    const gentle = [
+      { t: 7, v: 50 },
+      { t: 120, v: 118 },
+      { t: 250, v: 175 },
+      { t: 400, v: 212 },
+    ];
+    const kept = smoothAnchors(gentle);
+    for (let i = 0; i < gentle.length; i++) {
+      expect(kept[i].t).toBe(gentle[i].t);
+      expect(Math.abs(kept[i].v - gentle[i].v)).toBeLessThan(2);
+    }
   });
 });
 

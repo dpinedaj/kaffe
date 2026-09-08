@@ -45,37 +45,53 @@ export function deleteAnchor(anchors: Point[], index: number): Point[] {
   return anchors.filter((_, i) => i !== index);
 }
 
-/** Neighbor average on interior points so dragged corners do not stay sharp. */
+/**
+ * Ease a spike or sharp corner back toward its neighbors. Leaves a normal
+ * rising roast alone — global Laplacian smoothing flattened the curve toward
+ * the start–end chord (the “Y = X” look).
+ */
 export function smoothAnchors(anchors: Point[], passes = 2): Point[] {
   if (anchors.length < 3) return anchors.map((p) => ({ t: p.t, v: p.v }));
   let pts = anchors.map((p) => ({ t: p.t, v: p.v }));
-  const first = pts[0];
-  const last = pts[pts.length - 1];
+  const first = { ...pts[0] };
+  const last = { ...pts[pts.length - 1] };
+
   for (let pass = 0; pass < passes; pass++) {
-    const next = pts.map((p, i) => {
+    const kinks: number[] = [];
+    for (let i = 1; i < pts.length - 1; i++) {
+      kinks.push(Math.abs(slopeDelta(pts[i - 1], pts[i], pts[i + 1])));
+    }
+    const sorted = [...kinks].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
+    const kinkFloor = Math.max(0.22, median * 2.8);
+
+    pts = pts.map((p, i) => {
       if (i === 0 || i === pts.length - 1) return p;
       const a = pts[i - 1];
       const b = pts[i + 1];
-      return {
-        t: p.t * 0.5 + a.t * 0.25 + b.t * 0.25,
-        v: p.v * 0.5 + a.v * 0.25 + b.v * 0.25,
-      };
+      const dt1 = Math.max(1e-6, p.t - a.t);
+      const dt2 = Math.max(1e-6, b.t - p.t);
+      const sIn = (p.v - a.v) / dt1;
+      const sOut = (b.v - p.v) / dt2;
+      const span = Math.max(1e-6, b.t - a.t);
+      const chord = a.v + ((p.t - a.t) / span) * (b.v - a.v);
+      const residual = p.v - chord;
+      const reverses = sIn * sOut < 0 && Math.abs(sIn) > 0.04 && Math.abs(sOut) > 0.04;
+      const spiked = reverses || Math.abs(sOut - sIn) > kinkFloor;
+      if (!spiked) return p;
+      const pull = reverses || Math.abs(residual) > 16 ? 0.7 : 0.5;
+      return { t: p.t, v: clampTemp(p.v + (chord - p.v) * pull) };
     });
-    next[0] = first;
-    next[next.length - 1] = last;
-    for (let i = 1; i < next.length; i++) {
-      if (next[i].t < next[i - 1].t + MIN_ANCHOR_GAP) {
-        next[i] = { ...next[i], t: next[i - 1].t + MIN_ANCHOR_GAP };
-      }
-    }
-    for (let i = next.length - 2; i > 0; i--) {
-      if (next[i].t > next[i + 1].t - MIN_ANCHOR_GAP) {
-        next[i] = { ...next[i], t: next[i + 1].t - MIN_ANCHOR_GAP };
-      }
-    }
-    pts = next;
+    pts[0] = first;
+    pts[pts.length - 1] = last;
   }
   return pts;
+}
+
+function slopeDelta(a: Point, p: Point, b: Point): number {
+  const dt1 = Math.max(1e-6, p.t - a.t);
+  const dt2 = Math.max(1e-6, b.t - p.t);
+  return (b.v - p.v) / dt2 - (p.v - a.v) / dt1;
 }
 
 function cubic(p0: number, p1: number, p2: number, p3: number, t: number): number {
@@ -193,14 +209,16 @@ export function scaleCurveTime(curve: CurveData, factor: number): CurveData {
 
 export function formatClock(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "—";
-  const m = Math.floor(seconds / 60);
-  const s = seconds - m * 60;
-  return `${m}:${s.toFixed(0).padStart(2, "0")}`;
+  const total = Math.round(seconds);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 export function formatClockFine(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "—";
-  const m = Math.floor(seconds / 60);
-  const s = seconds - m * 60;
+  const tenth = Math.round(seconds * 10);
+  const m = Math.floor(tenth / 600);
+  const s = (tenth % 600) / 10;
   return `${m}:${s.toFixed(1).padStart(4, "0")}`;
 }

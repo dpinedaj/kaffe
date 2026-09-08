@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { BoostZones } from "../components/BoostZones";
 import { InteractiveCurve } from "../components/InteractiveCurve";
 import { Card, Field, Pill, Row, Select, Toggle } from "../components/ui";
@@ -46,10 +46,14 @@ export default function Studio({
   const generated = useMemo(() => generateProfile(intent), [intent]);
   const origin = originById(intent.originId);
   const variety = varietyById(intent.varietyId);
+  const preManual = useRef<{ flavors: RoastIntent["flavors"]; roastStyle: RoastIntent["roastStyle"] } | null>(null);
 
   function patch(partial: Partial<RoastIntent>) {
     const next: RoastIntent = { ...intent, ...partial };
-    if (!("manualAnchors" in partial)) next.manualAnchors = undefined;
+    if (!("manualAnchors" in partial)) {
+      next.manualAnchors = undefined;
+      preManual.current = null;
+    }
     setIntent(next);
   }
 
@@ -181,7 +185,7 @@ export default function Studio({
                     ))}
                   </Select>
                 </Row>
-                <Row label="Roast style" last>
+                <Row label="Roast style">
                   <Select value={intent.roastStyle} onChange={(v) => patch({ roastStyle: v as RoastIntent["roastStyle"] })}>
                     {STYLES.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -189,6 +193,25 @@ export default function Studio({
                       </option>
                     ))}
                   </Select>
+                </Row>
+                <Row label="Cup timing" last>
+                  <div className="flex rounded-lg bg-card2 p-0.5">
+                    {([
+                      ["rest", "Rest"],
+                      ["rtd", "RTD"],
+                    ] as const).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        className={`rounded-md px-2.5 py-1 text-[12px] font-semibold ${
+                          (intent.drinkPlan ?? "rest") === id ? "bg-blue text-white" : "text-muted"
+                        }`}
+                        onClick={() => patch({ drinkPlan: id })}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </Row>
               </Card>
               <div className="mt-2 space-y-2 px-1 text-[12px] leading-relaxed text-muted">
@@ -233,6 +256,26 @@ export default function Studio({
                       : intent.moisture < 11
                         ? "Drier than typical — less preheat and a shorter dry so the front does not race (monsoon / old crop / decaf-like)."
                         : "At the 11% reference. No extra moisture adjustment."}
+                  </p>
+                )}
+                {(intent.drinkPlan ?? "rest") === "rtd" ? (
+                  <p>
+                    <span className="text-label">RTD · drink 1–3 days. </span>
+                    Official Kaffelogic Ready-to-Drink profiles are for roasting, grinding, and brewing
+                    before the lot has degassed — guests, test roasts, or an empty jar. A fluid-bed bean
+                    keeps more CO₂ than a drum roast, so RTD forces that gas out during the roast:
+                    a RoR step after drying/Maillard, then a +boost through first crack (“T through crack”).
+                    That is the same idea as the stock RTD 1500–2000 boosts, not the BOOST kit hardware.
+                    Flavour is front-loaded and fades hard around day 4. Rest is the better pick if you
+                    can wait.
+                  </p>
+                ) : (
+                  <p>
+                    <span className="text-label">Rest · peak 3–5 days. </span>
+                    Official Rest profiles wait for degassing. Boosts only fire when the bean actually
+                    needs them (wet drying, crash into crack, runaway dark espresso). Energy through
+                    first crack stays gentler, so CO₂ leaves in the bag and acidity/sweetness settle.
+                    Use this for the “best cup,” RTD for “drink tonight.”
                   </p>
                 )}
               </div>
@@ -424,7 +467,7 @@ export default function Studio({
         <Card className="p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-[15px] font-semibold">Curve preview</h2>
-            <span className="text-[12px] text-muted">Walk, Add point, drag, then Smooth</span>
+            <span className="text-[12px] text-muted">Walk, Add point, Smooth spikes, Reset</span>
           </div>
           <InteractiveCurve
             poly={generated.roastPoly}
@@ -433,7 +476,21 @@ export default function Studio({
             fcTime={generated.firstCrackTime}
             endTime={generated.totalTime}
             zones={activeZones(generated.profile.raw)}
+            canReset={generated.manual}
+            onReset={() => {
+              const snap = preManual.current;
+              preManual.current = null;
+              setIntent({
+                ...intent,
+                manualAnchors: undefined,
+                flavors: snap?.flavors ?? intent.flavors,
+                roastStyle: snap?.roastStyle ?? intent.roastStyle,
+              });
+            }}
             onAnchorsChange={(anchors) => {
+              if (!intent.manualAnchors) {
+                preManual.current = { flavors: intent.flavors, roastStyle: intent.roastStyle };
+              }
               const next: RoastIntent = { ...intent, manualAnchors: anchors };
               const preview = generateProfile(next);
               next.flavors = inferFlavorsFromAdjustment(preview.breakdown.flavor);
@@ -457,6 +514,12 @@ export default function Studio({
 
         <Card>
           <h2 className="px-4 pt-3 text-[13px] font-semibold uppercase tracking-wide text-muted">Result</h2>
+          <Field
+            label="Cup timing"
+            value={
+              (intent.drinkPlan ?? "rest") === "rtd" ? "RTD · brew 1–3 days" : "Rest · peak 3–5 days"
+            }
+          />
           <Field label="Curve name" value={generated.curveName} />
           <Field
             label="First crack temp"
