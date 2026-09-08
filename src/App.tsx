@@ -60,6 +60,9 @@ export default function App() {
             Library
           </NavButton>
         </nav>
+        {import.meta.env.DEV && (
+          <span className="hidden rounded-lg bg-card2 px-2 py-1 text-[11px] text-orange md:inline">Local AI</span>
+        )}
         <div className="hidden flex-1 md:block" aria-hidden="true" />
       </header>
 
@@ -92,6 +95,7 @@ export default function App() {
               setRoute("studio");
               setStudioTab("parameters");
             }}
+            studioIntent={intent}
           />
         )}
         {route === "library" && (

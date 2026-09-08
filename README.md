@@ -18,6 +18,17 @@ npm run dev
 
 Open http://localhost:5173
 
+### Local overlay coach (dev only)
+
+GitHub Pages never ships this. `npm run build` / `npm run preview` keep Overlay as it is today.
+
+1. Copy `.env.example` to `.env`
+2. Paste a Cursor API key from [Integrations](https://cursor.com/dashboard/integrations) as `CURSOR_API_KEY`
+3. `npm run dev` — Overlay shows a **Local Cursor coach** box
+4. Ask about a loaded `.klog` / `.kpro`. If the coach proposes parameters, open them in Generate or add the regenerated `.kpro` to the overlay
+
+The key is read by the Vite **dev server** only (`CURSOR_API_KEY`, no `VITE_` prefix), so it is not baked into the browser bundle. The agent is called with an empty tool list so it cannot edit the repo.
+
 Production preview (what GitHub Pages serves):
 
 ```bash
@@ -38,7 +49,7 @@ Live: [https://dpinedaj.github.io/kaffe/](https://dpinedaj.github.io/kaffe/)
 ## What it does
 
 - **Generate** — origin, variety, process, altitude or measured density, moisture, brew, roast style, **Rest / RTD** cup timing, up to two flavor goals, recommended boost zones, live Bézier preview (add / delete / smooth spikes / reset), download `.kpro`
-- **Overlay** — compare profiles, design vs actual from a `.klog`, zone/scalar diff, phases, ±3 °C deviation
+- **Overlay** — compare profiles, design vs actual from a `.klog`, zone/scalar diff, phases, ±3 °C deviation. Local `npm run dev` only: Cursor overlay coach (off on GitHub Pages).
 - **Library** — save, rename, favorite, export JSON (this device only)
 
 `.kpro` is plain `key:value` ASCII, LF, no checksum. Curves are cubic Bézier groups of three pairs. A `.klog` already contains the design curve in the `=profile` column — Overlay uses that when a log is present, and only analyses samples up to `roast_end`.
