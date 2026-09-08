@@ -6,11 +6,11 @@ import {
   isLocalAiUiEnabled,
   parseCoachReply,
   type OverlayCoachChatTurn,
-  type OverlayCoachReply,
 } from "../lib/ai/overlayCoach";
 import { defaultLevel, type OverlayTrack } from "../lib/overlay";
 import { parseKpro } from "../lib/kpro";
 import { Card } from "./ui";
+import { CoachMarkdown } from "./CoachMarkdown";
 
 export function OverlayCoach({
   tracks,
@@ -75,7 +75,7 @@ export function OverlayCoach({
       });
       const body = (await res.json()) as { text?: string; error?: string };
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
-      const parsed: OverlayCoachReply = parseCoachReply(body.text ?? "");
+      const parsed = parseCoachReply(body.text ?? "");
       setTurns((prev) => [...prev, { role: "assistant", text: parsed.feedback }]);
       setProposal(parsed.intentPatch ? applyIntentPatch(baseIntent, parsed.intentPatch) : null);
     } catch (e) {
@@ -109,10 +109,25 @@ export function OverlayCoach({
             server, not in the browser bundle.
           </p>
         </div>
-        <span className="rounded-full bg-card2 px-2 py-1 text-[11px] text-muted">{status?.model ?? "…"}</span>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <span className="rounded-full bg-card2 px-2 py-1 text-[11px] text-muted">{status?.model ?? "…"}</span>
+          <button
+            type="button"
+            disabled={turns.length === 0 && !proposal && !question && !error}
+            className="rounded-lg bg-card2 px-3 py-1.5 text-[12px] font-semibold text-white disabled:text-muted"
+            onClick={() => {
+              setTurns([]);
+              setProposal(null);
+              setQuestion("");
+              setError(null);
+            }}
+          >
+            New chat
+          </button>
+        </div>
       </div>
       {status && !status.enabled && <p className="mb-3 text-[13px] text-orange">{status.reason}</p>}
-      <div className="mb-3 max-h-64 space-y-2 overflow-y-auto">
+      <div className="mb-3 max-h-[28rem] space-y-2 overflow-y-auto">
         {turns.length === 0 && (
           <p className="text-[13px] text-muted">
             Ask why the log drifted, or request a new Generate intent (flavors, Rest/RTD, moisture). The model cannot
@@ -121,8 +136,8 @@ export function OverlayCoach({
         )}
         {turns.map((turn, i) => (
           <div key={`${turn.role}-${i}`} className={`rounded-xl px-3 py-2 text-[13px] ${turn.role === "user" ? "bg-card2 text-white" : "bg-ink text-label"}`}>
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-muted">{turn.role === "user" ? "You" : "Coach"}</div>
-            <div className="whitespace-pre-wrap">{turn.text}</div>
+            <div className="mb-1.5 text-[11px] uppercase tracking-wide text-muted">{turn.role === "user" ? "You" : "Coach"}</div>
+            {turn.role === "assistant" ? <CoachMarkdown text={turn.text} /> : <div className="whitespace-pre-wrap">{turn.text}</div>}
           </div>
         ))}
       </div>

@@ -79,7 +79,7 @@ export default function App() {
             onSave={saveCurrent}
           />
         )}
-        {route === "overlay" && (
+        <div className={route === "overlay" ? undefined : "hidden"}>
           <OverlayPage
             library={library}
             tracks={overlayTracks}
@@ -97,7 +97,7 @@ export default function App() {
             }}
             studioIntent={intent}
           />
-        )}
+        </div>
         {route === "library" && (
           <LibraryPage
             items={library}
