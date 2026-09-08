@@ -1,9 +1,11 @@
 import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { InteractiveCurve } from "../components/InteractiveCurve";
+import { OverlayCoach } from "../components/OverlayCoach";
 import { OverlayChart } from "../components/RoastChart";
 import { Card } from "../components/ui";
 import { expandCurve, formatClock, formatClockFine, rebuildFromAnchors, rorSeries, timeAtValue } from "../lib/curve";
 import { defaultIntent, downloadText, type RoastIntent } from "../lib/generate";
+import { isLocalAiUiEnabled } from "../lib/ai/overlayCoach";
 import { parseKlog, type RoastLog } from "../lib/klog";
 import { activeZones, encodeKpro, parseKpro, type KproProfile, type Point } from "../lib/kpro";
 import { newSavedId, type SavedProfile } from "../lib/storage";
@@ -31,6 +33,7 @@ export default function OverlayPage({
   setSyncLevels,
   onSaveToLibrary,
   onOpenInGenerate,
+  studioIntent,
 }: {
   library: SavedProfile[];
   tracks: OverlayTrack[];
@@ -41,6 +44,7 @@ export default function OverlayPage({
   setSyncLevels: (on: boolean) => void;
   onSaveToLibrary: (item: SavedProfile) => void;
   onOpenInGenerate: (intent: RoastIntent, existingId?: string) => void;
+  studioIntent: RoastIntent;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -227,6 +231,15 @@ export default function OverlayPage({
         </div>
         {error && <p className="mt-2 text-[13px] text-orange">{error}</p>}
       </Card>
+
+      {isLocalAiUiEnabled() && (
+        <OverlayCoach
+          tracks={tracks}
+          baseIntent={editLibraryItem?.intent ?? studioIntent}
+          onOpenInGenerate={(next) => onOpenInGenerate(next)}
+          onAddGeneratedTrack={(track) => setTracks((prev) => [...prev, track])}
+        />
+      )}
 
       {tracks.length > 0 && (
         <>
