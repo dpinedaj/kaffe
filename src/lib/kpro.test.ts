@@ -72,6 +72,37 @@ describe("generator", () => {
     expect(parsed.roast.anchors.length).toBeGreaterThan(3);
   });
 
+  it("paces Nordic light ~6–7 min, classic ~9 min, and slow dark espresso ~11 min", () => {
+    const nordic = generateProfile({
+      ...defaultIntent(),
+      originId: "ethiopia",
+      varietyId: "heirloom",
+      process: "natural",
+      altitudeM: 2200,
+      roastStyle: "light",
+      brew: "filter",
+      flavors: [{ id: "floral", weight: 1 }],
+    });
+    const classic = generateProfile({ ...defaultIntent(), roastStyle: "medium", flavors: [] });
+    const slow = generateProfile({
+      ...defaultIntent(),
+      roastStyle: "dark",
+      brew: "espresso",
+      flavors: [{ id: "body", weight: 1 }],
+    });
+    expect(nordic.family).toBe("nordic");
+    expect(nordic.totalTime).toBeGreaterThan(330);
+    expect(nordic.totalTime).toBeLessThan(480);
+    expect(classic.family).toBe("classic");
+    expect(classic.totalTime).toBeGreaterThan(480);
+    expect(classic.totalTime).toBeLessThan(630);
+    expect(slow.family).toBe("slow");
+    expect(slow.totalTime).toBeGreaterThan(classic.totalTime);
+    expect(slow.totalTime).toBeGreaterThan(600);
+    expect(nordic.firstCrackTime).toBeLessThan(nordic.totalTime);
+    expect(classic.firstCrackTime).toBeGreaterThan(nordic.firstCrackTime);
+  });
+
   it("infers fruity/bright from a short-development residual", () => {
     const picks = inferFlavorsFromAdjustment(FLAVOR_DELTA.fruity);
     expect(picks[0]?.id).toBe("fruity");
@@ -120,6 +151,69 @@ describe("generator", () => {
     expect(wet.breakdown.moisture.preheatW).toBeGreaterThan(dry.breakdown.moisture.preheatW);
     expect(wet.preheatPower).toBeGreaterThan(dry.preheatPower);
     expect(wet.breakdown.total.dryingS).toBeGreaterThan(dry.breakdown.total.dryingS);
+    expect(wet.dryTime).toBeGreaterThan(dry.dryTime);
+    expect(wet.drySlope).toBeLessThan(dry.drySlope);
+  });
+
+  it("slows dehydration and raises first-crack temp as density increases", () => {
+    const soft = generateProfile({
+      ...defaultIntent(),
+      originId: "brazil",
+      varietyId: "unknown",
+      altitudeM: 1100,
+      autoDensity: false,
+      densityGL: 620,
+      flavors: [],
+    });
+    const hard = generateProfile({
+      ...defaultIntent(),
+      originId: "brazil",
+      varietyId: "unknown",
+      altitudeM: 1100,
+      autoDensity: false,
+      densityGL: 760,
+      flavors: [],
+    });
+    expect(hard.dryTime).toBeGreaterThan(soft.dryTime);
+    expect(hard.drySlope).toBeLessThan(soft.drySlope);
+    expect(hard.autoFirstCrackTemp).toBeGreaterThan(soft.autoFirstCrackTemp);
+    expect(hard.firstCrackTime).toBeGreaterThan(soft.firstCrackTime);
+  });
+
+  it("steepens dry and Maillard slopes for floral acidity versus body", () => {
+    const floral = generateProfile({
+      ...defaultIntent(),
+      roastStyle: "light",
+      brew: "filter",
+      flavors: [{ id: "floral", weight: 1 }],
+    });
+    const body = generateProfile({
+      ...defaultIntent(),
+      roastStyle: "light",
+      brew: "filter",
+      flavors: [{ id: "body", weight: 1 }],
+    });
+    expect(floral.drySlope).toBeGreaterThan(body.drySlope);
+    expect(floral.mailSlope).toBeGreaterThan(body.mailSlope);
+    expect(floral.mailTime).toBeLessThan(body.mailTime);
+    expect(floral.totalTime).toBeLessThan(body.totalTime);
+  });
+
+  it("gives dark espresso more development ratio than light filter", () => {
+    const light = generateProfile({
+      ...defaultIntent(),
+      roastStyle: "light",
+      brew: "filter",
+      flavors: [{ id: "floral", weight: 1 }],
+    });
+    const dark = generateProfile({
+      ...defaultIntent(),
+      roastStyle: "dark",
+      brew: "espresso",
+      flavors: [{ id: "body", weight: 1 }],
+    });
+    expect(dark.dtr).toBeGreaterThan(light.dtr);
+    expect(dark.devTime).toBeGreaterThan(light.devTime);
   });
 
   it("writes a manual expect_fc and times first crack to that temperature", () => {

@@ -464,7 +464,29 @@ export default function Studio({
           />
           <Field label="First crack time" value={formatClock(generated.firstCrackTime)} />
           <Field label="Total time" value={formatClock(generated.totalTime)} />
+          <Field
+            label="Pace"
+            value={
+              generated.family === "nordic"
+                ? "Nordic · ~6–7 min"
+                : generated.family === "slow"
+                  ? "Slow · ~11 min"
+                  : "Classic · ~9 min"
+            }
+          />
           <Field label="DTR" value={`${(generated.dtr * 100).toFixed(1)}%`} />
+          <Field
+            label="Dehydration"
+            value={`${formatClock(generated.dryTime)} · ${generated.drySlope.toFixed(1)} °C/min`}
+          />
+          <Field
+            label="Maillard"
+            value={`${formatClock(generated.mailTime)} · ${generated.mailSlope.toFixed(1)} °C/min`}
+          />
+          <Field
+            label="Development"
+            value={`${formatClock(generated.devTime)} · ${generated.devSlope.toFixed(1)} °C/min`}
+          />
           <Field label="Preheat power" value={`${generated.preheatPower} W`} />
           <Field label="Density" value={`${generated.resolvedDensityGL} g/L · ${generated.densityClass}`} />
           <Field label="Zone 1 · drying" value={formatZoneSummary(generated.zones.zone1)} />

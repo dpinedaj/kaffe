@@ -61,6 +61,7 @@ export interface ZoneIntent {
 }
 
 export type ZoneSet = Record<ZoneId, ZoneIntent>;
+export type RoastFamily = "nordic" | "classic" | "slow";
 
 export interface RoastIntent {
   originId: string;
@@ -118,6 +119,12 @@ export interface GeneratedRoast {
   zones: ZoneSet;
   totalTime: number;
   dtr: number;
+  dryTime: number;
+  mailTime: number;
+  devTime: number;
+  drySlope: number;
+  mailSlope: number;
+  devSlope: number;
   preheatPower: number;
   roastPoly: Point[];
   rorPoly: Point[];
@@ -125,6 +132,7 @@ export interface GeneratedRoast {
   curveName: string;
   inferredFlavors: FlavorPick[];
   manual: boolean;
+  family: RoastFamily;
 }
 
 const ZERO: Adjustment = {
@@ -398,11 +406,11 @@ export function suggestedZones(
   if (intent.roastStyle === "light") fcScore += 1.5;
   if (volatile >= 0.6) fcScore += 2;
   if (densityClass === "hard") fcScore += 1.5;
-  if (rorFc < 8) fcScore += 2;
-  else if (rorFc < 10) fcScore += 1;
-  if (rorDrop > 4) fcScore += 1.5;
+  if (rorFc < 8 && (intent.roastStyle === "light" || densityClass === "hard")) fcScore += 2;
+  else if (rorFc < 10 && intent.roastStyle === "light") fcScore += 1;
+  if (rorDrop > 4 && intent.roastStyle === "light") fcScore += 1.5;
   if (intent.roastStyle === "dark") fcScore -= 1;
-  const wantIntoFc = fcScore >= 3 || (rorFc < 7.5 && fcScore >= 2);
+  const wantIntoFc = fcScore >= 3 || (rorFc < 7.5 && fcScore >= 2 && intent.roastStyle === "light");
   let intoBoost = 2;
   if (intent.roastStyle === "light") intoBoost += 1;
   if (volatile >= 0.6) intoBoost += 1;
@@ -492,17 +500,6 @@ export function formatZoneSummary(z: ZoneIntent): string {
 
 function flavorAdjustment(picks: FlavorPick[]): Adjustment {
   return picks.reduce((acc, pick) => add(acc, scale(FLAVOR_DELTA[pick.id], pick.weight)), { ...ZERO });
-}
-
-function applyTimeMorph(points: Point[], dry: number, mid: number, dev: number, fcT: number): Point[] {
-  const fc = fcT;
-  return points.map((p) => {
-    let t = p.t;
-    if (p.t < 150) t += dry * (p.t / 150);
-    else if (p.t < fc) t += dry + mid * ((p.t - 150) / Math.max(1, fc - 150));
-    else t += dry + mid + dev * ((p.t - fc) / Math.max(1, 540 - fc));
-    return { t: Math.max(1, t), v: p.v };
-  });
 }
 
 function curveName(intent: RoastIntent): string {
@@ -605,6 +602,246 @@ export function inferStyleFromCurve(dtr: number, endTemp: number): RoastStyleId 
   return "medium";
 }
 
+/**
+ * Pace families from official / community KL evidence:
+ * - Nordic Light: ~5:20–6:30, DTR ~20% (community fast filter)
+ * - Classic / Ninja / Firestarter: ~9:00–9:35, FC ~7:40, DTR ~20% at L3
+ * - Slow dark/espresso: ~10–12 min (Nano 7 typical ~10 min at 120 g)
+ */
+export const FAMILY_TOTAL_S: Record<RoastFamily, number> = {
+  nordic: 400,
+  classic: 540,
+  slow: 660,
+};
+
+export const FAMILY_DTR: Record<RoastFamily, number> = {
+  nordic: 0.2,
+  classic: 0.21,
+  slow: 0.23,
+};
+
+export interface DurationPlan {
+  family: RoastFamily;
+  startS: number;
+  dryS: number;
+  fcS: number;
+  endS: number;
+  dtr: number;
+  fcTemp: number;
+  /** Dehydration slope, °C/min from ~50°C to yellow (~150°C). */
+  drySlope: number;
+  /** Maillard slope, °C/min from yellow to first crack. */
+  mailSlope: number;
+  /** Development slope, °C/min from first crack to drop. */
+  devSlope: number;
+}
+
+export function pickRoastFamilyFromTotal(endS: number): RoastFamily {
+  if (endS < 465) return "nordic";
+  if (endS < 600) return "classic";
+  return "slow";
+}
+
+export const CHARGE_TEMP = 50;
+export const YELLOW_TEMP = 150;
+/** Hernández / Schwartzberg-style reference: mid-altitude washed Arabica, Nano 7 fluid bed. */
+const ROR_DRY_REF = 40;
+const ROR_MAIL_REF = 12;
+const ROR_DEV_REF = 7;
+const FC_TEMP_REF = 203.5;
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+/**
+ * Phase times from roast kinetics, not from a single family bucket.
+ *
+ * Dehydration (Schwartzberg 2002; Hernández et al. 2007): moisture loss is Arrhenius
+ * diffusion ~ X²/d²·exp(−E/RT). We don't integrate the ODE; we keep the same
+ * dependencies as a drying slope: wetter and denser seed slow the 50→150°C rise.
+ * Steeper dry slope preserves acidity and aroma; shallower builds body
+ * (Royal Coffee water-activity / Maillard cupping).
+ *
+ * Maillard (van Boekel 2006; Royal Coffee aW): faster through 150°C→FC → brighter
+ * acidity and thinner body; slower → viscosity and caramel.
+ *
+ * First crack: typically 196–205°C internal, 203–210°C on a naked KL probe.
+ * Denser seed cracks hotter/later (stronger cell wall, more energy). Moisture
+ * mainly delays the *time* to crack via evaporative cooling, not the crack temp.
+ *
+ * Development: Rao 20–25% DTR; Hilder: default KL ~20% at light levels.
+ */
+export function durationPlan(
+  intent: RoastIntent,
+  variety: VarietyInfo,
+  adj: Adjustment,
+  densityGL: number,
+  dropTemp: number,
+): DurationPlan {
+  const volatile = flavorMass(intent, VOLATILE_FLAVORS) + (variety.flavorLean.some((id) => VOLATILE_FLAVORS.includes(id)) ? 0.3 : 0);
+  const heavy =
+    flavorMass(intent, HEAVY_FLAVORS) + (variety.flavorLean.includes("body") || variety.flavorLean.includes("deepSweet") ? 0.3 : 0);
+  const moisture = intent.moisture != null && Number.isFinite(intent.moisture) ? clamp(intent.moisture, 6, 16) : REFERENCE_MOISTURE;
+  const rho = clamp(densityGL, 560, 800);
+  const sizeK = variety.beanSize === "large" ? 0.82 : variety.beanSize === "small" ? 1.08 : 1;
+  let processK = 1;
+  if (intent.process === "washed") processK = 1.04;
+  if (intent.process === "natural") processK = 0.94;
+  if (intent.process === "honey") processK = 0.92;
+  if (intent.process === "anaerobic") processK = 0.9;
+  const beanK = (REFERENCE_DENSITY_GL / rho) ** 0.5 * (REFERENCE_MOISTURE / moisture) ** 0.45 * sizeK * processK;
+
+  const kDry =
+    1 +
+    0.18 * volatile -
+    0.16 * heavy +
+    (intent.roastStyle === "light" ? 0.12 : 0) +
+    (intent.roastStyle === "dark" ? -0.1 : 0) +
+    (intent.brew === "filter" ? 0.05 : 0) +
+    (intent.brew === "espresso" ? -0.08 : 0);
+  const kMail =
+    1 +
+    0.2 * volatile -
+    0.22 * heavy +
+    (intent.roastStyle === "light" ? 0.18 : 0) +
+    (intent.roastStyle === "dark" ? -0.12 : 0) +
+    (intent.process === "honey" ? -0.08 : 0);
+  const kDev =
+    1 +
+    0.15 * volatile -
+    0.2 * heavy +
+    (intent.roastStyle === "light" ? 0.12 : 0) +
+    (intent.roastStyle === "dark" ? -0.15 : 0) +
+    (intent.brew === "espresso" ? -0.1 : 0);
+
+  const drySlope = clamp(ROR_DRY_REF * beanK * kDry, 28, 85);
+  const mailSlope = clamp(ROR_MAIL_REF * beanK ** 0.5 * kMail, 7, 28);
+  const devSlope = clamp(ROR_DEV_REF * kDev, 4, 14);
+
+  const estimatedFc = clamp(
+    FC_TEMP_REF +
+      (3.8 * (rho - REFERENCE_DENSITY_GL)) / 80 +
+      adj.fcTemp +
+      (intent.process === "washed" ? -0.4 : 0) +
+      (intent.process === "natural" ? 0.3 : 0),
+    196,
+    Math.min(212, dropTemp - 4),
+  );
+  const fcTemp =
+    intent.expectFc != null && Number.isFinite(intent.expectFc) ? clamp(intent.expectFc, 185, 222) : estimatedFc;
+
+  let dry = ((YELLOW_TEMP - CHARGE_TEMP) / drySlope) * 60 + adj.dryingS * 0.35;
+  let maillard = ((fcTemp - YELLOW_TEMP) / mailSlope) * 60 + adj.midS * 0.35;
+  dry = clamp(dry, 85, 230);
+  maillard = clamp(maillard, 100, 340);
+
+  const drop = Math.max(fcTemp + 3, dropTemp);
+  let development = ((drop - fcTemp) / devSlope) * 60 + adj.developmentS * 0.35;
+  const preTotal = dry + maillard;
+  const targetDtr = clamp(
+    0.2 +
+      (intent.roastStyle === "dark" ? 0.035 : 0) +
+      (intent.roastStyle === "light" ? -0.015 : 0) +
+      (intent.brew === "espresso" ? 0.02 : 0) +
+      (intent.brew === "filter" && intent.roastStyle === "light" ? -0.015 : 0) +
+      0.025 * heavy -
+      0.03 * volatile,
+    0.15,
+    0.27,
+  );
+  const dtrDev = (targetDtr * preTotal) / (1 - targetDtr);
+  development = clamp(0.4 * development + 0.6 * dtrDev, 50, 220);
+
+  const startS = 7;
+  const fcS = startS + dry + maillard;
+  const endS = clamp(Math.max(fcS + development, fcS / (1 - targetDtr)), 330, 780);
+  return {
+    family: pickRoastFamilyFromTotal(endS),
+    startS,
+    dryS: startS + dry,
+    fcS,
+    endS,
+    dtr: (endS - fcS) / endS,
+    fcTemp: Number(estimatedFc.toFixed(1)),
+    drySlope: Number(drySlope.toFixed(1)),
+    mailSlope: Number(mailSlope.toFixed(1)),
+    devSlope: Number(devSlope.toFixed(1)),
+  };
+}
+
+/** Yellow / FC / drop times and °C/min slopes read off the finished curve. */
+export function measurePhases(poly: Point[], fcTemp: number, dropTemp: number): {
+  dryTime: number;
+  mailTime: number;
+  devTime: number;
+  drySlope: number;
+  mailSlope: number;
+  devSlope: number;
+} {
+  const t0 = poly[0]?.t ?? 7;
+  const tYellow = timeAtValue(poly, YELLOW_TEMP) ?? t0 + 90;
+  const tFc = timeAtValue(poly, fcTemp) ?? t0 + 300;
+  const tEnd = timeAtValue(poly, dropTemp) ?? poly[poly.length - 1]?.t ?? tFc + 60;
+  const dryTime = Math.max(1, tYellow - t0);
+  const mailTime = Math.max(1, tFc - tYellow);
+  const devTime = Math.max(1, tEnd - tFc);
+  return {
+    dryTime,
+    mailTime,
+    devTime,
+    drySlope: Number(((YELLOW_TEMP - CHARGE_TEMP) / (dryTime / 60)).toFixed(1)),
+    mailSlope: Number(((fcTemp - YELLOW_TEMP) / (mailTime / 60)).toFixed(1)),
+    devSlope: Number((Math.max(0.5, dropTemp - fcTemp) / (devTime / 60)).toFixed(1)),
+  };
+}
+
+function applyTempMorph(points: Point[], fcTempDelta: number): Point[] {
+  return points.map((p, i, arr) => ({
+    t: p.t,
+    v: p.v + (i === arr.length - 1 ? fcTempDelta * 0.4 : 0),
+  }));
+}
+
+/** Stretch the Nordic baseline so yellow / FC / drop land on the duration plan. */
+export function fitAnchorsToPlan(anchors: Point[], plan: DurationPlan, fcTemp: number, dropTemp: number): Point[] {
+  if (anchors.length < 3) return anchors.map((p) => ({ ...p }));
+  const poly = expandCurve(rebuildFromAnchors(anchors));
+  const t0 = anchors[0].t;
+  let tDry = timeAtValue(poly, 150) ?? 90;
+  let tFc = timeAtValue(poly, fcTemp) ?? 320;
+  let tDrop = timeAtValue(poly, dropTemp) ?? anchors[anchors.length - 1].t;
+  tDry = Math.max(t0 + 20, tDry);
+  tFc = Math.max(tDry + 40, tFc);
+  tDrop = Math.max(tFc + 20, tDrop);
+
+  const mapT = (t: number): number => {
+    if (t <= tDry) {
+      const span = Math.max(1, tDry - t0);
+      return plan.startS + (plan.dryS - plan.startS) * ((t - t0) / span);
+    }
+    if (t <= tFc) {
+      const span = Math.max(1, tFc - tDry);
+      return plan.dryS + (plan.fcS - plan.dryS) * ((t - tDry) / span);
+    }
+    if (t <= tDrop) {
+      const span = Math.max(1, tDrop - tFc);
+      return plan.fcS + (plan.endS - plan.fcS) * ((t - tFc) / span);
+    }
+    const span = Math.max(1, tDrop - tFc);
+    return plan.endS + (t - tDrop) * ((plan.endS - plan.fcS) / span);
+  };
+
+  const mapped = anchors.map((p) => ({ t: Math.max(1, mapT(p.t)), v: p.v }));
+  mapped[0] = { ...mapped[0], t: plan.startS };
+  for (let i = 1; i < mapped.length; i++) {
+    if (mapped[i].t < mapped[i - 1].t + 8) {
+      mapped[i] = { ...mapped[i], t: mapped[i - 1].t + 8 };
+    }
+  }
+  return mapped;
+}
+
 export function defaultIntent(): RoastIntent {
   return {
     originId: "colombia-antioquia",
@@ -621,14 +858,6 @@ export function defaultIntent(): RoastIntent {
   };
 }
 
-function morphAnchors(baseAnchors: Point[], total: Adjustment): Point[] {
-  const fcGuess = 374 + total.fcTemp * 2;
-  return applyTimeMorph(baseAnchors, total.dryingS, total.midS, total.developmentS, fcGuess).map((p, i, arr) => {
-    const last = i === arr.length - 1;
-    return { t: p.t, v: p.v + (last ? total.fcTemp * 0.4 : 0) };
-  });
-}
-
 export function generateProfile(intent: RoastIntent): GeneratedRoast {
   const origin = originById(intent.originId);
   const variety = varietyById(intent.varietyId);
@@ -641,30 +870,42 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
   const densityAdj = densityAdjustment(resolvedDensityGL);
   const beanAdj = add(add(add(originAdj, varietyAdj), moistureAdj), densityAdj);
   const base = parseKpro(BASELINE_KPRO, "baseline.kpro");
-  const beanAnchors = morphAnchors(base.roast.anchors, beanAdj);
+  let endTemp = levelToTemp(base.roastLevels, level) ?? 212;
+  const beanPlan = durationPlan({ ...intent, flavors: [], expectFc: undefined }, variety, beanAdj, resolvedDensityGL, endTemp);
+  const beanAnchors = fitAnchorsToPlan(
+    applyTempMorph(base.roast.anchors, beanAdj.fcTemp),
+    beanPlan,
+    beanPlan.fcTemp,
+    endTemp,
+  );
 
   let flavorAdj = flavorAdjustment(intent.flavors);
-  let roastAnchors: Point[];
-  if (intent.manualAnchors && intent.manualAnchors.length >= 3) {
-    roastAnchors = intent.manualAnchors.map((p) => ({ t: p.t, v: p.v }));
-    flavorAdj = inferAdjustmentFromAnchors(roastAnchors, beanAnchors, 204 + beanAdj.fcTemp);
-  } else {
-    roastAnchors = morphAnchors(base.roast.anchors, add(beanAdj, flavorAdj));
-  }
-  const total = add(beanAdj, flavorAdj);
-  const roast = rebuildFromAnchors(roastAnchors);
-  const roastPoly = expandCurve(roast);
-  const autoFirstCrackTemp = 204 + total.fcTemp;
-  const firstCrackTemp =
+  let total = add(beanAdj, flavorAdj);
+  const plan = durationPlan(intent, variety, total, resolvedDensityGL, endTemp);
+  const autoFirstCrackTemp = plan.fcTemp;
+  let firstCrackTemp =
     intent.expectFc != null && Number.isFinite(intent.expectFc)
       ? Math.max(185, Math.min(222, intent.expectFc))
       : autoFirstCrackTemp;
+
+  let roastAnchors: Point[];
+  if (intent.manualAnchors && intent.manualAnchors.length >= 3) {
+    roastAnchors = intent.manualAnchors.map((p) => ({ t: p.t, v: p.v }));
+    flavorAdj = inferAdjustmentFromAnchors(roastAnchors, beanAnchors, beanPlan.fcTemp);
+    total = add(beanAdj, flavorAdj);
+    endTemp = roastAnchors[roastAnchors.length - 1]?.v ?? endTemp;
+  } else {
+    roastAnchors = fitAnchorsToPlan(
+      applyTempMorph(base.roast.anchors, total.fcTemp),
+      plan,
+      firstCrackTemp,
+      endTemp,
+    );
+  }
+  const roast = rebuildFromAnchors(roastAnchors);
+  const roastPoly = expandCurve(roast);
   const densitySource = isAutoDensity(intent) ? "altitude" : "measured";
   const densityClass = classifyDensity(resolvedDensityGL);
-  let endTemp = levelToTemp(base.roastLevels, level) ?? 212;
-  if (intent.manualAnchors) {
-    endTemp = roastAnchors[roastAnchors.length - 1]?.v ?? endTemp;
-  }
   const totalTime = timeAtValue(roastPoly, endTemp) ?? roastAnchors[roastAnchors.length - 1].t;
   const firstCrackTime = timeAtValue(roastPoly, firstCrackTemp) ?? totalTime * 0.86;
   const rorPoly = rorSeries(roastPoly);
@@ -673,6 +914,16 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
   const lateExtra = intent.roastStyle === "dark" ? -100 : intent.roastStyle === "light" ? 80 : 0;
   const fan = rebuildFromAnchors(buildOfficialFanAnchors(totalTime, firstCrackTime, total.fanRpm, earlyExtra, lateExtra));
   const dtr = totalTime > 0 ? Math.max(0.08, (totalTime - firstCrackTime) / totalTime) : 0.14;
+  const phases = intent.manualAnchors?.length
+    ? measurePhases(roastPoly, firstCrackTemp, endTemp)
+    : {
+        dryTime: plan.dryS - plan.startS,
+        mailTime: plan.fcS - plan.dryS,
+        devTime: plan.endS - plan.fcS,
+        drySlope: plan.drySlope,
+        mailSlope: plan.mailSlope,
+        devSlope: plan.devSlope,
+      };
   const preheatPower = Math.round(Math.max(700, Math.min(1400, 820 + total.preheatW)));
   const inferredFlavors = intent.manualAnchors ? inferFlavorsFromAdjustment(flavorAdj) : intent.flavors;
 
@@ -715,6 +966,12 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
     firstCrackTime,
     totalTime,
     dtr,
+    dryTime: phases.dryTime,
+    mailTime: phases.mailTime,
+    devTime: phases.devTime,
+    drySlope: phases.drySlope,
+    mailSlope: phases.mailSlope,
+    devSlope: phases.devSlope,
     preheatPower,
     roastPoly,
     rorPoly,
@@ -726,6 +983,7 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
     densitySource,
     resolvedDensityGL,
     zones,
+    family: pickRoastFamilyFromTotal(totalTime),
   };
 }
 
