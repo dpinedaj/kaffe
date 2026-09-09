@@ -187,7 +187,50 @@ Dark roast style marks floral/fruit/bright as **avoid** (those notes are already
 
 ## 9. Fan
 
-Official Nano 7 pattern: hold **~14 700 RPM**, then drop **~1 500 RPM** into development (`FAN_HOLD_RPM` / `FAN_END_RPM`). Large seeds get a little more early air; dark espresso a little less late air.
+The Nano’s default is **14 700 RPM** ([Studio / uneven roast](https://kaffelogicjp.com/en/pages/uneven-roasting); calibration display is 120 g @ 14 700). Across **101 public profiles** on [kl-profiles.com](https://kl-profiles.com/) (Sep 2026): 72 start at ~14 700; median drop is **1 500 RPM**; the majority ease in mid-roast, not at first crack.
+
+| Family | Examples | Drop |
+|---|---|---|
+| Current official | (KL) Washed/Natural v1.1, Explorer, Filter altitude packs, Firestarter, JLightEthiopia | Mid-roast (~55–62% of a 10:00 fan), 14 700 → 13 200 |
+| Nordic community | NordicLight | Earlier (~4:35 already down) |
+| Older Rest cores | Rest v1.0 altitude, ninjaturtle, shapeshifter | Hold until ~9:00, then drop |
+
+Kaffe follows the **current official / majority** family, not Rest v1.0’s late cliff and not a crash at crack (community [fan profiling](https://community.kaffelogic.com/viewtopic.php?t=196)).
+
+Schwartzberg (2002) / Hernández: convective supply $\propto E\,G'(T_{\mathrm{GI}}-T_B)$. High $G'$ through drying moves moisture and keeps a fluid bed even (KL: raise the *whole* curve if circulation is sluggish). Lower $G'$ in development reduces cooling so the PID can finish; the official −1 500 RPM (~10%) is craft, not an integrated $G'(t)$ ODE. Drum “airflow” essays say the same in phase language: more air to dry, less into development.
+
+**Times** (seconds) mix the roast phases with the official 10 min clock, then clamp **before first crack**:
+
+$$
+\alpha = 0.78 + \delta_{\mathrm{style}}+\delta_{\mathrm{flavor}}+\delta_{\mathrm{process}}+\delta_{\mathrm{RTD}}+\delta_{\mathrm{size}}+\delta_{X}+\delta_{\rho}
+$$
+
+$$
+t_{\mathrm{hold}} = 0.55\bigl(t_{\mathrm{yellow}} + \alpha\,(t_{\mathrm{FC}}-t_{\mathrm{yellow}})\bigr) + 0.45\cdot 0.50\,T
+\quad \le t_{\mathrm{FC}}-20
+$$
+
+$$
+t_{\mathrm{low}} = t_{\mathrm{FC}} + \beta\,(T-t_{\mathrm{FC}}),\quad \beta \approx 0.72
+$$
+
+$\alpha$ rises (hold longer) for dark, body, natural/anaerobic, RTD, large seed, wetter, denser. It falls for light, floral/bright, washed, small seed. $\beta$ is higher for dark/espresso (low plateau later in a long development) and lower for light and RTD (reach low sooner after crack so heat can drive CO₂ — boosts still do the RoR-error work).
+
+**RPM**
+
+$$
+N_{\mathrm{hold}} = 14700 + \Delta + \delta_{\mathrm{size}} + 25\cdot\max(0, X-11)
+$$
+
+$$
+N_{\mathrm{end}} = 13200 + \Delta + \delta_{\mathrm{style}} + \delta_{\mathrm{RTD}} + \delta_{\mathrm{espresso}} + \delta_{\mathrm{heavy/volatile}}
+$$
+
+$\Delta$ is the uniform Studio transform (flavor / density / process / moisture on the whole curve). Light $+80$ / dark $-100$ on the *end* only; RTD $-80$ end; espresso $-50$ end. Clamped 12 000–16 800; drop at least 700 RPM.
+
+Batch size does **not** change this shape. BOOST firmware adds $\Delta\mathrm{RPM} = 34.3\,(m-120)$ on a **120 g** reference ([JP Studio fan chart](https://kaffelogicjp.com/en/pages/studio_fanprofile); [reference load size](https://kaffelogic.atlassian.net/wiki/spaces/RWK/pages/11698443/Reference+load+size)). High-altitude *machine* calibration (spin faster for thinner air) stays on the roaster, not in the `.kpro`.
+
+Implementation: `planFanSchedule` / `buildOfficialFanCurve` in `src/lib/generate.ts`.
 
 ---
 
@@ -226,3 +269,5 @@ Official Nano 7 pattern: hold **~14 700 RPM**, then drop **~1 500 RPM** into
 11. Kaffelogic. RTD profile (drink 1–3 days). [https://kaffelogicjp.com/en/pages/kl-rtd](https://kaffelogicjp.com/en/pages/kl-rtd) · Rest profile (peak 3–5 days). [https://kaffelogicjp.com/en/pages/rest](https://kaffelogicjp.com/en/pages/rest) · Core profiles. [https://www.kaffelogic.com/pages/profiles](https://www.kaffelogic.com/pages/profiles)
 12. Fnq. Rest time and profile selection (RTD RoR step, “T through crack”, CO₂). Kaffelogic community. [https://community.kaffelogic.com/viewtopic.php?t=228](https://community.kaffelogic.com/viewtopic.php?t=228)
 13. Green Coffee Collective. *Kaffelogic Nano 7: Everything You Need to Know* — fluid-bed rest vs drum; RTD as the drink-now exception. [https://greencoffeecollective.com/blogs/learn/kaffelogic-nano-7-guide](https://greencoffeecollective.com/blogs/learn/kaffelogic-nano-7-guide)
+14. Kaffelogic. Default fan 14 700 RPM; Studio transform is a uniform RPM shift (×10). [Uneven roasting](https://kaffelogicjp.com/en/pages/uneven-roasting) · [Fan profile vs load (BOOST)](https://kaffelogicjp.com/en/pages/studio_fanprofile) · [Reference load size](https://kaffelogic.atlassian.net/wiki/spaces/RWK/pages/11698443/Reference+load+size) · Community: no drastic fan change into first crack. [https://community.kaffelogic.com/viewtopic.php?t=196](https://community.kaffelogic.com/viewtopic.php?t=196)
+15. Public Nano 7 library (fan-shape census, 101 profiles). [https://kl-profiles.com/](https://kl-profiles.com/)

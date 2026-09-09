@@ -73,6 +73,7 @@ export function buildOverlayReviewContext(tracks: OverlayTrack[]): Record<string
     },
     rules: [
       "Do not change batch size; BOOST firmware scales fan and heat from the 120 g curve.",
+      "Fan follows yellow → first crack → development (hold ~14700, ease ~1500 RPM down before crack). Do not crash fan at first crack. BOOST load size is a firmware offset on the 120 g curve.",
       "Do not emit roast_profile Bézier points. Only bean intent fields.",
       "At most two flavors. Prefer Rest unless the user asked for drink-now / RTD.",
       "A boost is °C/min on RoR-error, not the BOOST kit.",
