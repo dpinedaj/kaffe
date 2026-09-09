@@ -112,6 +112,10 @@ A **boost** is not the BOOST kit. Chris Hilder: it is **°C/min added to RoR-err
 
 Official: [RTD](https://kaffelogicjp.com/en/pages/kl-rtd), [Rest](https://kaffelogicjp.com/en/pages/rest). Fluid-bed lots often need more rest than drum coffee unless you use RTD.
 
+### Fan
+
+Stock Nano 7 profiles hold **14 700 RPM** through drying and most of Maillard, then ease ~**1 500 RPM** down so development sits near **13 200**. Kaffe times that drop from **yellow → first crack → drop** (plus the official 10 min clock), and shifts RPM from density, moisture, process, size, roast style, Rest/RTD, and brew. BOOST load size stays a firmware offset on a 120 g curve. Equation: [docs/ROAST-MODEL.md](docs/ROAST-MODEL.md#9-fan).
+
 ### Flavors
 
 Up to two goals share one budget. Floral / fruity / bright / juicy steepen the front and shorten development. Body / deep sweet lengthen Maillard and DTR. That follows roasting practice (Rao; volatile loss vs heat/time), not a single published “flavor → curve” paper. Full table and citations: [docs/ROAST-MODEL.md](docs/ROAST-MODEL.md).
@@ -124,4 +128,5 @@ Up to two goals share one budget. Floral / fruity / bright / juicy steepen the f
 | Boost recommendations | `suggestedZones` / `suggestedRtdZones` |
 | Flavor deltas | `FLAVOR_DELTA` |
 | Density from altitude | `densityFromAltitude` |
+| Fan Bézier | `planFanSchedule` / `buildOfficialFanCurve` |
 | Origins, varieties, flavor copy | `src/lib/knowledge.ts` |

@@ -43,3 +43,6 @@ export function timeTickAnchor(t: number, tMax: number): "start" | "middle" | "e
 
 export const TEMP_TICKS = [40, 60, 80, 100, 120, 140, 160, 180, 200, 220];
 export const ROR_TICKS = [-5, 0, 5, 10, 15, 20, 25, 30, 35];
+export const FAN_RPM_MIN = 12000;
+export const FAN_RPM_MAX = 16800;
+export const FAN_TICKS = [12000, 13200, 14700, 16000];

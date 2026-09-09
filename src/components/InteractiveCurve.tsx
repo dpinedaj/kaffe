@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { clockTick, ROR_TICKS, TEMP_TICKS, timeTickAnchor, timeTicks } from "../lib/chart";
+import { clockTick, FAN_RPM_MAX, FAN_RPM_MIN, ROR_TICKS, TEMP_TICKS, timeTickAnchor, timeTicks } from "../lib/chart";
 import { deleteAnchor, formatClock, insertAnchor, sampleAtTime, smoothAnchors } from "../lib/curve";
 import type { ActiveZone, Point } from "../lib/kpro";
 
@@ -21,6 +21,7 @@ export function InteractiveCurve({
   poly,
   anchors,
   ror = [],
+  fan = [],
   fcTime,
   endTime,
   zones = [],
@@ -31,6 +32,7 @@ export function InteractiveCurve({
   poly: Point[];
   anchors: Point[];
   ror?: Point[];
+  fan?: Point[];
   fcTime?: number;
   endTime?: number;
   zones?: ActiveZone[];
@@ -47,6 +49,8 @@ export function InteractiveCurve({
   const x = (t: number) => PAD.l + (t / tMax) * (W - PAD.l - PAD.r);
   const y = (v: number) => PAD.t + (1 - (v - 20) / 210) * (H - PAD.t - PAD.b);
   const yRor = (v: number) => PAD.t + (1 - (v - ROR_MIN) / (ROR_MAX - ROR_MIN)) * (H - PAD.t - PAD.b);
+  const yFan = (v: number) =>
+    PAD.t + (1 - (v - FAN_RPM_MIN) / (FAN_RPM_MAX - FAN_RPM_MIN)) * (H - PAD.t - PAD.b);
 
   function fromClient(clientX: number, clientY: number): Point {
     const svg = svgRef.current!;
@@ -100,6 +104,9 @@ export function InteractiveCurve({
   const rorPath = ror
     .map((p, i) => `${i === 0 ? "M" : "L"} ${x(p.t).toFixed(1)} ${yRor(p.v).toFixed(1)}`)
     .join(" ");
+  const fanPath = fan
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${x(p.t).toFixed(1)} ${yFan(p.v).toFixed(1)}`)
+    .join(" ");
   const fc = fcTime != null ? poly.find((p) => Math.abs(p.t - fcTime) < 3) : undefined;
   const end = endTime != null ? poly.find((p) => Math.abs(p.t - endTime) < 3) : undefined;
   const canDelete = selected != null && selected > 0 && selected < anchors.length - 1 && anchors.length > 3;
@@ -110,6 +117,7 @@ export function InteractiveCurve({
   const bean =
     drag != null ? anchors[drag].v : activeT != null ? sampleAtTime(poly, activeT) : null;
   const rorNow = activeT != null ? sampleAtTime(ror, activeT) : null;
+  const fanNow = activeT != null && fan.length ? sampleAtTime(fan, activeT) : null;
   const walkBean = activeT != null ? sampleAtTime(poly, activeT) : null;
 
   return (
@@ -156,7 +164,7 @@ export function InteractiveCurve({
         <span className="text-[11px] text-muted">Walk, then Add point · Smooth eases spikes · first/last stay fixed in time</span>
       </div>
 
-      <div className="mb-2 grid grid-cols-3 gap-2 rounded-xl bg-card2 px-3 py-2 text-[12px]">
+      <div className="mb-2 grid grid-cols-2 gap-2 rounded-xl bg-card2 px-3 py-2 text-[12px] sm:grid-cols-4">
         <div>
           <div className="text-muted">Time</div>
           <div className="text-[15px] font-semibold text-white">{activeT != null ? formatClock(activeT) : "—"}</div>
@@ -169,6 +177,12 @@ export function InteractiveCurve({
           <div className="text-muted">RoR</div>
           <div className="text-[15px] font-semibold text-orange">
             {rorNow != null ? `${rorNow.toFixed(1)} °C/min` : "—"}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted">Fan</div>
+          <div className="text-[15px] font-semibold text-[#BF5AF2]">
+            {fanNow != null ? `${Math.round(fanNow)} RPM` : "—"}
           </div>
         </div>
       </div>
@@ -232,6 +246,7 @@ export function InteractiveCurve({
           );
         })}
         {rorPath && <path d={rorPath} fill="none" stroke="#FF9F0A" strokeWidth="1.6" strokeDasharray="5 4" />}
+        {fanPath && <path d={fanPath} fill="none" stroke="#BF5AF2" strokeWidth="1.7" strokeDasharray="6 3" />}
         <path d={path} fill="none" stroke="#0A84FF" strokeWidth="2.2" />
         {activeT != null && walkBean != null && (
           <g>
@@ -239,6 +254,9 @@ export function InteractiveCurve({
             <circle cx={x(activeT)} cy={y(walkBean)} r="4.5" fill="#0A84FF" stroke="#fff" strokeWidth="1.5" />
             {rorNow != null && (
               <circle cx={x(activeT)} cy={yRor(rorNow)} r="3.5" fill="#FF9F0A" stroke="#fff" strokeWidth="1.2" />
+            )}
+            {fanNow != null && (
+              <circle cx={x(activeT)} cy={yFan(fanNow)} r="3.5" fill="#BF5AF2" stroke="#fff" strokeWidth="1.2" />
             )}
           </g>
         )}

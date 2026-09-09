@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { BoostZones } from "../components/BoostZones";
 import { InteractiveCurve } from "../components/InteractiveCurve";
 import { Card, Field, Pill, Row, Select, Toggle } from "../components/ui";
-import { formatClock } from "../lib/curve";
+import { formatClock, sampleAtTime } from "../lib/curve";
 import {
   downloadText,
   generateProfile,
@@ -473,6 +473,7 @@ export default function Studio({
             poly={generated.roastPoly}
             anchors={generated.profile.roast.anchors}
             ror={generated.rorPoly}
+            fan={generated.fanPoly}
             fcTime={generated.firstCrackTime}
             endTime={generated.totalTime}
             zones={activeZones(generated.profile.raw)}
@@ -506,7 +507,8 @@ export default function Studio({
           <div className="mt-2 flex flex-wrap gap-4 text-[12px] text-muted">
             <span className="text-blue">Bean · handles</span>
             <span className="text-orange">RoR (reference)</span>
-            <span className="text-[#BF5AF2]">Boost zones</span>
+            <span className="text-[#BF5AF2]">Fan</span>
+            <span className="text-[#BF5AF2] opacity-70">Boost zones</span>
             <span className="text-red">First crack</span>
             <span className="text-green">Drop</span>
           </div>
@@ -549,6 +551,10 @@ export default function Studio({
           <Field
             label="Development"
             value={`${formatClock(generated.devTime)} · ${generated.devSlope.toFixed(1)} °C/min`}
+          />
+          <Field
+            label="Fan"
+            value={`${Math.round(sampleAtTime(generated.fanPoly, 40) ?? 0).toLocaleString()} → ${Math.round(sampleAtTime(generated.fanPoly, generated.totalTime) ?? 0).toLocaleString()} RPM`}
           />
           <Field label="Preheat power" value={`${generated.preheatPower} W`} />
           <Field label="Density" value={`${generated.resolvedDensityGL} g/L · ${generated.densityClass}`} />
