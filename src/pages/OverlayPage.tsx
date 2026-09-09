@@ -250,6 +250,7 @@ export default function OverlayPage({
                 <span key={t.id} className="flex items-center gap-2">
                   <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: t.color }} />
                   {t.name} {t.log ? "(solid actual / dashed design)" : "(design)"}
+                  <span className="text-muted"> · dotted fan</span>
                 </span>
               ))}
             </div>
@@ -325,6 +326,7 @@ export default function OverlayPage({
                 poly={editPoly}
                 anchors={editTrack.profile.roast.anchors}
                 ror={editRor}
+                fan={editTrack ? expandCurve(editTrack.profile.fan) : []}
                 fcTime={editFcTime}
                 endTime={editEndTime}
                 zones={activeZones(editTrack.profile.raw)}

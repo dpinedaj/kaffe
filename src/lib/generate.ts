@@ -4,6 +4,7 @@ import {
   originById,
   varietyById,
   STYLES,
+  type BeanSize,
   type BrewId,
   type DensityClass,
   type FlavorId,
@@ -12,7 +13,7 @@ import {
   type RoastStyleId,
   type VarietyInfo,
 } from "./knowledge";
-import { encodeKpro, parseKpro, type KproProfile, type Point } from "./kpro";
+import { encodeKpro, parseKpro, type BezierSegment, type CurveData, type KproProfile, type Point } from "./kpro";
 import { BASELINE_KPRO } from "./template";
 
 export interface FlavorPick {
@@ -654,9 +655,23 @@ export function inferAdjustmentFromAnchors(manual: Point[], originAnchors: Point
   };
 }
 
-/** Official Nano 7 pattern: hold ~14700 RPM, then decline ~1500 RPM into development. */
+/**
+ * Nano 7 fan: Schwartzberg G' high through drying / most of Maillard, then ~10%
+ * less air in development. Shape is phase-relative (yellow → FC → drop), blended
+ * with the official 10 min clock so it matches KL Washed/Natural v1.1 and the
+ * Nordic template — not a crash at first crack.
+ */
 export const FAN_HOLD_RPM = 14700;
 export const FAN_END_RPM = 13200;
+/** Official 600 s templates: drop underway by 5:00, low plateau by 9:18. */
+export const FAN_HOLD_FRAC = 300 / 600;
+export const FAN_LOW_FRAC = 558 / 600;
+export const FAN_START_FRAC = 18 / 600;
+/** Fraction of Maillard completed before the drop (KL v1.1 / Explorer). */
+export const FAN_MAIL_ALPHA = 0.78;
+/** Fraction of development elapsed when the low plateau is reached. */
+export const FAN_DEV_BETA = 0.72;
+const FAN_DROP_CP2_FRAC = (540 - 300) / (558 - 300);
 const FAN_MIN = 12000;
 const FAN_MAX = 16800;
 
@@ -664,23 +679,147 @@ function clampRpm(n: number): number {
   return Math.round(Math.max(FAN_MIN, Math.min(FAN_MAX, n)));
 }
 
-export function buildOfficialFanAnchors(
-  totalTime: number,
-  firstCrackTime: number,
-  rpmOffset: number,
-  earlyExtra = 0,
-  lateExtra = 0,
-): Point[] {
-  const endT = Math.max(180, totalTime);
-  const holdT = Math.max(90, Math.min(endT - 45, firstCrackTime > 0 ? firstCrackTime : endT * 0.62));
-  const startT = Math.max(8, Math.min(22, endT * 0.04));
-  const hold = clampRpm(FAN_HOLD_RPM + rpmOffset + earlyExtra);
-  const end = clampRpm(FAN_END_RPM + rpmOffset + lateExtra);
-  return [
-    { t: startT, v: hold },
-    { t: holdT, v: hold },
-    { t: endT, v: Math.min(hold, end) },
+export interface FanCurveInput {
+  totalTime: number;
+  firstCrackTime: number;
+  /** Time to yellow (~150 °C). */
+  dryTime?: number;
+  /** Uniform Studio-style transform (flavor / density / process / moisture). */
+  rpmOffset?: number;
+  beanSize?: BeanSize;
+  roastStyle?: RoastStyleId;
+  drinkPlan?: DrinkPlan;
+  process?: ProcessId;
+  brew?: BrewId;
+  moisture?: number | null;
+  densityGL?: number;
+  volatileWeight?: number;
+  heavyWeight?: number;
+}
+
+export interface FanSchedule {
+  tStart: number;
+  tHold: number;
+  tLow: number;
+  tEnd: number;
+  holdRpm: number;
+  endRpm: number;
+  /** Maillard fraction before drop. */
+  alpha: number;
+  /** Development fraction before low plateau. */
+  beta: number;
+}
+
+function fanEarlyExtra(input: FanCurveInput): number {
+  const size = input.beanSize === "large" ? 280 : input.beanSize === "small" ? -40 : 0;
+  const moisture = input.moisture != null && Number.isFinite(input.moisture) ? clamp(input.moisture, 6, 16) : REFERENCE_MOISTURE;
+  // Extra hold-only air for wet lots: moistureAdjustment already shifts the whole
+  // curve; this keeps G' up through drying a little longer without lifting drop RPM.
+  const wetHold = Math.round(Math.max(0, moisture - REFERENCE_MOISTURE) * 25);
+  return size + wetHold;
+}
+
+function fanLateExtra(input: FanCurveInput): number {
+  const style = input.roastStyle === "dark" ? -100 : input.roastStyle === "light" ? 80 : 0;
+  const rtd = input.drinkPlan === "rtd" ? -80 : 0;
+  const espresso = input.brew === "espresso" ? -50 : 0;
+  const heavy = -40 * (input.heavyWeight ?? 0);
+  const volatile = 25 * (input.volatileWeight ?? 0);
+  return Math.round(style + rtd + espresso + heavy + volatile);
+}
+
+export function planFanSchedule(input: FanCurveInput): FanSchedule {
+  const T = Math.max(180, input.totalTime);
+  const tFc = input.firstCrackTime > 40 ? input.firstCrackTime : T * 0.62;
+  const tDry =
+    input.dryTime != null && input.dryTime > 30 && input.dryTime < tFc - 24
+      ? input.dryTime
+      : clamp(0.28 * tFc, 50, tFc - 40);
+  const moisture = input.moisture != null && Number.isFinite(input.moisture) ? clamp(input.moisture, 6, 16) : REFERENCE_MOISTURE;
+  const rho = input.densityGL != null && Number.isFinite(input.densityGL) ? clamp(input.densityGL, 560, 800) : REFERENCE_DENSITY_GL;
+  const volatile = input.volatileWeight ?? 0;
+  const heavy = input.heavyWeight ?? 0;
+
+  let alpha = FAN_MAIL_ALPHA;
+  if (input.roastStyle === "light") alpha -= 0.06;
+  if (input.roastStyle === "dark") alpha += 0.06;
+  alpha += 0.04 * heavy - 0.05 * volatile;
+  if (input.process === "natural" || input.process === "anaerobic") alpha += 0.04;
+  if (input.process === "washed") alpha -= 0.02;
+  if (input.drinkPlan === "rtd") alpha += 0.05;
+  if (input.beanSize === "large") alpha += 0.04;
+  if (input.beanSize === "small") alpha -= 0.02;
+  alpha += 0.015 * (moisture - REFERENCE_MOISTURE);
+  alpha += 0.04 * ((rho - REFERENCE_DENSITY_GL) / 80);
+  alpha = clamp(alpha, 0.62, 0.9);
+
+  let beta = FAN_DEV_BETA;
+  if (input.roastStyle === "dark") beta += 0.06;
+  if (input.roastStyle === "light") beta -= 0.04;
+  if (input.drinkPlan === "rtd") beta -= 0.08;
+  if (input.brew === "espresso") beta += 0.04;
+  beta = clamp(beta, 0.55, 0.85);
+
+  const tStart = Math.max(8, Math.min(22, FAN_START_FRAC * T));
+  const tHoldPhase = tDry + alpha * (tFc - tDry);
+  const tHoldClock = FAN_HOLD_FRAC * T;
+  let tHold = 0.55 * tHoldPhase + 0.45 * tHoldClock;
+  tHold = Math.min(tHold, tFc - 20);
+  tHold = Math.max(tHold, tDry + 24, tStart + 80);
+
+  let tLow = tFc + beta * (T - tFc);
+  tLow = Math.max(tLow, tHold + 75);
+  tLow = Math.min(tLow, T - 12);
+
+  const tEnd = T;
+  if (!(tStart + 8 < tHold && tHold + 8 < tLow && tLow + 8 < tEnd)) {
+    tHold = tStart + (tEnd - tStart) * FAN_HOLD_FRAC;
+    tLow = tStart + (tEnd - tStart) * FAN_LOW_FRAC;
+    if (tLow >= tEnd - 8) tLow = tEnd - 12;
+    if (tHold >= tLow - 40) tHold = Math.max(tStart + 40, tLow - 90);
+  }
+
+  const offset = input.rpmOffset ?? 0;
+  const holdRpm = clampRpm(FAN_HOLD_RPM + offset + fanEarlyExtra(input));
+  const endRpm = clampRpm(Math.min(holdRpm - 700, FAN_END_RPM + offset + fanLateExtra(input)));
+  return { tStart, tHold, tLow, tEnd, holdRpm, endRpm, alpha, beta };
+}
+
+export function buildOfficialFanCurve(input: FanCurveInput): CurveData {
+  const { tStart, tHold, tLow, tEnd, holdRpm: hold, endRpm: end } = planFanSchedule(input);
+  const a0 = { t: tStart, v: hold };
+  const a1 = { t: tHold, v: hold };
+  const a2 = { t: tLow, v: end };
+  const a3 = { t: tEnd, v: end };
+  const holdSpan = Math.max(1, a1.t - a0.t);
+  const dropSpan = Math.max(1, a2.t - a1.t);
+  const midLow = (a2.t + a3.t) / 2;
+
+  const segments: BezierSegment[] = [
+    {
+      start: a0,
+      cp1: { t: a0.t + holdSpan * (24 / 282), v: hold },
+      cp2: { t: a0.t + holdSpan * (42 / 282), v: hold },
+      end: a1,
+    },
+    {
+      start: a1,
+      cp1: { t: a1.t, v: end },
+      cp2: { t: a1.t + dropSpan * FAN_DROP_CP2_FRAC, v: end },
+      end: a2,
+    },
+    {
+      start: a2,
+      cp1: { t: midLow, v: end },
+      cp2: { t: midLow, v: end },
+      end: a3,
+    },
   ];
+  return { anchors: [a0, a1, a2, a3], segments };
+}
+
+export function buildOfficialFanAnchors(input: FanCurveInput): Point[] {
+  return buildOfficialFanCurve(input).anchors;
 }
 
 export function inferStyleFromCurve(dtr: number, endTemp: number): RoastStyleId {
@@ -1001,9 +1140,23 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
   const firstCrackTime = timeAtValue(roastPoly, firstCrackTemp) ?? totalTime * 0.86;
   const rorPoly = rorSeries(roastPoly);
   const zones = resolveZones(intent, firstCrackTime, totalTime, rorPoly, densityClass);
-  const earlyExtra = variety.beanSize === "large" ? 280 : variety.beanSize === "small" ? -40 : 0;
-  const lateExtra = intent.roastStyle === "dark" ? -100 : intent.roastStyle === "light" ? 80 : 0;
-  const fan = rebuildFromAnchors(buildOfficialFanAnchors(totalTime, firstCrackTime, total.fanRpm, earlyExtra, lateExtra));
+  const dryEndTime = timeAtValue(roastPoly, YELLOW_TEMP) ?? firstCrackTime * 0.35;
+  const roastEndT = roastAnchors[roastAnchors.length - 1]?.t ?? totalTime;
+  const fan = buildOfficialFanCurve({
+    totalTime: Math.max(totalTime, roastEndT),
+    firstCrackTime,
+    dryTime: dryEndTime,
+    rpmOffset: total.fanRpm,
+    beanSize: variety.beanSize,
+    roastStyle: intent.roastStyle,
+    drinkPlan: drinkPlanOf(intent),
+    process: intent.process,
+    brew: intent.brew,
+    moisture: intent.moisture,
+    densityGL: resolvedDensityGL,
+    volatileWeight: flavorMass(intent, VOLATILE_FLAVORS),
+    heavyWeight: flavorMass(intent, HEAVY_FLAVORS),
+  });
   const dtr = totalTime > 0 ? Math.max(0.08, (totalTime - firstCrackTime) / totalTime) : 0.14;
   const phases = intent.manualAnchors?.length
     ? measurePhases(roastPoly, firstCrackTemp, endTemp)

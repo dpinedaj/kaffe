@@ -144,6 +144,43 @@ describe("generator", () => {
     expect(out.profile.fan.anchors[out.profile.fan.anchors.length - 1].t).toBeGreaterThan(out.totalTime - 5);
   });
 
+  it("uses the official four-anchor fan (hold to ~50%, ease to ~13.2k, cover the whole Bézier)", () => {
+    const light = generateProfile({
+      ...defaultIntent(),
+      originId: "colombia-antioquia",
+      varietyId: "castillo",
+      roastStyle: "light",
+      brew: "filter",
+      flavors: [{ id: "winey", weight: 1 }, { id: "lightSweet", weight: 1 }],
+    });
+    const fanEnd = light.profile.fan.anchors[light.profile.fan.anchors.length - 1];
+    const roastEnd = light.profile.roast.anchors[light.profile.roast.anchors.length - 1];
+    expect(light.profile.fan.anchors).toHaveLength(4);
+    expect(fanEnd.t).toBeGreaterThan(roastEnd.t - 2);
+    expect(fanEnd.t).toBeGreaterThan(light.firstCrackTime + 80);
+
+    const hold = sampleAtTime(light.fanPoly, light.fanPoly[0].t) ?? 0;
+    const tHold = light.profile.fan.anchors[1].t;
+    const stillHolding = sampleAtTime(light.fanPoly, Math.max(light.fanPoly[0].t, tHold - 8)) ?? 0;
+    const afterDrop = sampleAtTime(light.fanPoly, tHold + 45) ?? 0;
+    const at93 = sampleAtTime(light.fanPoly, fanEnd.t * 0.93) ?? 0;
+    const atFc = sampleAtTime(light.fanPoly, light.firstCrackTime) ?? 0;
+    const beforeFc = sampleAtTime(light.fanPoly, light.firstCrackTime - 30) ?? 0;
+    expect(stillHolding).toBeGreaterThan(hold - 80);
+    expect(afterDrop).toBeLessThan(hold - 200);
+    expect(at93).toBeLessThan(hold - 800);
+    expect(atFc).toBeLessThan(beforeFc);
+    expect(tHold).toBeLessThan(light.firstCrackTime);
+    expect(tHold / fanEnd.t).toBeGreaterThan(0.35);
+    expect(tHold / fanEnd.t).toBeLessThan(0.65);
+
+    const parsed = parseKpro(light.kproText, "fan.kpro");
+    expect(parsed.fan.anchors).toHaveLength(4);
+    const midOfficial = sampleAtTime(expandCurve(parsed.fan), tHold + 45);
+    expect(midOfficial).not.toBeNull();
+    expect(Math.abs((midOfficial ?? 0) - afterDrop)).toBeLessThan(80);
+  });
+
   it("lengthens drying and raises preheat when moisture is above 11%", () => {
     const dry = generateProfile({ ...defaultIntent(), moisture: 9, flavors: [] });
     const wet = generateProfile({ ...defaultIntent(), moisture: 13, flavors: [] });
@@ -386,6 +423,42 @@ describe("generator", () => {
     const caturra = generateProfile({ ...defaultIntent(), originId: "colombia-huila", varietyId: "caturra", flavors: [] });
     const pacamara = generateProfile({ ...defaultIntent(), originId: "colombia-huila", varietyId: "pacamara", flavors: [] });
     expect(sampleAtTime(pacamara.fanPoly, 40) ?? 0).toBeGreaterThan(sampleAtTime(caturra.fanPoly, 40) ?? 0);
+  });
+
+  it("holds fan longer for a wet dense dark roast than a dry light one, and drops more for RTD / espresso", () => {
+    const lightDry = generateProfile({
+      ...defaultIntent(),
+      roastStyle: "light",
+      brew: "filter",
+      drinkPlan: "rest",
+      moisture: 10,
+      densityGL: 640,
+      autoDensity: false,
+      flavors: [{ id: "floral", weight: 1 }],
+    });
+    const darkWet = generateProfile({
+      ...defaultIntent(),
+      roastStyle: "dark",
+      brew: "espresso",
+      drinkPlan: "rest",
+      moisture: 13,
+      densityGL: 740,
+      autoDensity: false,
+      flavors: [{ id: "body", weight: 1 }],
+    });
+    expect(darkWet.profile.fan.anchors[1].t / darkWet.firstCrackTime).toBeGreaterThan(
+      lightDry.profile.fan.anchors[1].t / lightDry.firstCrackTime,
+    );
+    const rest = generateProfile({ ...defaultIntent(), drinkPlan: "rest", roastStyle: "medium", flavors: [] });
+    const rtd = generateProfile({ ...defaultIntent(), drinkPlan: "rtd", roastStyle: "medium", flavors: [] });
+    const restEnd = rest.profile.fan.anchors[rest.profile.fan.anchors.length - 1].v;
+    const rtdEnd = rtd.profile.fan.anchors[rtd.profile.fan.anchors.length - 1].v;
+    expect(rtdEnd).toBeLessThan(restEnd);
+    const filter = generateProfile({ ...defaultIntent(), brew: "filter", roastStyle: "medium", flavors: [] });
+    const espresso = generateProfile({ ...defaultIntent(), brew: "espresso", roastStyle: "medium", flavors: [] });
+    expect(espresso.profile.fan.anchors[espresso.profile.fan.anchors.length - 1].v).toBeLessThan(
+      filter.profile.fan.anchors[filter.profile.fan.anchors.length - 1].v,
+    );
   });
 });
 
