@@ -261,6 +261,20 @@ export function encodeCurve(curve: CurveData, padValue: number): string {
       earlier = { t: start.t + 20, v: start.v + 2 };
       later = { t: start.t + 40, v: start.v + 4 };
     }
+    // Last triple is [blue, end-blue, yellow CP] like official Nordic.
+    if (i === bodyAnchors.length - 1 && next && next.t > start.t + 8) {
+      const dt = next.t - start.t;
+      const minOff = Math.min(12, dt * 0.28);
+      const candidates = [earlier, later].filter((p) => p.t > start.t + 1 && p.t < next.t - 1);
+      const mid = start.t + dt * 0.35;
+      let cp = candidates.sort((a, b) => Math.abs(a.t - mid) - Math.abs(b.t - mid))[0] ?? {
+        t: mid,
+        v: start.v + (next.v - start.v) * 0.35,
+      };
+      cp = { t: Math.max(start.t + minOff, Math.min(next.t - minOff, cp.t)), v: cp.v };
+      pairs.push(start, next, cp);
+      continue;
+    }
     pairs.push(start, later, earlier);
   }
 

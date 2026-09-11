@@ -306,7 +306,7 @@ export default function Studio({
                 {intent.expectFc != null ? (
                   <>
                     <span className="text-label">Manual expect_fc {generated.firstCrackTemp.toFixed(1)} °C. </span>
-                    The red marker, development time, and fan drop follow this temperature on the curve.
+                    The red line, development time, and fan drop follow this temperature on the curve.
                   </>
                 ) : (
                   <>
@@ -495,7 +495,8 @@ export default function Studio({
               const next: RoastIntent = { ...intent, manualAnchors: anchors };
               const preview = generateProfile(next);
               next.flavors = inferFlavorsFromAdjustment(preview.breakdown.flavor);
-              next.roastStyle = inferStyleFromCurve(preview.dtr, anchors[anchors.length - 1]?.v ?? 212);
+              const dropTemp = sampleAtTime(preview.roastPoly, preview.totalTime) ?? anchors[anchors.length - 1]?.v ?? 212;
+              next.roastStyle = inferStyleFromCurve(preview.dtr, dropTemp);
               setIntent(next);
             }}
           />
@@ -509,8 +510,8 @@ export default function Studio({
             <span className="text-orange">RoR (reference)</span>
             <span className="text-[#BF5AF2]">Fan</span>
             <span className="text-[#BF5AF2] opacity-70">Boost zones</span>
-            <span className="text-red">First crack</span>
-            <span className="text-green">Drop</span>
+            <span className="text-red">First crack · line</span>
+            <span className="text-green">Drop · line</span>
           </div>
         </Card>
 
@@ -523,6 +524,7 @@ export default function Studio({
             }
           />
           <Field label="Curve name" value={generated.curveName} />
+          <Field label="On Nano" value={generated.profile.name} />
           <Field
             label="First crack temp"
             value={`${generated.firstCrackTemp.toFixed(1)} °C${intent.expectFc != null ? " · set" : ""}`}

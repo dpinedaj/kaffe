@@ -1,4 +1,4 @@
-import { expandCurve, formatClock, levelToTemp, rebuildFromAnchors, rorSeries, sampleAtTime, timeAtValue } from "./curve";
+import { expandCurve, formatClock, levelToTemp, mergePhasePins, rebuildFromAnchors, rorSeries, sampleAtTime, timeAtValue } from "./curve";
 import {
   flavorById,
   originById,
@@ -589,18 +589,91 @@ function flavorAdjustment(picks: FlavorPick[]): Adjustment {
   return picks.reduce((acc, pick) => add(acc, scale(FLAVOR_DELTA[pick.id], pick.weight)), { ...ZERO });
 }
 
-function curveName(intent: RoastIntent): string {
+function processCode(process: ProcessId): string {
+  if (process === "natural") return "NAT";
+  if (process === "washed") return "WSH";
+  if (process === "honey") return "HNY";
+  if (process === "anaerobic") return "AN";
+  return "OTH";
+}
+
+function brewCode(brew: BrewId): string {
+  if (brew === "filter") return "F";
+  if (brew === "espresso") return "E";
+  if (brew === "cupping") return "C";
+  return "O";
+}
+
+function styleCode(style: RoastStyleId): string {
+  if (style === "light") return "L";
+  if (style === "dark") return "D";
+  return "M";
+}
+
+function roastLevelOf(intent: RoastIntent): number {
+  if (!intent.autoLevel) return intent.level;
+  return STYLES.find((s) => s.id === intent.roastStyle)?.level ?? intent.level;
+}
+
+function originCode(intent: RoastIntent): string {
   const origin = originById(intent.originId);
+  return origin.shortCode ?? origin.name.slice(0, 3).toUpperCase();
+}
+
+function varietyCode(intent: RoastIntent): string {
   const variety = varietyById(intent.varietyId);
-  const proc =
-    intent.process === "natural" ? "NAT" : intent.process === "washed" ? "WSH" : intent.process === "honey" ? "HNY" : "AN";
-  const alt = intent.altitudeM >= 2000 ? "2-2.7k" : intent.altitudeM >= 1500 ? "1.5-2k" : "0-1.5k";
-  const style = intent.roastStyle === "light" ? "L" : intent.roastStyle === "medium" ? "M" : "D";
-  const brew = intent.brew === "filter" ? "F" : intent.brew === "espresso" ? "E" : intent.brew === "cupping" ? "C" : "O";
-  const drink = isRtd(intent) ? " RTD" : "";
-  const code = origin.shortCode ?? origin.name.slice(0, 3).toUpperCase();
-  const varCode = variety.id !== "unknown" && variety.shortCode ? `-${variety.shortCode}` : "";
-  return `${brew}-${proc} ${alt} ${style} ${code}${varCode}${drink}`;
+  if (variety.id === "unknown" || !variety.shortCode) return "";
+  return variety.shortCode;
+}
+
+const KPRO_SHORT_MAX = 17;
+
+function fileSlug(name: string): string {
+  const s = name.trim().replace(/\s+/g, "_").replace(/[^A-Za-z0-9._+-]/g, "");
+  return (s || "Kaffe").slice(0, 120);
+}
+
+/** Human-readable name: brew, process, level, lot, altitude, rest/RTD, and extras. */
+export function curveName(intent: RoastIntent): string {
+  const variety = varietyById(intent.varietyId);
+  const level = roastLevelOf(intent).toFixed(1);
+  const lot = [originCode(intent), varietyCode(intent)].filter(Boolean).join("-");
+  const flavors = intent.flavors
+    .filter((f) => f.weight > 0)
+    .map((f) => flavorById(f.id).name.replace(/\s+/g, "-").toLowerCase())
+    .join("+");
+  const parts = [
+    `${brewCode(intent.brew)}-${processCode(intent.process)}`,
+    `${styleCode(intent.roastStyle)}${level}`,
+    lot,
+    `${Math.round(intent.altitudeM)}m`,
+    isRtd(intent) ? "RTD" : "Rest",
+  ];
+  if (flavors) parts.push(flavors);
+  if (intent.moisture != null && Number.isFinite(intent.moisture)) {
+    parts.push(`${Number(intent.moisture).toFixed(1)}H`);
+  }
+  if (intent.autoDensity === false && intent.densityGL != null && Number.isFinite(intent.densityGL)) {
+    parts.push(`${Math.round(intent.densityGL)}gL`);
+  }
+  if (intent.expectFc != null && Number.isFinite(intent.expectFc)) {
+    parts.push(`FC${Math.round(intent.expectFc)}`);
+  }
+  if (variety.beanSize === "large") parts.push("lg");
+  if (variety.beanSize === "small") parts.push("sm");
+  if (intent.manualAnchors && intent.manualAnchors.length >= 3) parts.push("man");
+  return parts.join(" ");
+}
+
+/** Nano `profile_short_name` is 17 characters. Pack brew-process-level-lot, RTD if on. */
+export function kproShortName(intent: RoastIntent): string {
+  const lv = String(Math.round(roastLevelOf(intent) * 10));
+  const origin = originCode(intent);
+  const vari = varietyCode(intent);
+  const head = `${brewCode(intent.brew)}-${processCode(intent.process)}-${styleCode(intent.roastStyle)}${lv}`;
+  const tail = isRtd(intent) ? "RTD" : vari;
+  const parts = tail ? [head, origin, tail] : [head, origin];
+  return parts.join("-").slice(0, KPRO_SHORT_MAX);
 }
 
 const ADJ_KEYS: (keyof Adjustment)[] = ["fcTemp", "preheatW", "dryingS", "midS", "developmentS", "fanRpm"];
@@ -822,9 +895,10 @@ export function buildOfficialFanAnchors(input: FanCurveInput): Point[] {
   return buildOfficialFanCurve(input).anchors;
 }
 
+/** `endTemp` is drop °C (recommended level), not the last Bézier handle past drop. */
 export function inferStyleFromCurve(dtr: number, endTemp: number): RoastStyleId {
-  if (dtr < 0.145 || endTemp < 210) return "light";
-  if (dtr > 0.22 || endTemp > 216) return "dark";
+  if (endTemp < 211.4 || (dtr < 0.185 && endTemp < 213)) return "light";
+  if (endTemp > 213.8 || dtr > 0.232) return "dark";
   return "medium";
 }
 
@@ -870,6 +944,9 @@ export function pickRoastFamilyFromTotal(endS: number): RoastFamily {
 
 export const CHARGE_TEMP = 50;
 export const YELLOW_TEMP = 150;
+/** Official Nordic last minute is ~1 °C/min. Cooling is klog roast_end, not this tail. */
+const DROP_TAIL_S = 60;
+const DROP_TAIL_C = 2;
 /** Hernández / Schwartzberg-style reference: mid-altitude washed Arabica, Nano 7 fluid bed. */
 const ROR_DRY_REF = 40;
 const ROR_MAIL_REF = 12;
@@ -878,6 +955,23 @@ const FC_TEMP_REF = 203.5;
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
+}
+
+/**
+ * Floor the RoR-error controller may ask for while catching the profile.
+ * Kaffelogic Studio flags the Nordic baseline −0.7 when the curve itself
+ * never goes below ~0.8 °C/min: that slack lets tracking look like a crash.
+ * Keep ~1 °C/min of room under design min RoR, but not below −0.2 unless
+ * the Bézier is actually that slow (charge skipped; measure through drop).
+ */
+export function minDesiredRor(ror: Point[], tStart: number, tEnd: number): number {
+  let min = Infinity;
+  for (const p of ror) {
+    if (p.t < tStart || p.t > tEnd) continue;
+    if (p.v < min) min = p.v;
+  }
+  if (!Number.isFinite(min)) min = 4;
+  return clamp(Math.round((min - 1) * 10) / 10, -1, -0.2);
 }
 
 /**
@@ -896,7 +990,11 @@ function clamp(n: number, lo: number, hi: number): number {
  * Denser seed cracks hotter/later (stronger cell wall, more energy). Moisture
  * mainly delays the *time* to crack via evaporative cooling, not the crack temp.
  *
- * Development: Rao 20–25% DTR; Hilder: default KL ~20% at light levels.
+ * Development time at constant colour is a real sensory lever (Münchow et al.
+ * 2020; Alstrup et al. 2020). Rao’s 20–25% DTR is craft for drums at
+ * typical load; high energy-to-batch (sample / fluid-bed Nano) can sit nearer
+ * 15%. Hilder: default KL ~20% at light levels. Formula below is that Nano
+ * band, not a claim that 20–25% is a law.
  */
 export function durationPlan(
   intent: RoastIntent,
@@ -1037,7 +1135,7 @@ export function fitAnchorsToPlan(anchors: Point[], plan: DurationPlan, fcTemp: n
   if (anchors.length < 3) return anchors.map((p) => ({ ...p }));
   const poly = expandCurve(rebuildFromAnchors(anchors));
   const t0 = anchors[0].t;
-  let tDry = timeAtValue(poly, 150) ?? 90;
+  let tDry = timeAtValue(poly, YELLOW_TEMP) ?? 90;
   let tFc = timeAtValue(poly, fcTemp) ?? 320;
   let tDrop = timeAtValue(poly, dropTemp) ?? anchors[anchors.length - 1].t;
   tDry = Math.max(t0 + 20, tDry);
@@ -1057,18 +1155,21 @@ export function fitAnchorsToPlan(anchors: Point[], plan: DurationPlan, fcTemp: n
       const span = Math.max(1, tDrop - tFc);
       return plan.fcS + (plan.endS - plan.fcS) * ((t - tFc) / span);
     }
-    const span = Math.max(1, tDrop - tFc);
-    return plan.endS + (t - tDrop) * ((plan.endS - plan.fcS) / span);
+    return plan.endS + (t - tDrop) * (DROP_TAIL_S / Math.max(1, anchors[anchors.length - 1].t - tDrop));
   };
 
   const mapped = anchors.map((p) => ({ t: Math.max(1, mapT(p.t)), v: p.v }));
   mapped[0] = { ...mapped[0], t: plan.startS };
-  for (let i = 1; i < mapped.length; i++) {
-    if (mapped[i].t < mapped[i - 1].t + 8) {
-      mapped[i] = { ...mapped[i], t: mapped[i - 1].t + 8 };
-    }
-  }
-  return mapped;
+  mapped[mapped.length - 1] = { t: plan.endS + DROP_TAIL_S, v: dropTemp + DROP_TAIL_C };
+  return mergePhasePins(
+    mapped,
+    [
+      { t: plan.dryS, v: YELLOW_TEMP },
+      { t: plan.fcS, v: fcTemp },
+      { t: plan.endS, v: dropTemp },
+    ],
+    24,
+  );
 }
 
 export function defaultIntent(): RoastIntent {
@@ -1158,20 +1259,12 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
     heavyWeight: flavorMass(intent, HEAVY_FLAVORS),
   });
   const dtr = totalTime > 0 ? Math.max(0.08, (totalTime - firstCrackTime) / totalTime) : 0.14;
-  const phases = intent.manualAnchors?.length
-    ? measurePhases(roastPoly, firstCrackTemp, endTemp)
-    : {
-        dryTime: plan.dryS - plan.startS,
-        mailTime: plan.fcS - plan.dryS,
-        devTime: plan.endS - plan.fcS,
-        drySlope: plan.drySlope,
-        mailSlope: plan.mailSlope,
-        devSlope: plan.devSlope,
-      };
+  const phases = measurePhases(roastPoly, firstCrackTemp, endTemp);
   const preheatPower = Math.round(Math.max(700, Math.min(1400, 820 + total.preheatW)));
   const inferredFlavors = intent.manualAnchors ? inferFlavorsFromAdjustment(flavorAdj) : intent.flavors;
 
-  const name = intent.name?.trim() || curveName(intent);
+  const displayName = intent.name?.trim() || curveName(intent);
+  const shortName = (intent.name?.trim() ? fileSlug(intent.name) : kproShortName(intent)).slice(0, 17);
   const flavorsLabel = intent.flavors.map((f) => flavorById(f.id).name).join(" + ") || "bean default";
   const description = [
     `${origin.name} · ${variety.name} · ${intent.process} · ${intent.altitudeM}m${
@@ -1186,20 +1279,21 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
 
   const profile: KproProfile = {
     ...base,
-    name: name.replace(/\s+/g, "_").slice(0, 17),
-    fileName: `${name.replace(/\s+/g, "_")}.kpro`,
+    name: shortName,
+    fileName: `${fileSlug(displayName)}.kpro`,
     designer: "Kaffe",
     description,
     roast,
     fan,
     raw: {
       ...base.raw,
-      profile_short_name: name.replace(/\s+/g, "_").slice(0, 17),
+      profile_short_name: shortName,
       profile_designer: "Kaffe",
       recommended_level: level.toFixed(1),
       preheat_power: preheatPower.toFixed(1),
       roast_required_power: String(Math.max(preheatPower, 1100)),
       expect_fc: firstCrackTemp.toFixed(1),
+      roast_min_desired_rate_of_rise: minDesiredRor(rorPoly, (roastPoly[0]?.t ?? 7) + 20, totalTime).toFixed(1),
       ...zoneFields(zones),
     },
   };
@@ -1223,7 +1317,7 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
     roastPoly,
     rorPoly,
     fanPoly: expandCurve(fan),
-    curveName: name,
+    curveName: displayName,
     inferredFlavors,
     manual: Boolean(intent.manualAnchors?.length),
     densityClass,
