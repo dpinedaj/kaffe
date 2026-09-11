@@ -127,6 +127,7 @@ export const DIFF_FIELDS: { group: string; key: string; label: string; unit?: st
   { group: "PID", key: "roast_PID_Kp", label: "Kp" },
   { group: "PID", key: "roast_PID_Ki", label: "Ki" },
   { group: "PID", key: "roast_PID_Kd", label: "Kd" },
+  { group: "PID", key: "roast_min_desired_rate_of_rise", label: "Min RoR", unit: "°C/min" },
   { group: "Zone 1", key: "zone1_time_start", label: "Start", unit: "s" },
   { group: "Zone 1", key: "zone1_time_end", label: "End", unit: "s" },
   { group: "Zone 1", key: "zone1_boost", label: "boost" },
