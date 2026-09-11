@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { buildCurve, encodeKpro, parseKpro } from "./kpro";
-import { deleteAnchor, expandCurve, insertAnchor, levelToTemp, sampleAtTime, smoothAnchors, valueAtTime } from "./curve";
+import { deleteAnchor, expandCurve, insertAnchor, levelToTemp, mergePhasePins, rebuildFromAnchors, rorSeries, sampleAtTime, smoothAnchors, timeAtValue, valueAtTime } from "./curve";
 import {
   generateProfile,
   defaultIntent,
   inferFlavorsFromAdjustment,
+  inferStyleFromCurve,
   densityFromAltitude,
   FLAVOR_DELTA,
   FAN_HOLD_RPM,
   offZone,
+  YELLOW_TEMP,
+  curveName,
+  kproShortName,
 } from "./generate";
 import { originById, varietyById } from "./knowledge";
 import { BASELINE_KPRO } from "./template";
@@ -51,6 +55,58 @@ describe("curve math", () => {
     expect(curve.anchors.length).toBeGreaterThanOrEqual(2);
     expect(curve.segments.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("pins phase temperatures so first-crossing times survive a rebuild", () => {
+    const warped = [
+      { t: 7, v: 50 },
+      { t: 80, v: 120 },
+      { t: 200, v: 170 },
+      { t: 310, v: 201 },
+      { t: 340, v: 214 },
+      { t: 400, v: 223 },
+    ];
+    const pinned = mergePhasePins(warped, [
+      { t: 130, v: 150 },
+      { t: 280, v: 204 },
+      { t: 360, v: 210.4 },
+    ]);
+    const poly = expandCurve(rebuildFromAnchors(pinned));
+    expect(timeAtValue(poly, 150)).toBeCloseTo(130, 0);
+    expect(timeAtValue(poly, 204)).toBeCloseTo(280, 0);
+    expect(timeAtValue(poly, 210.4)).toBeCloseTo(360, 0);
+    expect(pinned[pinned.length - 1].v).toBeGreaterThan(210.4);
+    expect(pinned[pinned.length - 1].t).toBeGreaterThan(360);
+  });
+
+  it("rebuilds a monotone cubic so a mid pin does not flick RoR", () => {
+    const pts = [
+      { t: 7, v: 50 },
+      { t: 130, v: 150 },
+      { t: 280, v: 204 },
+      { t: 360, v: 210.4 },
+      { t: 408, v: 211.9 },
+    ];
+    const poly = expandCurve(rebuildFromAnchors(pts));
+    const ror = rorSeries(poly);
+    const atDrop = sampleAtTime(ror, 368) ?? 99;
+    const before = sampleAtTime(ror, 340) ?? 0;
+    expect(atDrop).toBeLessThan(8);
+    expect(atDrop).toBeLessThan(before + 1);
+    expect(timeAtValue(poly, 210.4)).toBeCloseTo(360, 0);
+  });
+
+  it("keeps the last yellow CP away from the end blue point", () => {
+    const out = generateProfile(defaultIntent());
+    const parsed = parseKpro(out.kproText, "gap.kpro");
+    const last = parsed.roast.anchors[parsed.roast.anchors.length - 1];
+    const prev = parsed.roast.anchors[parsed.roast.anchors.length - 2];
+    const seg = parsed.roast.segments[parsed.roast.segments.length - 1];
+    expect(last.t).toBeGreaterThan(out.totalTime + 20);
+    expect((last.v - prev.v) / ((last.t - prev.t) / 60)).toBeGreaterThan(0.9);
+    expect(Math.abs(seg.cp1.t - last.t)).toBeGreaterThan(10);
+    expect(Math.abs(seg.cp2.t - last.t)).toBeGreaterThan(10);
+    expect(Math.abs(seg.cp1.t - prev.t)).toBeGreaterThan(8);
+  });
 });
 
 describe("generator", () => {
@@ -70,6 +126,55 @@ describe("generator", () => {
     expect(out.breakdown.total.developmentS).toBeLessThan(0);
     const parsed = parseKpro(out.kproText, "gen.kpro");
     expect(parsed.roast.anchors.length).toBeGreaterThan(3);
+  });
+
+  it("sets roast min desired RoR from the curve instead of the Nordic −0.7 default", () => {
+    const out = generateProfile({
+      ...defaultIntent(),
+      flavors: [{ id: "fruity", weight: 1 }, { id: "bright", weight: 1 }],
+    });
+    expect(out.profile.raw.roast_min_desired_rate_of_rise).toBe("-0.2");
+    expect(out.kproText).toMatch(/roast_min_desired_rate_of_rise:-0.2/);
+  });
+
+  it("names the curve with brew, level, lot, altitude, rest, and extras", () => {
+    const out = generateProfile({
+      ...defaultIntent(),
+      flavors: [{ id: "floral", weight: 1 }],
+      moisture: 12.5,
+      expectFc: 206,
+    });
+    expect(out.curveName).toBe("F-WSH L2.2 ANT-CAS 1550m Rest floral 12.5H FC206");
+    expect(out.profile.name).toBe("F-WSH-L22-ANT-CAS");
+    expect(out.profile.name.length).toBeLessThanOrEqual(17);
+    expect(out.profile.fileName).toContain("1550m");
+    expect(out.profile.fileName).toContain("floral");
+    expect(out.kproText).toMatch(/profile_short_name:F-WSH-L22-ANT-CAS/);
+
+    const rtd = kproShortName({ ...defaultIntent(), drinkPlan: "rtd", roastStyle: "medium" });
+    expect(rtd).toBe("F-WSH-M32-ANT-RTD");
+    expect(rtd.length).toBeLessThanOrEqual(17);
+
+    const espresso = curveName({
+      ...defaultIntent(),
+      brew: "espresso",
+      roastStyle: "dark",
+      originId: "ethiopia",
+      varietyId: "heirloom",
+      process: "natural",
+      altitudeM: 2200,
+      drinkPlan: "rtd",
+      flavors: [{ id: "body", weight: 1 }],
+      autoDensity: false,
+      densityGL: 720,
+    });
+    expect(espresso).toContain("E-NAT");
+    expect(espresso).toContain("D4.6");
+    expect(espresso).toContain("ETH-HEI");
+    expect(espresso).toContain("2200m");
+    expect(espresso).toContain("RTD");
+    expect(espresso).toContain("body");
+    expect(espresso).toContain("720gL");
   });
 
   it("paces Nordic light ~6–7 min, classic ~9 min, and slow dark espresso ~11 min", () => {
@@ -251,6 +356,51 @@ describe("generator", () => {
     });
     expect(dark.dtr).toBeGreaterThan(light.dtr);
     expect(dark.devTime).toBeGreaterThan(light.devTime);
+  });
+
+  it("realises brew × style DTR on the Bézier and matches the HUD clocks", () => {
+    const styles = ["light", "medium", "dark"] as const;
+    const brews = ["filter", "espresso"] as const;
+    const rows = styles.flatMap((roastStyle) =>
+      brews.map((brew) => {
+        const out = generateProfile({ ...defaultIntent(), roastStyle, brew, flavors: [] });
+        const formula =
+          0.2 +
+          (roastStyle === "dark" ? 0.035 : 0) +
+          (roastStyle === "light" ? -0.015 : 0) +
+          (brew === "espresso" ? 0.02 : 0) +
+          (brew === "filter" && roastStyle === "light" ? -0.015 : 0);
+        return { roastStyle, brew, out, formula };
+      }),
+    );
+    for (const { roastStyle, brew, out, formula } of rows) {
+      const fromClocks = (out.totalTime - out.firstCrackTime) / out.totalTime;
+      expect(out.dtr).toBeCloseTo(fromClocks, 3);
+      expect(out.devTime).toBeCloseTo(out.totalTime - out.firstCrackTime, 0);
+      expect(out.dtr).toBeGreaterThan(formula - 0.02);
+      expect(out.dtr).toBeLessThan(formula + 0.025);
+      expect(timeAtValue(out.roastPoly, YELLOW_TEMP)).toBeCloseTo(out.roastPoly[0].t + out.dryTime, 0);
+      expect(timeAtValue(out.roastPoly, out.firstCrackTemp)).toBeCloseTo(out.firstCrackTime, 0);
+      const drop = levelToTemp(out.profile.roastLevels, Number(out.profile.raw.recommended_level));
+      expect(drop).not.toBeNull();
+      expect(timeAtValue(out.roastPoly, drop ?? 0)).toBeCloseTo(out.totalTime, 0);
+      const last = out.profile.roast.anchors[out.profile.roast.anchors.length - 1];
+      expect(last.t).toBeGreaterThan(out.totalTime + 8);
+      expect(last.v).toBeGreaterThan(drop ?? 0);
+      expect(last.v).toBeLessThan((drop ?? 0) + 4);
+      const rorBefore = sampleAtTime(out.rorPoly, Math.max(out.firstCrackTime + 8, out.totalTime - 20)) ?? 99;
+      const rorAfter = sampleAtTime(out.rorPoly, Math.min(last.t - 4, out.totalTime + 16)) ?? 99;
+      expect(rorAfter).toBeLessThan(8);
+      expect(rorAfter).toBeLessThanOrEqual(rorBefore + 0.5);
+      expect(inferStyleFromCurve(out.dtr, drop ?? 212)).toBe(roastStyle);
+    }
+    const at = (style: (typeof rows)[number]["roastStyle"], brew: (typeof rows)[number]["brew"]) =>
+      rows.find((r) => r.roastStyle === style && r.brew === brew)!.out;
+    expect(at("light", "espresso").dtr).toBeGreaterThan(at("light", "filter").dtr + 0.012);
+    expect(at("medium", "espresso").dtr).toBeGreaterThan(at("medium", "filter").dtr + 0.012);
+    expect(at("dark", "espresso").dtr).toBeGreaterThan(at("dark", "filter").dtr + 0.012);
+    expect(at("medium", "filter").dtr).toBeGreaterThan(at("light", "filter").dtr + 0.015);
+    expect(at("dark", "filter").dtr).toBeGreaterThan(at("medium", "filter").dtr + 0.015);
   });
 
   it("writes a manual expect_fc and times first crack to that temperature", () => {

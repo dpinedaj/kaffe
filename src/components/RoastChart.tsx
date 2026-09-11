@@ -3,7 +3,7 @@ import {
   ComposedChart,
   Line,
   ReferenceArea,
-  ReferenceDot,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -35,8 +35,6 @@ export function PreviewChart({
     ror: rorMap.get(Math.round(p.t)) ?? null,
     fan: fanMap.get(Math.round(p.t)) ?? null,
   }));
-  const fc = roast.find((p) => fcTime != null && Math.abs(p.t - fcTime) < 2);
-  const end = roast.find((p) => endTime != null && Math.abs(p.t - endTime) < 2);
 
   return (
     <div className="h-[320px] w-full">
@@ -101,8 +99,26 @@ export function PreviewChart({
             strokeDasharray="6 3"
             dot={false}
           />
-          {fc && <ReferenceDot yAxisId="temp" x={fc.t} y={fc.v} r={4} fill="#FF453A" stroke="none" />}
-          {end && <ReferenceDot yAxisId="temp" x={end.t} y={end.v} r={4} fill="#30D158" stroke="none" />}
+          {fcTime != null && fcTime > 0 && (
+            <ReferenceLine
+              yAxisId="temp"
+              x={fcTime}
+              stroke="#FF453A"
+              strokeDasharray="5 3"
+              strokeWidth={1.8}
+              label={{ value: "FC", position: "insideBottomLeft", fill: "#FF453A", fontSize: 11 }}
+            />
+          )}
+          {endTime != null && endTime > 0 && (
+            <ReferenceLine
+              yAxisId="temp"
+              x={endTime}
+              stroke="#30D158"
+              strokeDasharray="5 3"
+              strokeWidth={1.8}
+              label={{ value: "Drop", position: "insideBottomRight", fill: "#30D158", fontSize: 11 }}
+            />
+          )}
         </ComposedChart>
       </ResponsiveContainer>
     </div>

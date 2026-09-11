@@ -1,24 +1,141 @@
 import type { BezierSegment, CurveData, Point } from "./kpro";
 
 export const MIN_ANCHOR_GAP = 8;
+/** Kaffelogic Studio warns if a yellow CP sits on a blue anchor (end RoR ~0 or dt/3 on a short span). */
+export const MIN_CP_GAP = 12;
 
 function clampTemp(v: number): number {
   return Math.max(25, Math.min(228, v));
 }
 
+function cpOffset(dt: number): number {
+  if (dt <= 0) return 0;
+  const third = dt / 3;
+  const minOff = Math.min(MIN_CP_GAP, dt * 0.28);
+  return Math.min(Math.max(third, minOff), dt * 0.42);
+}
+
+/**
+ * Cubic through the anchors with C1, monotone RoR (Fritsch–Carlson).
+ * The last span matches official Nordic: one CP, end RoR ≥ 1 °C/min, so Studio
+ * does not warn that a yellow handle is on the blue end point.
+ */
 export function rebuildFromAnchors(anchors: Point[]): CurveData {
+  const pts = anchors.map((p) => ({ t: p.t, v: p.v }));
+  if (pts.length < 2) return { anchors: pts, segments: [] };
+  const m = monotoneTangents(pts);
   const segs: BezierSegment[] = [];
-  for (let i = 0; i + 1 < anchors.length; i++) {
-    const a = anchors[i];
-    const b = anchors[i + 1];
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const a = pts[i];
+    const b = pts[i + 1];
+    const dt = b.t - a.t;
+    const last = i + 1 === pts.length - 1;
+    if (last) {
+      const ror = Math.max((b.v - a.v) / Math.max(dt, 1e-6), 1 / 60);
+      const off = Math.min(Math.max(dt * 0.35, Math.min(14, dt * 0.4)), dt * 0.45);
+      const cp = { t: a.t + off, v: b.v - ror * (b.t - a.t - off) };
+      segs.push({ start: a, cp1: cp, cp2: { ...cp }, end: b });
+      continue;
+    }
+    const off = cpOffset(dt);
     segs.push({
       start: a,
-      cp1: { t: a.t + (b.t - a.t) * 0.35, v: a.v + (b.v - a.v) * 0.35 },
-      cp2: { t: a.t + (b.t - a.t) * 0.7, v: a.v + (b.v - a.v) * 0.7 },
+      cp1: { t: a.t + off, v: a.v + m[i] * off },
+      cp2: { t: b.t - off, v: b.v - m[i + 1] * off },
       end: b,
     });
   }
-  return { anchors, segments: segs };
+  return { anchors: pts, segments: segs };
+}
+
+function monotoneTangents(pts: Point[]): number[] {
+  const n = pts.length;
+  const d: number[] = [];
+  for (let i = 0; i + 1 < n; i++) {
+    const dt = pts[i + 1].t - pts[i].t;
+    d.push(dt > 1e-9 ? (pts[i + 1].v - pts[i].v) / dt : 0);
+  }
+  const m = new Array<number>(n).fill(0);
+  m[0] = d[0] ?? 0;
+  m[n - 1] = d[n - 2] ?? 0;
+  for (let i = 1; i < n - 1; i++) {
+    if (d[i - 1] === 0 || d[i] === 0 || d[i - 1] * d[i] < 0) {
+      m[i] = 0;
+      continue;
+    }
+    const dt0 = pts[i].t - pts[i - 1].t;
+    const dt1 = pts[i + 1].t - pts[i].t;
+    const w1 = 2 * dt1 + dt0;
+    const w2 = dt1 + 2 * dt0;
+    m[i] = (w1 + w2) / (w1 / d[i - 1] + w2 / d[i]);
+  }
+  for (let i = 0; i < n - 1; i++) {
+    if (Math.abs(d[i]) < 1e-12) {
+      m[i] = 0;
+      m[i + 1] = 0;
+      continue;
+    }
+    const a = m[i] / d[i];
+    const b = m[i + 1] / d[i];
+    const s = a * a + b * b;
+    if (s > 9) {
+      const t = 3 / Math.sqrt(s);
+      m[i] = t * a * d[i];
+      m[i + 1] = t * b * d[i];
+    }
+  }
+  return m;
+}
+
+/**
+ * Insert phase pins (yellow / FC / drop) into a time-warped curve.
+ * Neighbors that would steal a pin's first temperature crossing, or sit
+ * inside `minGap`, are dropped so `timeAtValue` hits the pin times.
+ */
+export function mergePhasePins(anchors: Point[], pins: Point[], minGap = MIN_ANCHOR_GAP): Point[] {
+  if (anchors.length < 2) return anchors.map((p) => ({ t: p.t, v: p.v }));
+  const first = { t: anchors[0].t, v: anchors[0].v };
+  let last = { t: anchors[anchors.length - 1].t, v: anchors[anchors.length - 1].v };
+  const pinList = pins
+    .map((p) => ({ t: p.t, v: p.v }))
+    .filter((p) => p.t > first.t + minGap)
+    .sort((a, b) => a.t - b.t || a.v - b.v);
+  const lastPinT = pinList.reduce((m, p) => Math.max(m, p.t), first.t);
+  if (last.t < lastPinT + minGap) last = { ...last, t: lastPinT + minGap };
+
+  const bounds = [first, ...pinList, last];
+  const interior = anchors.slice(1, -1);
+  const out: Point[] = [{ ...first }];
+  for (let i = 0; i + 1 < bounds.length; i++) {
+    const lo = bounds[i];
+    const hi = bounds[i + 1];
+    const loV = Math.min(lo.v, hi.v);
+    const hiV = Math.max(lo.v, hi.v);
+    for (const p of interior) {
+      if (p.t < lo.t + minGap || p.t > hi.t - minGap) continue;
+      if (p.v <= loV + 0.35 || p.v >= hiV - 0.35) continue;
+      out.push({ t: p.t, v: p.v });
+    }
+    if (i + 1 < bounds.length - 1) out.push({ t: hi.t, v: hi.v });
+  }
+  out.push({ ...last });
+
+  const kept: Point[] = [];
+  for (const p of out) {
+    const prev = kept[kept.length - 1];
+    if (prev && p.t < prev.t + minGap) {
+      const pIsPin = pinList.some((pin) => Math.abs(pin.t - p.t) < 0.05 && Math.abs(pin.v - p.v) < 0.05);
+      const prevIsPin = pinList.some((pin) => Math.abs(pin.t - prev.t) < 0.05 && Math.abs(pin.v - prev.v) < 0.05);
+      const prevIsFirst = kept.length === 1;
+      if (pIsPin && !prevIsPin && !prevIsFirst) {
+        kept.pop();
+        kept.push(p);
+      }
+      continue;
+    }
+    kept.push(p);
+  }
+  return kept;
 }
 
 export function insertAnchor(anchors: Point[], at: Point): Point[] {

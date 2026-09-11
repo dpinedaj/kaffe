@@ -107,8 +107,6 @@ export function InteractiveCurve({
   const fanPath = fan
     .map((p, i) => `${i === 0 ? "M" : "L"} ${x(p.t).toFixed(1)} ${yFan(p.v).toFixed(1)}`)
     .join(" ");
-  const fc = fcTime != null ? poly.find((p) => Math.abs(p.t - fcTime) < 3) : undefined;
-  const end = endTime != null ? poly.find((p) => Math.abs(p.t - endTime) < 3) : undefined;
   const canDelete = selected != null && selected > 0 && selected < anchors.length - 1 && anchors.length > 3;
   const addPreviewT = walkT ?? (tMin + tMax) / 2;
   const canAdd = insertAnchor(anchors, { t: addPreviewT, v: sampleAtTime(poly, addPreviewT) ?? 150 }).length > anchors.length;
@@ -248,6 +246,52 @@ export function InteractiveCurve({
         {rorPath && <path d={rorPath} fill="none" stroke="#FF9F0A" strokeWidth="1.6" strokeDasharray="5 4" />}
         {fanPath && <path d={fanPath} fill="none" stroke="#BF5AF2" strokeWidth="1.7" strokeDasharray="6 3" />}
         <path d={path} fill="none" stroke="#0A84FF" strokeWidth="2.2" />
+        {fcTime != null && fcTime > 0 && (
+          <g pointerEvents="none">
+            <line
+              x1={x(fcTime)}
+              x2={x(fcTime)}
+              y1={PAD.t}
+              y2={H - PAD.b}
+              stroke="#FF453A"
+              strokeWidth="1.8"
+              strokeDasharray="5 3"
+            />
+            <text
+              x={x(fcTime) + (endTime != null && Math.abs(x(endTime) - x(fcTime)) < 42 ? -6 : 0)}
+              y={H - PAD.b - 6}
+              textAnchor={endTime != null && Math.abs(x(endTime) - x(fcTime)) < 42 ? "end" : "middle"}
+              fill="#FF453A"
+              fontSize="11"
+              fontWeight="700"
+            >
+              FC
+            </text>
+          </g>
+        )}
+        {endTime != null && endTime > 0 && (
+          <g pointerEvents="none">
+            <line
+              x1={x(endTime)}
+              x2={x(endTime)}
+              y1={PAD.t}
+              y2={H - PAD.b}
+              stroke="#30D158"
+              strokeWidth="1.8"
+              strokeDasharray="5 3"
+            />
+            <text
+              x={x(endTime) + (fcTime != null && Math.abs(x(endTime) - x(fcTime)) < 42 ? 6 : 0)}
+              y={H - PAD.b - 6}
+              textAnchor={fcTime != null && Math.abs(x(endTime) - x(fcTime)) < 42 ? "start" : "middle"}
+              fill="#30D158"
+              fontSize="11"
+              fontWeight="700"
+            >
+              Drop
+            </text>
+          </g>
+        )}
         {activeT != null && walkBean != null && (
           <g>
             <line x1={x(activeT)} x2={x(activeT)} y1={PAD.t} y2={H - PAD.b} stroke="#636366" strokeDasharray="3 3" />
@@ -260,8 +304,6 @@ export function InteractiveCurve({
             )}
           </g>
         )}
-        {fc && <circle cx={x(fc.t)} cy={y(fc.v)} r="4" fill="#FF453A" />}
-        {end && <circle cx={x(end.t)} cy={y(end.v)} r="4" fill="#30D158" />}
         {anchors.map((p, i) => (
           <circle
             key={`${i}-${p.t}`}

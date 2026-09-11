@@ -77,6 +77,7 @@ export function buildOverlayReviewContext(tracks: OverlayTrack[]): Record<string
       "Do not emit roast_profile Bézier points. Only bean intent fields.",
       "At most two flavors. Prefer Rest unless the user asked for drink-now / RTD.",
       "A boost is °C/min on RoR-error, not the BOOST kit.",
+      "roast_min_desired_rate_of_rise is a .kpro field copied onto the Nano with the profile, not a hidden machine pref. It should sit ~1 °C/min below the design curve’s minimum RoR (typically −0.2 when the Bézier stays ≥ ~0.8). Do not leave −0.7 on a Kaffe file unless the curve itself is that slow.",
     ],
   };
 }
