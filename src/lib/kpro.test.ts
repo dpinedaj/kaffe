@@ -373,7 +373,7 @@ describe("generator", () => {
         return { roastStyle, brew, out, formula };
       }),
     );
-    for (const { roastStyle, brew, out, formula } of rows) {
+    for (const { roastStyle, out, formula } of rows) {
       const fromClocks = (out.totalTime - out.firstCrackTime) / out.totalTime;
       expect(out.dtr).toBeCloseTo(fromClocks, 3);
       expect(out.devTime).toBeCloseTo(out.totalTime - out.firstCrackTime, 0);
