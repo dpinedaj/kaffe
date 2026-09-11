@@ -88,15 +88,21 @@ Manual **Expected first crack** overrides $T_{\mathrm{FC}}$ for timing and `expe
 
 ## 4. Development (DTR)
 
-Rao’s working band is **20–25%** DTR. Under ~15% often reads sour/hollow; over ~30% flat or ashy. Chris Hilder: default Kaffelogic profiles sit near **~20%** at light levels.
+DTR is (time from first crack to **drop**) / (time to drop). On the Nano, **roast_end starts cooling** (`cooldown_*` in the `.kpro`; klog ignores samples after `roast_end`). Studio’s red level marker is drop; the last blue handle is unused profile time, not roast time (KL community). Official Nordic still eases ~1 °C in the last minute (~1 °C/min) as headroom if you raise level — it does not flick. A last-minute RoR near 0 stacks the yellow Bézier handle on the last blue point and Studio warns to move it (or use Smooth Point). Kaffe keeps that tail at ~2 °C over 60 s (~2 °C/min), writes the last triple as `[blue, end-blue, yellow CP]` like Nordic, and measures DTR at drop temperature.
 
-Kaffe target:
+**Colour vs time.** Münchow, Alstrup, Steen & Giacalone (2020, *Beverages* 6:29) found roast **colour** the stronger flavour predictor, but at constant colour **development time** (crack → drop) moved the cup more than time-to-crack. Alstrup, Petersen, Larsen & Münchow (2020, *Beverages* 6:70) held Agtron 76 and varied only post-crack time (90 / 143 / 266 / 390 s, dropping cooler when slower). Short development read fruitier, sweeter, more acid; long development read roastier, nuttier, more bitter. So a generator that claims a DTR must actually spend that time between crack temperature and drop temperature.
+
+**The 20–25% number** is Scott Rao’s craft band for drum roasters at typical load, dropped between the end of first crack and the start of second (*The Coffee Roaster’s Companion*; [2016 note](https://www.scottrao.com/blog/2016/8/25/development-time-ratio)). It is a correlation from exceptional lots, not a kinetic law. Rao’s own exception: high burner-to-batch energy (sample roaster, lightly loaded drum) develops well nearer **15%**. The Nano 7 is a high-power fluid bed at 120 g, so Kaffe sits in **15–27%**, not a forced 20–25%. Chris Hilder / KL community: default profiles are ~**20%** at light levels; on a *fixed* KL curve, raising level always raises DTR — to keep DTR in-band while changing drop °C you have to reshape the post-crack slope (which is what Alstrup et al. did).
+
+**Espresso vs filter.** Rao ([2017](https://www.scottrao.com/blog/roasting-for-espresso-vs-filter)) argues espresso is often a **slightly darker colour** because brew temperature is lower, not a larger DTR at the same colour. Kaffe’s roast-style level is that colour lever. The extra **+2 pp DTR** for espresso is a modest solubility/body overlay (same direction as Alstrup’s longer development at constant colour). It is not a 25–30% internet rule. On this machine, Ribes (2020, LightSide on a Nano 7) compared **10% vs 15%** DTR as espresso; 15% gained body and bitterness. Light filter’s extra **−1.5 pp** matches short development → more acid/fruit at a light drop.
+
+Kaffe target (craft overlay on that evidence, clamped 15–27%):
 
 $$
 \mathrm{DTR} \approx 0.20 + 0.035\,\mathbf{1}_{\mathrm{dark}} - 0.015\,\mathbf{1}_{\mathrm{light}} + 0.02\,\mathbf{1}_{\mathrm{espresso}} - 0.015\,\mathbf{1}_{\mathrm{light+filter}} + 0.025\,w_{\mathrm{heavy}} - 0.03\,w_{\mathrm{volatile}}
 $$
 
-clamped to 15–27%. Development time is 40% slope-based and 60% this DTR, then $t_{\mathrm{end}} \ge t_{\mathrm{FC}}/(1-\mathrm{DTR})$.
+Development time is 40% slope-based and 60% this DTR, then $t_{\mathrm{end}} \ge t_{\mathrm{FC}}/(1-\mathrm{DTR})$. Yellow, first crack, and drop are pinned, then rebuilt with **monotone cubics** (Fritsch–Carlson) so RoR stays C1 and declining through drop. Studio DTR, development clock, and late RoR are read off that finished curve.
 
 **Roast family** is not a control. After the curve exists:
 
@@ -130,6 +136,8 @@ Turn **Density from altitude** off when you have a measured g/L. Heat then follo
 The **BOOST kit** is hardware (chamber rings + variable batch size). A **boost zone** is software.
 
 Chris Hilder: the Nano controls **rate of rise**, not temperature error. A boost is a constant **°C/min added to RoR-error** every PID cycle — like aiming up-current when sailing. Official Nordic Light uses a short **+3 °C/min into crack**. Community espresso sometimes uses **−6…−15** after crack; Kaffe stays in **−6…−2**.
+
+`roast_min_desired_rate_of_rise` is the **floor** of what that controller may ask for while catching the profile. The Nordic baseline copies **−0.7**. Kaffelogic Studio warns when the Bézier itself never goes below ~0.8 °C/min: −0.7 then permits an unduly negative correction. Kaffe sets the field to about **design min RoR − 1**, clamped to **[−1, −0.2]** (so typical generated curves write **−0.2**). It is saved in the `.kpro`, not a separate machine pref.
 
 Nano 7 has **three** slots. Rest (default) only enables a zone when the bean needs it:
 

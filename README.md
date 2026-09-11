@@ -94,7 +94,7 @@ $$
 t_{\mathrm{mail}} = 60\cdot(T_{\mathrm{FC}}-150)/\mathrm{RoR}_{\mathrm{mail}}
 $$
 
-Development mixes that slope with Rao DTR **~20–25%** (Hilder: default KL ~20% at light). Density from altitude uses Nepal 2021 (~0.11 g/L per metre). Beans **always start at room temperature**; the machine preheats the empty chamber (~250 °C).
+Development mixes that slope with a **15–27%** DTR band (Rao’s 20–25% is drum-and-load craft; high energy-to-batch machines sit lower; Hilder: default KL ~20% at light). Yellow / first crack / drop are pinned on the Bézier so Studio DTR is the time you actually roast. Density from altitude uses Nepal 2021 (~0.11 g/L per metre). Beans **always start at room temperature**; the machine preheats the empty chamber (~250 °C).
 
 Steeper dry + Maillard → acidity and aroma; shallower → body and caramel (van Boekel 2006; [Royal Coffee aW / Maillard](https://royalcoffee.com/the-relationship-between-water-activity-and-the-maillard-reaction-in-roasting/)).
 
