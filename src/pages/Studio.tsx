@@ -400,6 +400,7 @@ export default function Studio({
                 variety,
                 generated.densityClass,
               );
+              const suggestedLevel = STYLES.find((s) => s.id === f.suggestedStyle)?.level;
               return (
                 <Card key={f.id} className="p-4">
                   <div className="mb-3 flex items-center justify-between">
@@ -438,7 +439,9 @@ export default function Studio({
                       <p>
                         Suggested roast level:{" "}
                         <span className="text-green">
-                          {f.suggestedStyle} {f.suggestedStyle === intent.roastStyle ? "(already current)" : ""}
+                          {f.suggestedStyle}
+                          {suggestedLevel != null ? ` L${suggestedLevel.toFixed(1)}` : ""}{" "}
+                          {f.suggestedStyle === intent.roastStyle ? "(already current)" : ""}
                         </span>
                       </p>
                       <ul className="list-disc space-y-1 pl-4">

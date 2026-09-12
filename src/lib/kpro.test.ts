@@ -144,12 +144,12 @@ describe("generator", () => {
       moisture: 12.5,
       expectFc: 206,
     });
-    expect(out.curveName).toBe("F-WSH L2.2 ANT-CAS 1550m Rest floral 12.5H FC206");
-    expect(out.profile.name).toBe("F-WSH-L22-ANT-CAS");
+    expect(out.curveName).toBe("F-WSH L1.6 ANT-CAS 1550m Rest floral 12.5H FC206");
+    expect(out.profile.name).toBe("F-WSH-L16-ANT-CAS");
     expect(out.profile.name.length).toBeLessThanOrEqual(17);
     expect(out.profile.fileName).toContain("1550m");
     expect(out.profile.fileName).toContain("floral");
-    expect(out.kproText).toMatch(/profile_short_name:F-WSH-L22-ANT-CAS/);
+    expect(out.kproText).toMatch(/profile_short_name:F-WSH-L16-ANT-CAS/);
 
     const rtd = kproShortName({ ...defaultIntent(), drinkPlan: "rtd", roastStyle: "medium" });
     expect(rtd).toBe("F-WSH-M32-ANT-RTD");
@@ -175,6 +175,19 @@ describe("generator", () => {
     expect(espresso).toContain("RTD");
     expect(espresso).toContain("body");
     expect(espresso).toContain("720gL");
+  });
+
+  it("maps light below KL level 2 and keeps medium/dark in the official bands", () => {
+    const light = generateProfile({ ...defaultIntent(), roastStyle: "light", flavors: [] });
+    const medium = generateProfile({ ...defaultIntent(), roastStyle: "medium", flavors: [] });
+    const dark = generateProfile({ ...defaultIntent(), roastStyle: "dark", flavors: [] });
+    expect(Number(light.profile.raw.recommended_level)).toBe(1.6);
+    expect(Number(medium.profile.raw.recommended_level)).toBe(3.2);
+    expect(Number(dark.profile.raw.recommended_level)).toBe(4.6);
+    expect(levelToTemp(light.profile.roastLevels, 1.6)).toBeCloseTo(209.2, 1);
+    expect(levelToTemp(medium.profile.roastLevels, 3.2)).toBeCloseTo(212.4, 1);
+    expect(levelToTemp(dark.profile.roastLevels, 4.6)).toBeCloseTo(215.2, 1);
+    expect(light.totalTime).toBeLessThan(medium.totalTime);
   });
 
   it("paces Nordic light ~6–7 min, classic ~9 min, and slow dark espresso ~11 min", () => {
