@@ -174,9 +174,7 @@ function scale(a: Adjustment, w: number): Adjustment {
 export const FLAVOR_DELTA: Record<FlavorId, Adjustment> = {
   fruity: { fcTemp: -1, preheatW: 18, dryingS: -4, midS: -8, developmentS: -18, fanRpm: 80 },
   lightSweet: { fcTemp: 0, preheatW: 8, dryingS: -2, midS: 4, developmentS: -6, fanRpm: 0 },
-  caramel: { fcTemp: 0.5, preheatW: 0, dryingS: 2, midS: 8, developmentS: 2, fanRpm: -40 },
   deepSweet: { fcTemp: 1, preheatW: -6, dryingS: 4, midS: 12, developmentS: 10, fanRpm: -100 },
-  cocoa: { fcTemp: 1.2, preheatW: -8, dryingS: 4, midS: 8, developmentS: 16, fanRpm: -140 },
   bright: { fcTemp: -1.5, preheatW: 16, dryingS: -6, midS: -6, developmentS: -14, fanRpm: 120 },
   juicy: { fcTemp: -0.5, preheatW: 10, dryingS: -2, midS: 2, developmentS: -8, fanRpm: 40 },
   winey: { fcTemp: 0, preheatW: 4, dryingS: 8, midS: 4, developmentS: -6, fanRpm: 0 },
@@ -312,7 +310,7 @@ export function offZone(role?: ZoneRole): ZoneIntent {
 }
 
 const VOLATILE_FLAVORS: FlavorId[] = ["floral", "fruity", "bright", "juicy"];
-const HEAVY_FLAVORS: FlavorId[] = ["body", "deepSweet", "cocoa", "caramel"];
+const HEAVY_FLAVORS: FlavorId[] = ["body", "deepSweet"];
 
 function flavorMass(intent: RoastIntent, ids: FlavorId[]): number {
   return intent.flavors.filter((f) => ids.includes(f.id)).reduce((s, f) => s + f.weight, 0);
@@ -1008,7 +1006,7 @@ export function durationPlan(
   const volatile = flavorMass(intent, VOLATILE_FLAVORS) + (variety.flavorLean.some((id) => VOLATILE_FLAVORS.includes(id)) ? 0.3 : 0);
   const heavy =
     flavorMass(intent, HEAVY_FLAVORS) +
-    (variety.flavorLean.includes("body") || variety.flavorLean.includes("deepSweet") || variety.flavorLean.includes("cocoa")
+    (variety.flavorLean.includes("body") || variety.flavorLean.includes("deepSweet")
       ? 0.3
       : 0);
   const moisture = intent.moisture != null && Number.isFinite(intent.moisture) ? clamp(intent.moisture, 6, 16) : REFERENCE_MOISTURE;
