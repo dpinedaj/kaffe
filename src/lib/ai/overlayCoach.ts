@@ -76,6 +76,7 @@ export function buildOverlayReviewContext(tracks: OverlayTrack[]): Record<string
       "Fan follows yellow → first crack → development (hold ~14700, ease ~1500 RPM down before crack). Do not crash fan at first crack. BOOST load size is a firmware offset on the 120 g curve.",
       "Do not emit roast_profile Bézier points. Only bean intent fields.",
       "At most two flavors. Prefer Rest unless the user asked for drink-now / RTD.",
+      "Flavors are roast-curve goals, not a promise the lot will taste like that word. They cannot invent blueberry, jasmine, or bergamot. lightSweet = honey/cane; deepSweet = panela/molasses/cooked fruit, not candy or milk chocolate.",
       "A boost is °C/min on RoR-error, not the BOOST kit.",
       "roast_min_desired_rate_of_rise is a .kpro field copied onto the Nano with the profile, not a hidden machine pref. It should sit ~1 °C/min below the design curve’s minimum RoR (typically −0.2 when the Bézier stays ≥ ~0.8). Do not leave −0.7 on a Kaffe file unless the curve itself is that slow.",
     ],

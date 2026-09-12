@@ -352,6 +352,7 @@ export default function Studio({
               </div>
               <p className="mb-3 px-1 text-[13px] text-muted">
                 Leave empty for the bean’s default curve; two goals share one adjustment budget.
+                These reshape the roast — they cannot add a note the green seed does not have.
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {FLAVORS.map((f) => {
