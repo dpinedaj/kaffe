@@ -227,6 +227,15 @@ describe("generator", () => {
     expect(picks[0]?.weight).toBeGreaterThan(0.5);
   });
 
+  it("keeps caramel, deep sweet, and cocoa as distinct sweetness residuals", () => {
+    expect(inferFlavorsFromAdjustment(FLAVOR_DELTA.caramel)[0]?.id).toBe("caramel");
+    expect(inferFlavorsFromAdjustment(FLAVOR_DELTA.deepSweet)[0]?.id).toBe("deepSweet");
+    expect(inferFlavorsFromAdjustment(FLAVOR_DELTA.cocoa)[0]?.id).toBe("cocoa");
+    const caramel = generateProfile({ ...defaultIntent(), roastStyle: "medium", flavors: [{ id: "caramel", weight: 1 }] });
+    const deep = generateProfile({ ...defaultIntent(), roastStyle: "medium", flavors: [{ id: "deepSweet", weight: 1 }] });
+    expect(deep.devTime).toBeGreaterThan(caramel.devTime);
+  });
+
   it("rebuilds from dragged anchors and updates inferred flavors", () => {
     const base = generateProfile(defaultIntent());
     const stretched = base.profile.roast.anchors.map((p, i, arr) =>
