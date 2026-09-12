@@ -96,6 +96,18 @@ DTR is (time from first crack to **drop**) / (time to drop). On the Nano, **roas
 
 **Espresso vs filter.** Rao ([2017](https://www.scottrao.com/blog/roasting-for-espresso-vs-filter)) argues espresso is often a **slightly darker colour** because brew temperature is lower, not a larger DTR at the same colour. Kaffe’s roast-style level is that colour lever. The extra **+2 pp DTR** for espresso is a modest solubility/body overlay (same direction as Alstrup’s longer development at constant colour). It is not a 25–30% internet rule. On this machine, Ribes (2020, LightSide on a Nano 7) compared **10% vs 15%** DTR as espresso; 15% gained body and bitterness. Light filter’s extra **−1.5 pp** matches short development → more acid/fruit at a light drop.
 
+### Roast style vs Kaffelogic level
+
+The Nano displays **level 0.1–5.9**. That number is a stop on the profile’s `roast_levels` table (seven temperatures, index 0…6 — Classic L3 = 227 °C). It is **not** a universal colour and it is **not** DTR.
+
+| | Official KL (JP manual) | Official cores on this machine | Kaffe style |
+|---|---|---|---|
+| Lighter | **1.5–2.0** | Washed/Natural v1.1 **1.4**; Classic **1.2**; Cupping **1.4** | Light **1.6** (~209 °C on the Nordic table) |
+| Medium | **2.5–3.5** | Rest 1500–2000 m **2.0**; some altitude Rest **3.0–3.2** | Medium **3.2** (~212 °C) |
+| Darker | **4.0+** | Super dark **5.6** | Dark **4.6** (~215 °C) |
+
+On a **fixed** curve, raising level always raises DTR (Hilder, *Development Time Analysis*). Kaffe does not do that: style sets the **drop °C**, and the Bézier is reshaped so DTR stays in the 15–27% band (same move Alstrup et al. made — hold colour, change post-crack time). Light used to write **2.2**, which is already the official “medium” side of the lighter band and hotter than every current official light/filter core. Colour (Münchow) still dominates the cup; a “light” DTR at L2.2 can grind medium if first crack is ~207 °C and you still run to 210–213 °C.
+
 Kaffe target (craft overlay on that evidence, clamped 15–27%):
 
 $$

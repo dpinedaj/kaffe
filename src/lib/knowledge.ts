@@ -433,8 +433,16 @@ export const BREWS: { id: BrewId; name: string }[] = [
   { id: "cupping", name: "Cupping" },
 ];
 
+/**
+ * Nano `recommended_level` for each style. The machine scale is 0.1–5.9;
+ * official guidance is 1.5–2.0 lighter, 2.5–3.5 medium, 4.0+ darker
+ * (KL JP manual). Official Washed/Natural v1.1 ship at 1.4; Classic at 1.2.
+ * Level is a stop on *this* curve’s `roast_levels` table, not a universal °C
+ * or a DTR. On a fixed .kpro, raising level always raises DTR (Hilder);
+ * Kaffe keeps DTR in-band by reshaping the post-crack slope (Alstrup).
+ */
 export const STYLES: { id: RoastStyleId; name: string; level: number }[] = [
-  { id: "light", name: "Light", level: 2.2 },
+  { id: "light", name: "Light", level: 1.6 },
   { id: "medium", name: "Medium", level: 3.2 },
   { id: "dark", name: "Dark", level: 4.6 },
 ];
