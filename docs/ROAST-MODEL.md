@@ -188,7 +188,9 @@ Kaffe’s **Cup timing** switch is this concept, not the BOOST kit.
 Up to two flavors share one adjustment budget (`FLAVOR_DELTA` in `generate.ts`). They are **craft heuristics** from roasting practice (Rao; Royal Coffee Maillard/aW; SCA cupping language), not a published mapping from a flavor word to a unique curve.
 
 Volatile group (steeper dry/Maillard, shorter DTR): floral, fruity, bright, juicy.  
-Heavy group (shallower, longer mid and development): body, deep sweet.
+Heavy group (shallower, longer mid and development): caramel, deep sweet, cocoa, body.
+
+These are **roast levers**, not a full SCA wheel. Variety-locked notes (blueberry, jasmine, bergamot) cannot be extracted from a bean that does not have the precursors (Münchow: colour and time move a shared acid/Maillard space; they do not rewrite origin).
 
 These are **roast levers**, not a full SCA wheel. Variety-locked notes (blueberry, jasmine, bergamot) cannot be extracted from a bean that does not have the precursors (Münchow: colour and time move a shared acid/Maillard space; they do not rewrite origin).
 
