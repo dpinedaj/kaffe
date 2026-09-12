@@ -156,7 +156,7 @@ function sanitizeIntentPatch(raw: unknown): Partial<RoastIntent> | null {
       autoDensity: true,
       autoZones: true,
       drinkPlan: "rest",
-      level: 2.2,
+      level: 1.6,
       flavors: [],
     },
     raw as Partial<RoastIntent>,
