@@ -188,7 +188,9 @@ Kaffe’s **Cup timing** switch is this concept, not the BOOST kit.
 Up to two flavors share one adjustment budget (`FLAVOR_DELTA` in `generate.ts`). They are **craft heuristics** from roasting practice (Rao; Royal Coffee Maillard/aW; SCA cupping language), not a published mapping from a flavor word to a unique curve.
 
 Volatile group (steeper dry/Maillard, shorter DTR): floral, fruity, bright, juicy.  
-Heavy group (shallower, longer mid and development): body, deep sweet.
+Heavy group (shallower, longer mid and development): caramel, deep sweet, cocoa, body.
+
+These are **roast levers**, not a full SCA wheel. Variety-locked notes (blueberry, jasmine, bergamot) cannot be extracted from a bean that does not have the precursors (Münchow: colour and time move a shared acid/Maillard space; they do not rewrite origin).
 
 | Goal | Idea | Typical curve |
 |---|---|---|
@@ -196,8 +198,11 @@ Heavy group (shallower, longer mid and development): body, deep sweet.
 | Fruity / bright | Organic acids survive a fast light roast; linger after crack and they collapse. | Fast dry, compact Maillard, short DTR. |
 | Juicy | Acidity plus a little sweetness — not a race to drop. | Moderate dry, balanced mid. |
 | Wine-like | Natural / anaerobic ferment character. | Slower start; do not flatten the dry. |
-| Light sweet | Compact Maillard without caramelized darkness. | Slightly longer mid than fruit. |
-| Deep sweet / body | Melanoidins and solubles need time (van Boekel; Royal: slower Maillard → more viscosity). | Longer Maillard, later crack, more development, less late fan. |
+| Light sweet | Honey / cane / simple syrup. Compact Maillard, no caramelized darkness. | Slightly longer mid than fruit. |
+| Caramel | Furans / diketones that read as caramel sauce (van Boekel; GC-O medium roast). | Moderate-long Maillard, medium-light drop. |
+| Deep sweet | Panela, molasses, date, stewed fruit — not candy and not milk chocolate. | Longer Maillard, later crack, more development. |
+| Cocoa / nutty | Alstrup et al. 2020: extra post-crack time at similar colour → nutty + chocolate. | Longer development, medium colour, calm late RoR. |
+| Body | Melanoidins and solubles need time (Royal: slower Maillard → more viscosity). | Longer mid, more development, less late fan. |
 | Clean | Even heat, washed-style, no fermenty linger. | Small deltas, no late stall. |
 | Balance | No single loud phase. | Classic 8–10 min, moderate DTR. |
 
