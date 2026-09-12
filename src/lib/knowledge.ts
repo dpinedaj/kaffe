@@ -628,9 +628,7 @@ export function recommendFlavor(
   if (origin.id === "colombia-huila" && ["juicy", "bright", "balance"].includes(flavor)) return "recommended";
   if (origin.id === "colombia-sierra" && ["body", "deepSweet", "cocoa"].includes(flavor)) return "recommended";
   if (origin.id === "colombia-sierra" && ["bright", "floral"].includes(flavor)) return "avoid";
-  if (origin.id === "colombia-tolima" && ["deepSweet", "body", "balance", "caramel"].includes(flavor)) return "recommended";
+  if (origin.id === "colombia-tolima" && ["deepSweet", "body", "balance"].includes(flavor)) return "recommended";
   if (style === "light" && ["fruity", "bright", "floral", "juicy", "lightSweet"].includes(flavor)) return "recommended";
-  if (style === "light" && flavor === "cocoa") return "avoid";
-  if (style === "medium" && ["caramel", "cocoa", "deepSweet"].includes(flavor)) return "recommended";
   return "neutral";
 }
