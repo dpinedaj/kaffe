@@ -192,6 +192,8 @@ Heavy group (shallower, longer mid and development): caramel, deep sweet, cocoa,
 
 These are **roast levers**, not a full SCA wheel. Variety-locked notes (blueberry, jasmine, bergamot) cannot be extracted from a bean that does not have the precursors (Münchow: colour and time move a shared acid/Maillard space; they do not rewrite origin).
 
+These are **roast levers**, not a full SCA wheel. Variety-locked notes (blueberry, jasmine, bergamot) cannot be extracted from a bean that does not have the precursors (Münchow: colour and time move a shared acid/Maillard space; they do not rewrite origin).
+
 | Goal | Idea | Typical curve |
 |---|---|---|
 | Floral | Volatile aromatics; heat them late and they disappear (Yeretzian-type roast-gas work). | High energy, early crack, very short development. |
@@ -199,10 +201,7 @@ These are **roast levers**, not a full SCA wheel. Variety-locked notes (blueberr
 | Juicy | Acidity plus a little sweetness — not a race to drop. | Moderate dry, balanced mid. |
 | Wine-like | Natural / anaerobic ferment character. | Slower start; do not flatten the dry. |
 | Light sweet | Honey / cane / simple syrup. Compact Maillard, no caramelized darkness. | Slightly longer mid than fruit. |
-| Caramel | Furans / diketones that read as caramel sauce (van Boekel; GC-O medium roast). | Moderate-long Maillard, medium-light drop. |
-| Deep sweet | Panela, molasses, date, stewed fruit — not candy and not milk chocolate. | Longer Maillard, later crack, more development. |
-| Cocoa / nutty | Alstrup et al. 2020: extra post-crack time at similar colour → nutty + chocolate. | Longer development, medium colour, calm late RoR. |
-| Body | Melanoidins and solubles need time (Royal: slower Maillard → more viscosity). | Longer mid, more development, less late fan. |
+| Deep sweet / body | Panela, molasses, cooked fruit, and viscosity — not candy or milk chocolate. Melanoidins need time (van Boekel; Royal). | Longer Maillard, later crack, more development, less late fan. |
 | Clean | Even heat, washed-style, no fermenty linger. | Small deltas, no late stall. |
 | Balance | No single loud phase. | Classic 8–10 min, moderate DTR. |
 
