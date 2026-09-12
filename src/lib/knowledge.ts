@@ -464,8 +464,8 @@ export const FLAVORS: FlavorInfo[] = [
     name: "Light Sweet",
     icon: "🍯",
     strategy: ["Moderate dry", "Keep Maillard compact", "Clean finish"],
-    why: "A slightly longer Maillard than a fruit bomb, without pushing into caramelized darkness.",
-    expected: ["Sweet", "Clean"],
+    why: "A slightly longer Maillard than a fruit bomb, without pushing into caramelized darkness. Reads as cane, honey, or simple syrup — not brown sugar.",
+    expected: ["Honey", "Cane sugar", "Clean"],
     tradeoffs: ["Heavy body"],
     warning: "Overstretching mid-roast mutes sparkle.",
     suggestedStyle: "light",
@@ -475,8 +475,8 @@ export const FLAVORS: FlavorInfo[] = [
     name: "Deep Sweet",
     icon: "🍬",
     strategy: ["Longer Maillard", "Later first crack", "More development"],
-    why: "Sugars need time in the browning phase to become caramel and cocoa.",
-    expected: ["Caramel", "Cocoa", "Body"],
+    why: "Slow browning builds melanoidins that taste like panela, molasses, date, or stewed fruit — low and round, not candy. Not caramel sauce and not milk chocolate.",
+    expected: ["Panela", "Molasses", "Cooked fruit"],
     tradeoffs: ["Bright fruit"],
     warning: "Too much development turns sweet into baked.",
     suggestedStyle: "medium",
@@ -605,6 +605,6 @@ export function recommendFlavor(
   if (origin.id === "colombia-sierra" && ["body", "deepSweet"].includes(flavor)) return "recommended";
   if (origin.id === "colombia-sierra" && ["bright", "floral"].includes(flavor)) return "avoid";
   if (origin.id === "colombia-tolima" && ["deepSweet", "body", "balance"].includes(flavor)) return "recommended";
-  if (style === "light" && ["fruity", "bright", "floral", "juicy"].includes(flavor)) return "recommended";
+  if (style === "light" && ["fruity", "bright", "floral", "juicy", "lightSweet"].includes(flavor)) return "recommended";
   return "neutral";
 }
