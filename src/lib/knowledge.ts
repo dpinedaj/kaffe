@@ -4,7 +4,9 @@ export type RoastStyleId = "light" | "medium" | "dark";
 export type FlavorId =
   | "fruity"
   | "lightSweet"
+  | "caramel"
   | "deepSweet"
+  | "cocoa"
   | "bright"
   | "juicy"
   | "winey"
@@ -254,7 +256,7 @@ export const VARIETIES: VarietyInfo[] = [
     shortCode: "CAS",
     beanSize: "medium",
     density: "medium",
-    flavorLean: ["body", "balance"],
+    flavorLean: ["body", "balance", "cocoa"],
     suggestedStyle: "medium",
     roast: { fcTemp: 0.5, preheatW: 4, dryingS: 2, midS: 6, developmentS: 6, fanRpm: -80 },
     notes: "Colombia rust-resistant Catimor. More body, less sparkle than Caturra — a longer mid and a bit more development help the cup.",
@@ -266,7 +268,7 @@ export const VARIETIES: VarietyInfo[] = [
     shortCode: "CVD",
     beanSize: "medium",
     density: "medium",
-    flavorLean: ["balance", "body"],
+    flavorLean: ["balance", "body", "cocoa"],
     suggestedStyle: "medium",
     roast: { fcTemp: 0.3, preheatW: 4, dryingS: 2, midS: 4, developmentS: 4, fanRpm: -50 },
     notes: "FNC hybrid related to Castillo. Similar heat: a little more mid and development than a Caturra lot.",
@@ -464,21 +466,43 @@ export const FLAVORS: FlavorInfo[] = [
     name: "Light Sweet",
     icon: "🍯",
     strategy: ["Moderate dry", "Keep Maillard compact", "Clean finish"],
-    why: "A slightly longer Maillard than a fruit bomb, without pushing into caramelized darkness.",
-    expected: ["Sweet", "Clean"],
+    why: "A slightly longer Maillard than a fruit bomb, without pushing into caramelized darkness. Reads as cane, honey, or simple syrup — not brown sugar.",
+    expected: ["Honey", "Cane sugar", "Clean"],
     tradeoffs: ["Heavy body"],
     warning: "Overstretching mid-roast mutes sparkle.",
     suggestedStyle: "light",
+  },
+  {
+    id: "caramel",
+    name: "Caramel",
+    icon: "🍮",
+    strategy: ["Moderate-long Maillard", "Hold through colour change", "Medium-light drop"],
+    why: "Furans and diketones that read as caramel sauce peak at a compact-but-not-rushed mid (van Boekel; medium roast RL55 in GC-O work). Shorter than deep sweet; cooler than cocoa.",
+    expected: ["Caramel", "Toffee", "Butterscotch"],
+    tradeoffs: ["Bright citrus"],
+    warning: "Stretching this into a long development turns sauce into molasses or bake.",
+    suggestedStyle: "medium",
   },
   {
     id: "deepSweet",
     name: "Deep Sweet",
     icon: "🍬",
     strategy: ["Longer Maillard", "Later first crack", "More development"],
-    why: "Sugars need time in the browning phase to become caramel and cocoa.",
-    expected: ["Caramel", "Cocoa", "Body"],
+    why: "Slow browning builds melanoidins that taste like panela, molasses, date, or stewed fruit — low and round, not candy. Not caramel sauce and not milk chocolate.",
+    expected: ["Panela", "Molasses", "Cooked fruit"],
     tradeoffs: ["Bright fruit"],
     warning: "Too much development turns sweet into baked.",
+    suggestedStyle: "medium",
+  },
+  {
+    id: "cocoa",
+    name: "Cocoa / nutty",
+    icon: "🍫",
+    strategy: ["Longer development", "Medium colour", "Keep late RoR calm"],
+    why: "At similar drop colour, extra post-crack time shifts the cup to nutty and chocolate (Alstrup et al. 2020). Pyrazines need that late Maillard; milk-chocolate cream still needs the lot to have it.",
+    expected: ["Cocoa", "Hazelnut", "Graham"],
+    tradeoffs: ["Acidity", "Floral"],
+    warning: "A light drop cannot invent chocolate; this only works near medium colour.",
     suggestedStyle: "medium",
   },
   {
@@ -584,27 +608,29 @@ export function recommendFlavor(
   density?: DensityClass,
 ): Rec {
   if (style === "dark" && ["fruity", "floral", "bright", "juicy"].includes(flavor)) return "avoid";
-  if (style === "dark" && ["deepSweet", "body"].includes(flavor)) return "recommended";
+  if (style === "dark" && ["deepSweet", "body", "cocoa", "caramel"].includes(flavor)) return "recommended";
   if (variety && VOLATILE_VARIETIES.has(variety.id) && ["floral", "fruity", "bright"].includes(flavor) && style !== "dark") {
     return "recommended";
   }
-  if (variety && VOLATILE_VARIETIES.has(variety.id) && ["body", "deepSweet"].includes(flavor) && style === "light") {
+  if (variety && VOLATILE_VARIETIES.has(variety.id) && ["body", "deepSweet", "cocoa"].includes(flavor) && style === "light") {
     return "avoid";
   }
-  if (variety && BODY_VARIETIES.has(variety.id) && ["body", "balance", "deepSweet"].includes(flavor)) return "recommended";
+  if (variety && BODY_VARIETIES.has(variety.id) && ["body", "balance", "deepSweet", "cocoa", "caramel"].includes(flavor)) return "recommended";
   if (variety && BODY_VARIETIES.has(variety.id) && flavor === "floral" && style !== "light") return "avoid";
   if (variety && variety.id !== "unknown" && variety.flavorLean.includes(flavor) && style !== "dark") {
     return "recommended";
   }
   if (process === "natural" && ["fruity", "winey", "juicy"].includes(flavor)) return "recommended";
-  if (process === "washed" && ["clean", "bright", "floral", "balance"].includes(flavor)) return "recommended";
+  if (process === "washed" && ["clean", "bright", "floral", "balance", "caramel"].includes(flavor)) return "recommended";
   if (process === "anaerobic" && ["winey", "fruity"].includes(flavor)) return "recommended";
   if ((density ?? origin.density) === "soft" && flavor === "bright") return "avoid";
   if (origin.id === "colombia-narino" && ["floral", "bright", "clean"].includes(flavor)) return "recommended";
   if (origin.id === "colombia-huila" && ["juicy", "bright", "balance"].includes(flavor)) return "recommended";
-  if (origin.id === "colombia-sierra" && ["body", "deepSweet"].includes(flavor)) return "recommended";
+  if (origin.id === "colombia-sierra" && ["body", "deepSweet", "cocoa"].includes(flavor)) return "recommended";
   if (origin.id === "colombia-sierra" && ["bright", "floral"].includes(flavor)) return "avoid";
-  if (origin.id === "colombia-tolima" && ["deepSweet", "body", "balance"].includes(flavor)) return "recommended";
-  if (style === "light" && ["fruity", "bright", "floral", "juicy"].includes(flavor)) return "recommended";
+  if (origin.id === "colombia-tolima" && ["deepSweet", "body", "balance", "caramel"].includes(flavor)) return "recommended";
+  if (style === "light" && ["fruity", "bright", "floral", "juicy", "lightSweet"].includes(flavor)) return "recommended";
+  if (style === "light" && flavor === "cocoa") return "avoid";
+  if (style === "medium" && ["caramel", "cocoa", "deepSweet"].includes(flavor)) return "recommended";
   return "neutral";
 }
