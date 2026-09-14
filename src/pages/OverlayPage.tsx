@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from "r
 import { InteractiveCurve } from "../components/InteractiveCurve";
 import { OverlayCoach } from "../components/OverlayCoach";
 import { OverlayChart } from "../components/RoastChart";
+import { OverlayTrackDetails } from "../components/OverlayTrackDetails";
 import { Card } from "../components/ui";
 import { expandCurve, formatClock, formatClockFine, rebuildFromAnchors, rorSeries, timeAtValue } from "../lib/curve";
 import { defaultIntent, downloadText, type RoastIntent } from "../lib/generate";
@@ -14,11 +15,12 @@ import {
   computePhases,
   defaultAlignTemp,
   defaultLevel,
-  DIFF_FIELDS,
-  formatScalar,
+  formatDiffValue,
   PALETTE,
+  visibleDiffGroups,
   type OverlayTrack,
 } from "../lib/overlay";
+
 async function readFile(file: File): Promise<string> {
   return file.text();
 }
@@ -48,6 +50,7 @@ export default function OverlayPage({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   async function addFiles(files: FileList | File[]) {
     setError(null);
@@ -70,6 +73,7 @@ export default function OverlayPage({
       }
     }
     setTracks(next);
+    if (next.length > tracks.length) setSelectedId(next[next.length - 1].id);
   }
 
   async function loadExample(kind: "profiles" | "logs") {
@@ -83,6 +87,8 @@ export default function OverlayPage({
           trackFromProfile("ex-a", parseKpro(a, "Rwanda_Nordic2.kpro"), PALETTE[0]),
           trackFromProfile("ex-b", parseKpro(b, "Rwanda_Nordic3.kpro"), PALETTE[1]),
         ]);
+        setSelectedId("ex-a");
+        setEditId("ex-a");
       } else {
         const text = await fetch(`${import.meta.env.BASE_URL}examples/example-align-a.klog`).then((r) => r.text());
         if (!text || text.startsWith("<!")) {
@@ -91,6 +97,7 @@ export default function OverlayPage({
         }
         const log = parseKlog(text, "example-align-a.klog");
         setTracks([trackFromLog("ex-log", log, PALETTE[0])]);
+        setSelectedId("ex-log");
       }
     } catch {
       setError("Could not load examples.");
@@ -185,6 +192,7 @@ export default function OverlayPage({
               onClick={() => {
                 setTracks([]);
                 setEditId(null);
+                setSelectedId(null);
               }}
             >
               Clear
@@ -212,10 +220,13 @@ export default function OverlayPage({
                       onClick={() => {
                         try {
                           const profile = parseKpro(item.kproText, `${item.name}.kpro`);
+                          const id = `lib-${item.id}`;
                           setTracks((prev) => [
                             ...prev,
-                            trackFromProfile(`lib-${item.id}`, { ...profile, name: item.curveName }, PALETTE[prev.length % PALETTE.length]),
+                            trackFromProfile(id, { ...profile, name: item.curveName }, PALETTE[prev.length % PALETTE.length]),
                           ]);
+                          setSelectedId(id);
+                          setEditId(id);
                         } catch (e) {
                           setError(e instanceof Error ? e.message : "Could not load library profile");
                         }
@@ -237,7 +248,11 @@ export default function OverlayPage({
           tracks={tracks}
           baseIntent={editLibraryItem?.intent ?? studioIntent}
           onOpenInGenerate={(next) => onOpenInGenerate(next)}
-          onAddGeneratedTrack={(track) => setTracks((prev) => [...prev, track])}
+          onAddGeneratedTrack={(track) => {
+            setTracks((prev) => [...prev, track]);
+            setSelectedId(track.id);
+            if (track.kind === "profile") setEditId(track.id);
+          }}
         />
       )}
 
@@ -256,6 +271,15 @@ export default function OverlayPage({
             </div>
           </Card>
 
+          <OverlayTrackDetails
+            tracks={tracks}
+            selectedId={selectedId}
+            onSelect={(id) => {
+              setSelectedId(id);
+              if (tracks.find((t) => t.id === id)?.kind === "profile") setEditId(id);
+            }}
+          />
+
           {editTrack && (
             <Card className="p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -268,7 +292,10 @@ export default function OverlayPage({
                 <div className="flex flex-wrap items-center gap-2">
                   <select
                     value={editTrack.id}
-                    onChange={(e) => setEditId(e.target.value)}
+                    onChange={(e) => {
+                      setEditId(e.target.value);
+                      setSelectedId(e.target.value);
+                    }}
                     className="rounded-lg bg-card2 px-3 py-2 text-[13px] text-white outline-none"
                   >
                     {profileTracks.map((t) => (
@@ -402,21 +429,19 @@ function trackFromLog(id: string, log: RoastLog, color: string): OverlayTrack {
 }
 
 function DiffTable({ tracks }: { tracks: OverlayTrack[] }) {
-  const groups = useMemo(() => {
-    const map = new Map<string, typeof DIFF_FIELDS>();
-    for (const field of DIFF_FIELDS) {
-      const list = map.get(field.group) ?? [];
-      list.push(field);
-      map.set(field.group, list);
-    }
-    return [...map.entries()];
-  }, []);
+  const groups = useMemo(() => visibleDiffGroups(tracks), [tracks]);
   if (tracks.length === 0) return null;
   const base = tracks[0];
 
   return (
     <Card className="overflow-x-auto">
-      <table className="w-full text-left text-[13px]">
+      <div className="flex items-end justify-between gap-3 px-4 pt-4">
+        <div>
+          <h3 className="text-[15px] font-semibold">Compare parameters</h3>
+          <p className="mt-1 text-[12px] text-muted">Values that differ from the first column are highlighted.</p>
+        </div>
+      </div>
+      <table className="mt-2 w-full text-left text-[13px]">
         <thead>
           <tr className="border-b border-line text-muted">
             <th className="px-4 py-3 font-medium">Item</th>
@@ -448,7 +473,7 @@ function GroupRows({
   base,
 }: {
   group: string;
-  fields: typeof DIFF_FIELDS;
+  fields: ReturnType<typeof visibleDiffGroups>[number][1];
   tracks: OverlayTrack[];
   base: OverlayTrack;
 }) {
@@ -472,7 +497,7 @@ function GroupRows({
               const differs = i > 0 && (val ?? "") !== (baseVal ?? "");
               return (
                 <td key={t.id} className={`px-4 py-2 tabular-nums ${differs ? "bg-orange/10 font-semibold text-orange" : ""}`}>
-                  {formatScalar(val)}
+                  {formatDiffValue(field, val)}
                 </td>
               );
             })}
