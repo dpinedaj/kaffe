@@ -8,7 +8,7 @@ import {
   type RoastStyleId,
 } from "../knowledge";
 import type { DrinkPlan, FlavorPick, RoastIntent } from "../generate";
-import { computeDeviationSummary, computePhases, DIFF_FIELDS, type OverlayTrack } from "../overlay";
+import { computeDeviationSummary, computePhases, DIFF_FIELDS, summarizeOverlayTrack, type OverlayTrack } from "../overlay";
 
 export const FLAVOR_IDS: FlavorId[] = FLAVORS.map((f) => f.id);
 const PROCESS_IDS: ProcessId[] = ["natural", "washed", "honey", "anaerobic", "other"];
@@ -37,6 +37,7 @@ export function buildOverlayReviewContext(tracks: OverlayTrack[]): Record<string
       const log = t.log;
       const phases = log ? computePhases(log) : null;
       const deviation = log ? computeDeviationSummary(log) : null;
+      const summary = summarizeOverlayTrack(t);
       const scalars: Record<string, string> = {};
       for (const field of DIFF_FIELDS) {
         const v = t.profile.raw[field.key];
@@ -49,6 +50,8 @@ export function buildOverlayReviewContext(tracks: OverlayTrack[]): Record<string
         expectFc: t.profile.raw.expect_fc ?? null,
         preheatPower: t.profile.raw.preheat_power ?? null,
         recommendedLevel: t.profile.raw.recommended_level ?? null,
+        headline: Object.fromEntries(summary.headline.map((row) => [row.label, row.value])),
+        designer: summary.designer || null,
         scalars,
         log: log
           ? {
