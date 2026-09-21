@@ -39,11 +39,11 @@ zone1_time_end:0.0
 zone1_multiplier_Kp:1.0
 zone1_multiplier_Kd:1.0
 zone1_boost:0.0
-zone2_time_start:300.0
-zone2_time_end:315.0
+zone2_time_start:0.0
+zone2_time_end:0.0
 zone2_multiplier_Kp:1.0
 zone2_multiplier_Kd:1.0
-zone2_boost:3.0
+zone2_boost:0.0
 corner1_time_start:0.0
 corner1_time_end:0.0
 cooldown_hi_speed:17000.0

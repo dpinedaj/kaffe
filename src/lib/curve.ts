@@ -288,6 +288,23 @@ export function levelToTemp(roastLevels: number[], level: number): number | null
   return roastLevels[i] + frac * (roastLevels[i + 1] - roastLevels[i]);
 }
 
+/** Inverse of `levelToTemp` on the Nordic 0…6 table. */
+export function tempToLevel(roastLevels: number[], temp: number): number | null {
+  if (roastLevels.length === 0) return null;
+  const maxIdx = roastLevels.length - 1;
+  if (temp <= roastLevels[0]) return 0;
+  if (temp >= roastLevels[maxIdx]) return maxIdx;
+  for (let i = 0; i < maxIdx; i++) {
+    const a = roastLevels[i];
+    const b = roastLevels[i + 1];
+    if (temp >= a && temp <= b) {
+      if (b === a) return i;
+      return i + (temp - a) / (b - a);
+    }
+  }
+  return maxIdx;
+}
+
 export function rorSeries(poly: Point[]): Point[] {
   const out: Point[] = [];
   for (let i = 1; i < poly.length; i++) {

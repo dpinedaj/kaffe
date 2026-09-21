@@ -100,7 +100,7 @@ Steeper dry + Maillard → acidity and aroma; shallower → body and caramel (va
 
 ### Boosts
 
-A **boost** is not the BOOST kit. Chris Hilder: it is **°C/min added to RoR-error** so the PID pretends the roast is off-course and feeds extra (or less) heat through an endotherm or exotherm. The Nano has three slots. Rest only turns a zone on when the bean needs it (wet drying, Maillard stall, crash into crack, runaway dark espresso). Official Nordic uses a short **+3 °C/min into crack**.
+A **boost** is not the BOOST kit. Chris Hilder: it is **°C/min added to RoR-error** so the PID pretends the roast is off-course and feeds extra (or less) heat through an endotherm or exotherm. The Nano has three slots. Rest only turns a zone on when the bean needs it (wet drying, Maillard stall, runaway dark espresso). Rest does **not** auto-add Nordic’s **+3 °C/min into crack**.
 
 ### Rest vs RTD
 
