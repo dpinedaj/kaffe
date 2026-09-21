@@ -428,6 +428,7 @@ describe("generator", () => {
     const auto = generateProfile(defaultIntent());
     const out = generateProfile({ ...defaultIntent(), expectFc: 207 });
     expect(out.profile.raw.expect_fc).toBe("207.0");
+    expect(out.profile.raw.expect_colrchange).toBe("150.0");
     expect(out.firstCrackTemp).toBe(207);
     expect(Number(out.profile.raw.recommended_level)).toBe(1.6);
     const drop = levelToTemp(out.profile.roastLevels, 1.6);
@@ -448,9 +449,11 @@ describe("generator", () => {
   it("eases RoR into crack and does not add a Rest into-crack boost", () => {
     const out = generateProfile({
       ...defaultIntent(),
+      originId: "colombia-antioquia",
+      altitudeM: 1800,
       flavors: [
-        { id: "juicy", weight: 0.8 },
-        { id: "lightSweet", weight: 0.5 },
+        { id: "lightSweet", weight: 1 },
+        { id: "juicy", weight: 1 },
       ],
       expectFc: 207,
     });
@@ -459,18 +462,29 @@ describe("generator", () => {
     expect(Number(out.profile.raw.recommended_level)).toBe(1.6);
     expect(out.firstCrackTemp).toBe(207);
     expect(out.firstCrackTemp).toBeLessThan(drop ?? 209);
+    const tYellow = timeAtValue(out.roastPoly, YELLOW_TEMP) ?? out.roastPoly[0].t + out.dryTime;
+    const rorEarly = sampleAtTime(out.rorPoly, tYellow + 40) ?? 0;
+    const rorMid = sampleAtTime(out.rorPoly, (tYellow + out.firstCrackTime) / 2) ?? 0;
     const rorFc = sampleAtTime(out.rorPoly, out.firstCrackTime) ?? 99;
     const rorPre = sampleAtTime(out.rorPoly, out.firstCrackTime - 30) ?? 0;
     expect(rorFc).toBeLessThan(rorPre + 0.5);
     expect(rorFc).toBeLessThan(12);
-    const window = out.rorPoly.filter((p) => p.t >= out.firstCrackTime - 50 && p.t <= out.firstCrackTime);
+    expect(rorMid).toBeLessThan(rorEarly + 1.5);
+    expect(rorFc).toBeLessThan(rorMid + 0.5);
+    const mail = out.rorPoly.filter((p) => p.t >= tYellow + 20 && p.t <= out.firstCrackTime);
+    let rise = 0;
     let cliff = false;
+    for (let i = 1; i < mail.length; i++) {
+      rise = Math.max(rise, mail[i].v - mail[i - 1].v);
+    }
+    const window = out.rorPoly.filter((p) => p.t >= out.firstCrackTime - 50 && p.t <= out.firstCrackTime);
     for (let i = 0; i < window.length; i++) {
       for (let j = i + 1; j < window.length; j++) {
         const dt = window[j].t - window[i].t;
         if (dt >= 4 && dt <= 12 && window[i].v - window[j].v > 8) cliff = true;
       }
     }
+    expect(rise).toBeLessThan(2.5);
     expect(cliff).toBe(false);
     expect(out.zones.zone2.enabled).toBe(false);
   });
