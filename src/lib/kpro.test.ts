@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCurve, encodeKpro, parseKpro } from "./kpro";
-import { deleteAnchor, expandCurve, insertAnchor, levelToTemp, mergePhasePins, rebuildFromAnchors, rorSeries, sampleAtTime, smoothAnchors, timeAtValue, valueAtTime } from "./curve";
+import { deleteAnchor, expandCurve, insertAnchor, levelToTemp, mergePhasePins, rebuildFromAnchors, rorSeries, sampleAtTime, smoothAnchors, tempToLevel, timeAtValue, valueAtTime } from "./curve";
 import {
   generateProfile,
   defaultIntent,
@@ -9,6 +9,7 @@ import {
   densityFromAltitude,
   FLAVOR_DELTA,
   FAN_HOLD_RPM,
+  FC_BELOW_DROP_C,
   offZone,
   YELLOW_TEMP,
   curveName,
@@ -26,7 +27,7 @@ describe("kpro parse", () => {
     expect(p.roast.anchors.length).toBeGreaterThanOrEqual(6);
     expect(p.roast.anchors[0].t).toBeCloseTo(7.09, 1);
     expect(p.roastLevels).toEqual([205, 208, 210, 212, 214, 216, 218]);
-    expect(p.raw.zone2_boost).toBe("3.0");
+    expect(p.raw.zone2_boost).toBe("0.0");
   });
 
   it("round-trips encode → parse with a usable curve", () => {
@@ -48,6 +49,8 @@ describe("curve math", () => {
   it("interpolates roast levels", () => {
     expect(levelToTemp([205, 208, 210, 212, 214, 216, 218], 3)).toBe(212);
     expect(levelToTemp([205, 208, 210, 212, 214, 216, 218], 2.5)).toBe(211);
+    expect(tempToLevel([205, 208, 210, 212, 214, 216, 218], 212)).toBe(3);
+    expect(tempToLevel([205, 208, 210, 212, 214, 216, 218], 211)).toBe(2.5);
   });
 
   it("builds cubic segments from 3-pair groups", () => {
@@ -400,6 +403,7 @@ describe("generator", () => {
       expect(timeAtValue(out.roastPoly, out.firstCrackTemp)).toBeCloseTo(out.firstCrackTime, 0);
       const drop = levelToTemp(out.profile.roastLevels, Number(out.profile.raw.recommended_level));
       expect(drop).not.toBeNull();
+      expect(out.firstCrackTemp).toBeLessThanOrEqual((drop ?? 0) - FC_BELOW_DROP_C + 0.05);
       expect(timeAtValue(out.roastPoly, drop ?? 0)).toBeCloseTo(out.totalTime, 0);
       const last = out.profile.roast.anchors[out.profile.roast.anchors.length - 1];
       expect(last.t).toBeGreaterThan(out.totalTime + 8);
@@ -420,13 +424,55 @@ describe("generator", () => {
     expect(at("dark", "filter").dtr).toBeGreaterThan(at("medium", "filter").dtr + 0.015);
   });
 
-  it("writes a manual expect_fc and times first crack to that temperature", () => {
+  it("writes a measured expect_fc without changing roast level", () => {
     const auto = generateProfile(defaultIntent());
-    const out = generateProfile({ ...defaultIntent(), expectFc: 210 });
-    expect(out.profile.raw.expect_fc).toBe("210.0");
-    expect(out.firstCrackTemp).toBe(210);
+    const out = generateProfile({ ...defaultIntent(), expectFc: 207 });
+    expect(out.profile.raw.expect_fc).toBe("207.0");
+    expect(out.firstCrackTemp).toBe(207);
+    expect(Number(out.profile.raw.recommended_level)).toBe(1.6);
+    const drop = levelToTemp(out.profile.roastLevels, 1.6);
+    expect(drop).toBeCloseTo(209.2, 1);
+    expect(out.firstCrackTemp).toBeLessThan(drop ?? 209);
     expect(out.autoFirstCrackTemp).toBeCloseTo(auto.firstCrackTemp, 1);
     expect(out.firstCrackTime).toBeGreaterThan(auto.firstCrackTime);
+  });
+
+  it("keeps a measured crack just below drop when the lot pops at or above the colour stop", () => {
+    const out = generateProfile({ ...defaultIntent(), autoLevel: false, level: 1.6, expectFc: 210 });
+    const drop = levelToTemp(out.profile.roastLevels, 1.6) ?? 209.2;
+    expect(Number(out.profile.raw.recommended_level)).toBe(1.6);
+    expect(out.firstCrackTemp).toBeLessThan(drop);
+    expect(out.firstCrackTemp).toBeGreaterThan(drop - 1.5);
+  });
+
+  it("eases RoR into crack and does not add a Rest into-crack boost", () => {
+    const out = generateProfile({
+      ...defaultIntent(),
+      flavors: [
+        { id: "juicy", weight: 0.8 },
+        { id: "lightSweet", weight: 0.5 },
+      ],
+      expectFc: 207,
+    });
+    const drop = levelToTemp(out.profile.roastLevels, Number(out.profile.raw.recommended_level));
+    expect(drop).not.toBeNull();
+    expect(Number(out.profile.raw.recommended_level)).toBe(1.6);
+    expect(out.firstCrackTemp).toBe(207);
+    expect(out.firstCrackTemp).toBeLessThan(drop ?? 209);
+    const rorFc = sampleAtTime(out.rorPoly, out.firstCrackTime) ?? 99;
+    const rorPre = sampleAtTime(out.rorPoly, out.firstCrackTime - 30) ?? 0;
+    expect(rorFc).toBeLessThan(rorPre + 0.5);
+    expect(rorFc).toBeLessThan(12);
+    const window = out.rorPoly.filter((p) => p.t >= out.firstCrackTime - 50 && p.t <= out.firstCrackTime);
+    let cliff = false;
+    for (let i = 0; i < window.length; i++) {
+      for (let j = i + 1; j < window.length; j++) {
+        const dt = window[j].t - window[i].t;
+        if (dt >= 4 && dt <= 12 && window[i].v - window[j].v > 8) cliff = true;
+      }
+    }
+    expect(cliff).toBe(false);
+    expect(out.zones.zone2.enabled).toBe(false);
   });
 
   it("raises estimated density and preheat as altitude increases", () => {
@@ -477,7 +523,7 @@ describe("generator", () => {
     expect(measured.preheatPower).toBeGreaterThan(inferred.preheatPower);
   });
 
-  it("recommends an into-crack boost for a light dense highland lot", () => {
+  it("does not add an into-crack boost on a light dense Rest highland lot", () => {
     const out = generateProfile({
       ...defaultIntent(),
       originId: "ethiopia",
@@ -487,12 +533,7 @@ describe("generator", () => {
       roastStyle: "light",
       flavors: [],
     });
-    expect(out.zones.zone2.enabled).toBe(true);
-    expect(out.zones.zone2.role).toBe("into-fc");
-    expect(out.zones.zone2.endS).toBeGreaterThan(out.zones.zone2.startS);
-    expect(out.zones.zone2.startS).toBeGreaterThan(out.firstCrackTime - 40);
-    expect(out.zones.zone2.endS).toBeLessThan(out.firstCrackTime + 30);
-    expect(Number(out.profile.raw.zone2_boost)).toBeGreaterThan(0);
+    expect(out.zones.zone2.enabled).toBe(false);
   });
 
   it("does not force first-crack or after-crack boosts on a medium low-grown lot", () => {
