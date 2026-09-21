@@ -42,7 +42,7 @@ export const ZONE_ROLE_META: Record<ZoneRole, { label: string; hint: string }> =
   },
   "into-fc": {
     label: "Into first crack",
-    hint: "Moisture dump + endotherm. Short lift so design RoR does not crash into crack.",
+    hint: "Optional. Rao: enter crack already decelerating. Kaffe does not auto-add this — it raised crack temperature on the Nano.",
   },
   "after-fc": {
     label: "After first crack",
@@ -341,7 +341,7 @@ export function zoneTemplate(role: ZoneRole, firstCrackTime: number, totalTime: 
     return {
       enabled: true,
       startS: Math.round(Math.max(90, fc - 20)),
-      endS: Math.round(Math.min(end, fc + 6)),
+      endS: Math.round(Math.min(end, fc)),
       boost: boost ?? 3,
       kp: 1,
       kd: 1,
@@ -360,18 +360,23 @@ export function zoneTemplate(role: ZoneRole, firstCrackTime: number, totalTime: 
   };
 }
 
+function levelHeadroomC(dropTemp: number | undefined, fcTemp: number | undefined): number | null {
+  if (dropTemp == null || fcTemp == null || !Number.isFinite(dropTemp) || !Number.isFinite(fcTemp)) return null;
+  return dropTemp - fcTemp;
+}
+
 /**
  * Infer boosts from bean physics + flavor + the design RoR — not a blanket FC lift.
  *
  * KL (Chris Hilder): a boost is °C/min added to RoR-error to pre-empt endotherm/exotherm.
- * Official Nordic uses a short +3 into crack. Community uses a long mid-roast +zone for
- * crashy lots, and −6…−15 after FC on runaway espresso (official docs are cautious).
- *   Rao: enter crack already decelerating; do not slam heat at FC. So +boost is before/at
- * the moisture dump, −boost only after crack if the design RoR is still hot.
+ * Official Nordic uses a short +3 into crack; Kaffe does not copy that on Rest. Nano logs
+ * showed it raising crack temperature. Rao: enter crack already decelerating; do not slam
+ * heat at FC. Rest may still add drying / Maillard +boost, and −boost after crack if the
+ * design RoR is still hot. You can add an into-crack zone by hand.
  *
  * RTD (KL core / Fnq): a RoR step after drying–Maillard plus sustained energy through
  * first crack (“T through FC”) to force CO₂ out so the cup is drinkable in 1–3 days.
- * Rest profiles do not drive through crack as hard — CO₂ stays in the seed and the cup
+ * Rest profiles do not drive through crack — CO₂ stays in the seed and the cup
  * peaks after 3–5 days of degassing.
  */
 export function suggestedZones(
@@ -380,8 +385,10 @@ export function suggestedZones(
   intent: RoastIntent,
   rorPoly: Point[] = [],
   densityClass: DensityClass = "medium",
+  dropTemp?: number,
+  fcTemp?: number,
 ): ZoneSet {
-  if (isRtd(intent)) return suggestedRtdZones(firstCrackTime, totalTime, intent, densityClass);
+  if (isRtd(intent)) return suggestedRtdZones(firstCrackTime, totalTime, intent, densityClass, dropTemp, fcTemp);
 
   const fc = Math.max(90, firstCrackTime);
   const end = Math.max(fc + 20, totalTime);
@@ -389,8 +396,6 @@ export function suggestedZones(
   const volatile = flavorMass(intent, VOLATILE_FLAVORS);
   const heavy = flavorMass(intent, HEAVY_FLAVORS);
   const rorFc = sampleAtTime(rorPoly, fc) ?? 10;
-  const rorPre = sampleAtTime(rorPoly, Math.max(0, fc - 25)) ?? rorFc;
-  const rorDrop = rorPre - rorFc;
 
   let dryScore = 0;
   if (moisture != null && moisture >= 12.5) dryScore += 3;
@@ -422,34 +427,7 @@ export function suggestedZones(
         }
       : null;
 
-  let fcScore = 0;
-  if (intent.roastStyle === "light") fcScore += 1.5;
-  if (volatile >= 0.6) fcScore += 2;
-  if (densityClass === "hard") fcScore += 1.5;
-  if (rorFc < 8 && (intent.roastStyle === "light" || densityClass === "hard")) fcScore += 2;
-  else if (rorFc < 10 && intent.roastStyle === "light") fcScore += 1;
-  if (rorDrop > 4 && intent.roastStyle === "light") fcScore += 1.5;
-  if (intent.roastStyle === "dark") fcScore -= 1;
-  const wantIntoFc = fcScore >= 3 || (rorFc < 7.5 && fcScore >= 2 && intent.roastStyle === "light");
-  let intoBoost = 2;
-  if (intent.roastStyle === "light") intoBoost += 1;
-  if (volatile >= 0.6) intoBoost += 1;
-  if (rorFc < 8) intoBoost += 1;
-  const zone2 = wantIntoFc
-    ? {
-        ...zoneTemplate("into-fc", fc, end, clampBoost(intoBoost, 2, 5)),
-        reason: [
-          intent.roastStyle === "light" ? "Light drop" : null,
-          volatile >= 0.6 ? "volatile flavors" : null,
-          densityClass === "hard" ? "dense seed" : null,
-          rorFc < 10 ? `design RoR ${rorFc.toFixed(1)} °C/min into crack` : null,
-          rorDrop > 4 ? "RoR already falling hard" : null,
-        ]
-          .filter(Boolean)
-          .join(", ")
-          .replace(/^./, (c) => c.toUpperCase()) + ". Short +boost through the moisture dump (Nordic-style).",
-      }
-    : offZone("into-fc");
+  const zone2 = offZone("into-fc");
 
   let afterScore = 0;
   if (intent.roastStyle === "dark") afterScore += 2;
@@ -497,6 +475,8 @@ function suggestedRtdZones(
   totalTime: number,
   intent: RoastIntent,
   densityClass: DensityClass,
+  dropTemp?: number,
+  fcTemp?: number,
 ): ZoneSet {
   const fc = Math.max(90, firstCrackTime);
   const end = Math.max(fc + 20, totalTime);
@@ -518,11 +498,9 @@ function suggestedRtdZones(
 
   const altNudge = intent.altitudeM >= 1800 || densityClass === "hard" ? 0.5 : 0;
   const mailBoost = clampBoost(2.5 + altNudge, 2, 4);
-  const intoBoost = clampBoost(
-    3.5 + (intent.roastStyle === "light" ? 0.5 : 0) + (densityClass === "hard" ? 0.5 : 0),
-    3,
-    5,
-  );
+  const headroom = levelHeadroomC(dropTemp, fcTemp);
+  const tightLevel = headroom != null && headroom < FC_BELOW_DROP_C + 1.5;
+  const intoBoost = tightLevel ? 2 : clampBoost(3 + (densityClass === "hard" ? 0.5 : 0), 2, 4);
   const mailStart = zone1Dry ? Math.round(zone1Dry.endS) : 90;
   const mailEnd = Math.round(Math.max(mailStart + 24, Math.min(fc - 28, mailStart + 180)));
   const zoneMail: ZoneIntent = {
@@ -537,16 +515,18 @@ function suggestedRtdZones(
       "RTD RoR step after drying/Maillard (see KL RTD 1500–2000). Extra °C/min here moves CO₂ out so the cup is ready in 1–3 days, not 3–5.",
   };
   const intoStart = Math.round(Math.min(Math.max(mailEnd, fc - 32), fc - 8));
+  const intoEnd = tightLevel ? fc : Math.round(Math.min(end, Math.max(intoStart + 16, fc + 12)));
   const zoneInto: ZoneIntent = {
     enabled: true,
     startS: intoStart,
-    endS: Math.round(Math.min(end, Math.max(intoStart + 16, fc + 18))),
+    endS: Math.max(intoStart + 12, intoEnd),
     boost: intoBoost,
     kp: 1,
     kd: 1,
     role: "into-fc",
-    reason:
-      "RTD “T through crack”: keep energy on into and through first crack. Forces remaining CO₂ out and flattens the dip/flick. Rest profiles do this much less.",
+    reason: tightLevel
+      ? "RTD through-crack energy, truncated at first crack so the roast-level drop still has a 4 °C band."
+      : "RTD “T through crack”: keep energy on into first crack. Forces remaining CO₂ out and flattens the dip/flick. Rest profiles do this much less.",
   };
 
   if (zone1Dry) return { zone1: zone1Dry, zone2: zoneMail, zone3: zoneInto };
@@ -559,9 +539,13 @@ export function resolveZones(
   totalTime: number,
   rorPoly: Point[] = [],
   densityClass: DensityClass = "medium",
+  dropTemp?: number,
+  fcTemp?: number,
 ): ZoneSet {
-  if (intent.autoZones !== false) return suggestedZones(firstCrackTime, totalTime, intent, rorPoly, densityClass);
-  return intent.zones ?? suggestedZones(firstCrackTime, totalTime, intent, rorPoly, densityClass);
+  if (intent.autoZones !== false) {
+    return suggestedZones(firstCrackTime, totalTime, intent, rorPoly, densityClass, dropTemp, fcTemp);
+  }
+  return intent.zones ?? suggestedZones(firstCrackTime, totalTime, intent, rorPoly, densityClass, dropTemp, fcTemp);
 }
 
 export function zoneFields(zones: ZoneSet): Record<string, string> {
@@ -952,9 +936,43 @@ const ROR_DRY_REF = 40;
 const ROR_MAIL_REF = 12;
 const ROR_DEV_REF = 7;
 const FC_TEMP_REF = 203.5;
+/** Probe gap so a *guessed* crack still leaves a development band (docs §3). Measured crack is lot knowledge and may sit closer. */
+export const FC_BELOW_DROP_C = 4;
+export const MEASURED_FC_BELOW_DROP_C = 0.8;
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
+}
+
+export function estimateFirstCrackTemp(intent: RoastIntent, adj: Adjustment, densityGL: number): number {
+  const rho = clamp(densityGL, 560, 800);
+  return clamp(
+    FC_TEMP_REF +
+      (3.8 * (rho - REFERENCE_DENSITY_GL)) / 80 +
+      adj.fcTemp +
+      (intent.process === "washed" ? -0.4 : 0) +
+      (intent.process === "natural" ? 0.3 : 0),
+    196,
+    212,
+  );
+}
+
+export function clampFirstCrackTemp(
+  fc: number,
+  dropTemp: number,
+  kind: "estimate" | "measured" = "estimate",
+): number {
+  const gap = kind === "measured" ? MEASURED_FC_BELOW_DROP_C : FC_BELOW_DROP_C;
+  const hi = Math.min(222, dropTemp - gap);
+  return clamp(fc, 185, Math.max(185, hi));
+}
+
+/** Roast style → drop on the Nordic table. First-crack °C does not move the colour stop. */
+export function resolveDropLevel(
+  roastLevels: number[],
+  styleLevel: number,
+): { level: number; dropTemp: number } {
+  return { level: styleLevel, dropTemp: levelToTemp(roastLevels, styleLevel) ?? 212 };
 }
 
 /**
@@ -1049,24 +1067,16 @@ export function durationPlan(
   const mailSlope = clamp(ROR_MAIL_REF * beanK ** 0.5 * kMail, 7, 28);
   const devSlope = clamp(ROR_DEV_REF * kDev, 4, 14);
 
-  const estimatedFc = clamp(
-    FC_TEMP_REF +
-      (3.8 * (rho - REFERENCE_DENSITY_GL)) / 80 +
-      adj.fcTemp +
-      (intent.process === "washed" ? -0.4 : 0) +
-      (intent.process === "natural" ? 0.3 : 0),
-    196,
-    Math.min(212, dropTemp - 4),
-  );
-  const fcTemp =
-    intent.expectFc != null && Number.isFinite(intent.expectFc) ? clamp(intent.expectFc, 185, 222) : estimatedFc;
+  const estimatedFc = estimateFirstCrackTemp(intent, adj, densityGL);
+  const measured = intent.expectFc != null && Number.isFinite(intent.expectFc);
+  const fcTemp = clampFirstCrackTemp(measured ? intent.expectFc! : estimatedFc, dropTemp, measured ? "measured" : "estimate");
 
   let dry = ((YELLOW_TEMP - CHARGE_TEMP) / drySlope) * 60 + adj.dryingS * 0.35;
   let maillard = ((fcTemp - YELLOW_TEMP) / mailSlope) * 60 + adj.midS * 0.35;
   dry = clamp(dry, 85, 230);
   maillard = clamp(maillard, 100, 340);
 
-  const drop = Math.max(fcTemp + 3, dropTemp);
+  const drop = Math.max(fcTemp + MEASURED_FC_BELOW_DROP_C, dropTemp);
   let development = ((drop - fcTemp) / devSlope) * 60 + adj.developmentS * 0.35;
   const preTotal = dry + maillard;
   const targetDtr = clamp(
@@ -1164,15 +1174,16 @@ export function fitAnchorsToPlan(anchors: Point[], plan: DurationPlan, fcTemp: n
   const mapped = anchors.map((p) => ({ t: Math.max(1, mapT(p.t)), v: p.v }));
   mapped[0] = { ...mapped[0], t: plan.startS };
   mapped[mapped.length - 1] = { t: plan.endS + DROP_TAIL_S, v: dropTemp + DROP_TAIL_C };
-  return mergePhasePins(
-    mapped,
-    [
-      { t: plan.dryS, v: YELLOW_TEMP },
-      { t: plan.fcS, v: fcTemp },
-      { t: plan.endS, v: dropTemp },
-    ],
-    24,
-  );
+  const pins: Point[] = [
+    { t: plan.dryS, v: YELLOW_TEMP },
+    { t: plan.fcS, v: fcTemp },
+    { t: plan.endS, v: dropTemp },
+  ];
+  const approachT = plan.fcS - 30;
+  if (approachT >= plan.dryS + 24 && plan.fcS + 24 <= plan.endS && fcTemp - 2.4 > YELLOW_TEMP + 8) {
+    pins.splice(1, 0, { t: approachT, v: Number((fcTemp - 2.4).toFixed(2)) });
+  }
+  return mergePhasePins(mapped, pins, 24);
 }
 
 export function defaultIntent(): RoastIntent {
@@ -1196,7 +1207,6 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
   const origin = originById(intent.originId);
   const variety = varietyById(intent.varietyId);
   const style = STYLES.find((s) => s.id === intent.roastStyle) ?? STYLES[0];
-  let level = intent.autoLevel ? style.level : intent.level;
   const resolvedDensityGL = resolveDensityGL(intent, origin, variety);
   const originAdj = originAdjustment(intent.process, intent.brew);
   const varietyAdj = varietyAdjustment(variety);
@@ -1204,7 +1214,19 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
   const densityAdj = densityAdjustment(resolvedDensityGL);
   const beanAdj = add(add(add(originAdj, varietyAdj), moistureAdj), densityAdj);
   const base = parseKpro(BASELINE_KPRO, "baseline.kpro");
-  let endTemp = levelToTemp(base.roastLevels, level) ?? 212;
+  let flavorAdj = flavorAdjustment(intent.flavors);
+  let total = add(beanAdj, flavorAdj);
+
+  const styleLevel = intent.autoLevel ? style.level : intent.level;
+  const estimatedFc = estimateFirstCrackTemp(intent, total, resolvedDensityGL);
+  const requestedFc =
+    intent.expectFc != null && Number.isFinite(intent.expectFc)
+      ? clamp(intent.expectFc, 185, 222)
+      : estimatedFc;
+  const resolved = resolveDropLevel(base.roastLevels, styleLevel);
+  let level = resolved.level;
+  let endTemp = resolved.dropTemp;
+
   const beanPlan = durationPlan({ ...intent, flavors: [], expectFc: undefined }, variety, beanAdj, resolvedDensityGL, endTemp);
   const beanAnchors = fitAnchorsToPlan(
     applyTempMorph(base.roast.anchors, beanAdj.fcTemp),
@@ -1213,14 +1235,21 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
     endTemp,
   );
 
-  let flavorAdj = flavorAdjustment(intent.flavors);
-  let total = add(beanAdj, flavorAdj);
-  const plan = durationPlan(intent, variety, total, resolvedDensityGL, endTemp);
-  const autoFirstCrackTemp = plan.fcTemp;
-  let firstCrackTemp =
+  const plan = durationPlan(
     intent.expectFc != null && Number.isFinite(intent.expectFc)
-      ? Math.max(185, Math.min(222, intent.expectFc))
-      : autoFirstCrackTemp;
+      ? { ...intent, expectFc: requestedFc }
+      : { ...intent, expectFc: undefined },
+    variety,
+    total,
+    resolvedDensityGL,
+    endTemp,
+  );
+  const autoFirstCrackTemp = clampFirstCrackTemp(estimatedFc, endTemp, "estimate");
+  let firstCrackTemp = clampFirstCrackTemp(
+    requestedFc,
+    endTemp,
+    intent.expectFc != null && Number.isFinite(intent.expectFc) ? "measured" : "estimate",
+  );
 
   let roastAnchors: Point[];
   if (intent.manualAnchors && intent.manualAnchors.length >= 3) {
@@ -1243,7 +1272,7 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
   const totalTime = timeAtValue(roastPoly, endTemp) ?? roastAnchors[roastAnchors.length - 1].t;
   const firstCrackTime = timeAtValue(roastPoly, firstCrackTemp) ?? totalTime * 0.86;
   const rorPoly = rorSeries(roastPoly);
-  const zones = resolveZones(intent, firstCrackTime, totalTime, rorPoly, densityClass);
+  const zones = resolveZones(intent, firstCrackTime, totalTime, rorPoly, densityClass, endTemp, firstCrackTemp);
   const dryEndTime = timeAtValue(roastPoly, YELLOW_TEMP) ?? firstCrackTime * 0.35;
   const roastEndT = roastAnchors[roastAnchors.length - 1]?.t ?? totalTime;
   const fan = buildOfficialFanCurve({
@@ -1276,7 +1305,7 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
     `Flavor: ${flavorsLabel}`,
     isRtd(intent)
       ? "Cup: RTD — brew 1–3 days. RoR step after Maillard and +boost through first crack to drive CO₂ out in the roast (KL core RTD / Fnq). Flavour drops hard around day 4."
-      : "Cup: Rest — peak 3–5 days after roast. Gentler through first crack so CO₂ degasses in the bag, not in the machine (KL core Rest).",
+      : "Cup: Rest — peak 3–5 days after roast. No into-crack +boost; CO₂ degasses in the bag, not in the machine (KL core Rest).",
     `Generated by Kaffe for Nano 7.`,
   ].join("\n");
 

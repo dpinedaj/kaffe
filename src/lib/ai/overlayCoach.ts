@@ -80,7 +80,8 @@ export function buildOverlayReviewContext(tracks: OverlayTrack[]): Record<string
       "Do not emit roast_profile Bézier points. Only bean intent fields.",
       "At most two flavors. Prefer Rest unless the user asked for drink-now / RTD.",
       "Flavors are roast-curve goals, not a promise the lot will taste like that word. They cannot invent blueberry, jasmine, or bergamot. lightSweet = honey/cane; deepSweet = panela/molasses/cooked fruit, not candy or milk chocolate.",
-      "A boost is °C/min on RoR-error, not the BOOST kit.",
+      "A boost is °C/min on RoR-error, not the BOOST kit. Rest never auto-adds an into-crack +boost — that raised crack temperature on the Nano. Drying / Maillard / after-crack zones only. Do not ask the generator to slam heat at first crack.",
+      "Expected first crack is lot knowledge (where this seed pops on the Nano probe), not roast colour. Do not raise recommended_level to match expectFc. Light stays ~L1.6 / 209 °C drop. If measured crack would sit at or after drop, pin it just below drop — do not darken the roast to invent a 4 °C band.",
       "roast_min_desired_rate_of_rise is a .kpro field copied onto the Nano with the profile, not a hidden machine pref. It should sit ~1 °C/min below the design curve’s minimum RoR (typically −0.2 when the Bézier stays ≥ ~0.8). Do not leave −0.7 on a Kaffe file unless the curve itself is that slow.",
     ],
   };
