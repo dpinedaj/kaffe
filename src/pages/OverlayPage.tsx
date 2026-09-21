@@ -5,7 +5,7 @@ import { OverlayChart } from "../components/RoastChart";
 import { OverlayTrackDetails } from "../components/OverlayTrackDetails";
 import { Card } from "../components/ui";
 import { expandCurve, formatClock, formatClockFine, rebuildFromAnchors, rorSeries, timeAtValue } from "../lib/curve";
-import { defaultIntent, downloadText, type RoastIntent } from "../lib/generate";
+import { defaultIntent, downloadText, YELLOW_TEMP, type RoastIntent } from "../lib/generate";
 import { isLocalAiUiEnabled } from "../lib/ai/overlayCoach";
 import { parseKlog, type RoastLog } from "../lib/klog";
 import { activeZones, encodeKpro, parseKpro, type KproProfile, type Point } from "../lib/kpro";
@@ -110,6 +110,8 @@ export default function OverlayPage({
   const editPoly = editTrack ? expandCurve(editTrack.profile.roast) : [];
   const editFcTemp = editTrack ? Number.parseFloat(editTrack.profile.raw.expect_fc ?? "") : NaN;
   const editFcTime = Number.isFinite(editFcTemp) ? (timeAtValue(editPoly, editFcTemp) ?? undefined) : undefined;
+  const editYellowTemp = editTrack ? Number.parseFloat(editTrack.profile.raw.expect_colrchange ?? "") : NaN;
+  const editYellowTime = timeAtValue(editPoly, Number.isFinite(editYellowTemp) && editYellowTemp > 0 ? editYellowTemp : YELLOW_TEMP) ?? undefined;
   const editEndTime = editPoly[editPoly.length - 1]?.t;
   const editRor = editPoly.length ? rorSeries(editPoly) : [];
   const editLibraryId = editTrack?.id.startsWith("lib-") ? editTrack.id.slice(4) : undefined;
@@ -354,6 +356,7 @@ export default function OverlayPage({
                 anchors={editTrack.profile.roast.anchors}
                 ror={editRor}
                 fan={editTrack ? expandCurve(editTrack.profile.fan) : []}
+                yellowTime={editYellowTime}
                 fcTime={editFcTime}
                 endTime={editEndTime}
                 zones={activeZones(editTrack.profile.raw)}

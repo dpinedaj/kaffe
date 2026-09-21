@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { BoostZones } from "../components/BoostZones";
 import { InteractiveCurve } from "../components/InteractiveCurve";
 import { Card, Field, Pill, Row, Select, Toggle } from "../components/ui";
-import { formatClock, levelToTemp, sampleAtTime } from "../lib/curve";
+import { formatClock, levelToTemp, sampleAtTime, timeAtValue } from "../lib/curve";
 import {
   downloadText,
   generateProfile,
@@ -11,6 +11,7 @@ import {
   formatZoneSummary,
   isAutoDensity,
   signed,
+  YELLOW_TEMP,
   type RoastIntent,
 } from "../lib/generate";
 import { activeZones } from "../lib/kpro";
@@ -482,6 +483,7 @@ export default function Studio({
             anchors={generated.profile.roast.anchors}
             ror={generated.rorPoly}
             fan={generated.fanPoly}
+            yellowTime={timeAtValue(generated.roastPoly, YELLOW_TEMP) ?? undefined}
             fcTime={generated.firstCrackTime}
             endTime={generated.totalTime}
             zones={activeZones(generated.profile.raw)}
@@ -518,6 +520,7 @@ export default function Studio({
             <span className="text-orange">RoR (reference)</span>
             <span className="text-[#BF5AF2]">Fan</span>
             <span className="text-[#BF5AF2] opacity-70">Boost zones</span>
+            <span className="text-[#FFD60A]">Colour change · line</span>
             <span className="text-red">First crack · line</span>
             <span className="text-green">Drop · line</span>
           </div>
@@ -536,6 +539,10 @@ export default function Studio({
           <Field
             label="Drop"
             value={`L${Number(generated.profile.raw.recommended_level).toFixed(1)} · ${(levelToTemp(generated.profile.roastLevels, Number(generated.profile.raw.recommended_level)) ?? 0).toFixed(1)} °C`}
+          />
+          <Field
+            label="Colour change"
+            value={`${YELLOW_TEMP.toFixed(1)} °C · ${formatClock(timeAtValue(generated.roastPoly, YELLOW_TEMP) ?? generated.dryTime)}`}
           />
           <Field
             label="First crack temp"
