@@ -4,6 +4,11 @@ import { parseKpro } from "./kpro";
 import { defaultLevel, summarizeOverlayTrack, visibleDiffGroups } from "./overlay";
 import { BASELINE_KPRO } from "./template";
 
+const BASELINE_WITH_ZONE2 = BASELINE_KPRO.replace(
+  /zone2_time_start:0\.0\nzone2_time_end:0\.0\nzone2_multiplier_Kp:1\.0\nzone2_multiplier_Kd:1\.0\nzone2_boost:0\.0/,
+  "zone2_time_start:300.0\nzone2_time_end:315.0\nzone2_multiplier_Kp:1.0\nzone2_multiplier_Kd:1.0\nzone2_boost:3.0",
+);
+
 const SYNTH_KLOG = `profile_short_name:Test
 profile_designer:Kaffe
 recommended_level:3.0
@@ -31,7 +36,7 @@ time	#spot_temp	#=temp	=mean_temp	=profile	profile_ROR	=actual_ROR	#=desired_ROR
 
 describe("overlay track summary", () => {
   it("reads identity, drop, and active zones from a design profile", () => {
-    const profile = parseKpro(BASELINE_KPRO, "base.kpro");
+    const profile = parseKpro(BASELINE_WITH_ZONE2, "base.kpro");
     const summary = summarizeOverlayTrack({
       id: "a",
       kind: "profile",
@@ -69,7 +74,7 @@ describe("overlay track summary", () => {
   });
 
   it("hides unused zone groups in the compare table", () => {
-    const profile = parseKpro(BASELINE_KPRO, "base.kpro");
+    const profile = parseKpro(BASELINE_WITH_ZONE2, "base.kpro");
     const track = {
       id: "a",
       kind: "profile" as const,

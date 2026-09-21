@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { BoostZones } from "../components/BoostZones";
 import { InteractiveCurve } from "../components/InteractiveCurve";
 import { Card, Field, Pill, Row, Select, Toggle } from "../components/ui";
-import { formatClock, sampleAtTime } from "../lib/curve";
+import { formatClock, levelToTemp, sampleAtTime } from "../lib/curve";
 import {
   downloadText,
   generateProfile,
@@ -273,8 +273,9 @@ export default function Studio({
                   <p>
                     <span className="text-label">Rest · peak 3–5 days. </span>
                     Official Rest profiles wait for degassing. Boosts only fire when the bean actually
-                    needs them (wet drying, crash into crack, runaway dark espresso). Energy through
-                    first crack stays gentler, so CO₂ leaves in the bag and acidity/sweetness settle.
+                    needs them (wet drying, Maillard stall, runaway dark espresso) — never an
+                    into-crack +boost. Energy through first crack stays gentler, so CO₂ leaves in the
+                    bag and acidity/sweetness settle.
                     Use this for the “best cup,” RTD for “drink tonight.”
                   </p>
                 )}
@@ -305,14 +306,17 @@ export default function Studio({
               <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
                 {intent.expectFc != null ? (
                   <>
-                    <span className="text-label">Manual expect_fc {generated.firstCrackTemp.toFixed(1)} °C. </span>
-                    The red line, development time, and fan drop follow this temperature on the curve.
+                    <span className="text-label">This lot’s crack {generated.firstCrackTemp.toFixed(1)} °C. </span>
+                    That is when the seed pops on the Nano probe, not the roast colour. Drop stays at the
+                    roast-style level (L{Number(generated.profile.raw.recommended_level).toFixed(1)} ·{" "}
+                    {(levelToTemp(generated.profile.roastLevels, Number(generated.profile.raw.recommended_level)) ?? 0).toFixed(1)}{" "}
+                    °C). If crack sits close to drop, development °C is short — we do not darken the roast to invent a band.
                   </>
                 ) : (
                   <>
                     Leave empty to estimate from origin, variety, and flavor (
                     {generated.autoFirstCrackTemp.toFixed(1)} °C). Set it when you already know where this
-                    lot cracks on the Nano 7 probe.
+                    lot cracks on the Nano 7 probe. Roast level is still the colour stop, not the crack.
                   </>
                 )}
               </p>
@@ -529,6 +533,10 @@ export default function Studio({
           />
           <Field label="Curve name" value={generated.curveName} />
           <Field label="On Nano" value={generated.profile.name} />
+          <Field
+            label="Drop"
+            value={`L${Number(generated.profile.raw.recommended_level).toFixed(1)} · ${(levelToTemp(generated.profile.roastLevels, Number(generated.profile.raw.recommended_level)) ?? 0).toFixed(1)} °C`}
+          />
           <Field
             label="First crack temp"
             value={`${generated.firstCrackTemp.toFixed(1)} °C${intent.expectFc != null ? " · set" : ""}`}

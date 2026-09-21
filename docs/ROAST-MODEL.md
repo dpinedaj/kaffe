@@ -80,7 +80,8 @@ $$
 - Density raises crack temperature (stronger cell wall, more energy to rupture). Moisture mainly **delays the time** to crack via evaporative cooling, not the crack temperature itself (Hernández: initial moisture strongly affects the drying *phase*; bean-temperature kinetics at 9–13% are closer to each other than to $X=0$).
 - Washed $-0.4$ °C, natural $+0.3$ °C (typical KL-user spread; washed often sounds slightly earlier).
 - Variety and flavor `fcTemp` adj stack on top.
-- Capped **4 °C below drop** so a light roast still has a development band.
+- Capped **4 °C below drop** when Kaffe *guesses* crack, so an estimated light roast still has a development band.
+- **Measured `expect_fc` is lot knowledge**, not a colour stop. Roast style still sets `recommended_level` on the Nordic **205–218 °C** table (light L1.6 ≈ 209 °C). If this lot pops at 207 °C, Light still drops ~209 °C — a short °C band, not a darker roast. Measured crack is only pulled down if it would sit **at or after** drop (the curve cannot pin crack past the colour stop).
 
 Manual **Expected first crack** overrides $T_{\mathrm{FC}}$ for timing and `expect_fc` in the `.kpro`.
 
@@ -147,7 +148,7 @@ Turn **Density from altitude** off when you have a measured g/L. Heat then follo
 
 The **BOOST kit** is hardware (chamber rings + variable batch size). A **boost zone** is software.
 
-Chris Hilder: the Nano controls **rate of rise**, not temperature error. A boost is a constant **°C/min added to RoR-error** every PID cycle — like aiming up-current when sailing. Official Nordic Light uses a short **+3 °C/min into crack**. Community espresso sometimes uses **−6…−15** after crack; Kaffe stays in **−6…−2**.
+Chris Hilder: the Nano controls **rate of rise**, not temperature error. A boost is a constant **°C/min added to RoR-error** every PID cycle — like aiming up-current when sailing. Official Nordic Light uses a short **+3 °C/min into crack**; Kaffe Rest **does not copy that**. Nano logs showed the extra RoR raising crack temperature a couple of degrees. Rao: enter crack already decelerating — do not slam heat *at* crack. Community espresso sometimes uses **−6…−15** after crack; Kaffe stays in **−6…−2**. A crashing design RoR is a curve fault (ease into crack), not a reason to add heat.
 
 `roast_min_desired_rate_of_rise` is the **floor** of what that controller may ask for while catching the profile. The Nordic baseline copies **−0.7**. Kaffelogic Studio warns when the Bézier itself never goes below ~0.8 °C/min: −0.7 then permits an unduly negative correction. Kaffe sets the field to about **design min RoR − 1**, clamped to **[−1, −0.2]** (so typical generated curves write **−0.2**). It is saved in the `.kpro`, not a separate machine pref.
 
@@ -157,7 +158,7 @@ Nano 7 has **three** slots. Rest (default) only enables a zone when the bean nee
 |---|---|---|
 | Drying | Moisture ≳ 12% or dense natural/anaerobic | Endothermic water loss can stall RoR before yellow. |
 | Maillard | Honey process or body / deep-sweet | Colour-change dip; hold RoR so sugars brown. |
-| Into first crack | Light + volatile and/or dense, or design RoR crashing | Moisture dump. Short +boost so the curve does not fall into crack. Rao: enter crack already decelerating — do not slam heat *at* crack. |
+| Into first crack | **Never auto** on Rest | Rao: enter crack already decelerating. Official Nordic +3 is optional by hand if this lot actually stalls. |
 | After crack | Dark / espresso / body *and* hot design RoR | Bean goes exothermic. Negative boost tames a flick. |
 
 Boost is **diluted** if the roast leaves the design line (Hilder): a +5 °C/min zone for 2 min is not a guaranteed +10 °C.
@@ -172,7 +173,7 @@ Official Kaffelogic core profiles ([RTD](https://kaffelogicjp.com/en/pages/kl-rt
 |---|---|---|
 | Drink | Peak **3–5 days** after roast | **1–3 days**; flavour drops hard around day 4 |
 | CO₂ | Stays in the seed, degasses in the bag | Driven out **during** the roast |
-| Boosts | Only if the bean needs them | Always a Maillard **RoR step**, then **+boost through first crack** (“T through crack”). No negative after-crack brake (that would hold gas in). |
+| Boosts | Only if the bean needs them (drying, Maillard, after-crack brake). **No** auto into-crack +boost. | Always a Maillard **RoR step**, then **+boost into first crack** (“T through crack”), truncated at crack if the roast-level band is tight. No negative after-crack brake (that would hold gas in). |
 | Slopes | Baseline | Slightly steeper dry (esp. ≥ 1500 m), Maillard, and development |
 
 Fluid-bed coffee often needs **more rest than drum coffee** at the same colour: convection leaves cell structure more intact, so CO₂ escapes slowly (Green Coffee Collective / KL community). RTD is the exception.
