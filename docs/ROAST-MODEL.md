@@ -17,7 +17,7 @@ Implementation: `src/lib/generate.ts` (`durationPlan`, `suggestedZones`, `densit
 | First crack | ~196–205 °C internal; ~203–210 °C on a naked KL probe | Steam ruptures the cell wall. Moisture dump is endothermic; then the bean can go exothermic. |
 | Development | crack → drop | Roast degree. DTR is (time after first crack) / (total roast time). |
 
-Yellow at ~150 °C is the usual colour-change / start-of-Maillard marker in roasting practice (Rao). First-crack temperatures follow bean-core measurements in the 196–205 °C band; Kaffelogic’s exposed probe reads several degrees hotter.
+Yellow at ~150 °C is the usual colour-change / start-of-Maillard marker in roasting practice (Rao). Generated `.kpro` files write that as `expect_colrchange` so the Nano / Studio show a colour-change line next to `expect_fc`. First-crack temperatures follow bean-core measurements in the 196–205 °C band; Kaffelogic’s exposed probe reads several degrees hotter.
 
 ---
 
@@ -148,7 +148,7 @@ Turn **Density from altitude** off when you have a measured g/L. Heat then follo
 
 The **BOOST kit** is hardware (chamber rings + variable batch size). A **boost zone** is software.
 
-Chris Hilder: the Nano controls **rate of rise**, not temperature error. A boost is a constant **°C/min added to RoR-error** every PID cycle — like aiming up-current when sailing. Official Nordic Light uses a short **+3 °C/min into crack**; Kaffe Rest **does not copy that**. Nano logs showed the extra RoR raising crack temperature a couple of degrees. Rao: enter crack already decelerating — do not slam heat *at* crack. Community espresso sometimes uses **−6…−15** after crack; Kaffe stays in **−6…−2**. A crashing design RoR is a curve fault (ease into crack), not a reason to add heat.
+Chris Hilder: the Nano controls **rate of rise**, not temperature error. A boost is a constant **°C/min added to RoR-error** every PID cycle — like aiming up-current when sailing. Official Nordic Light uses a short **+3 °C/min into crack**; Kaffe Rest **does not copy that**. Nano logs showed the extra RoR raising crack temperature a couple of degrees. Rao: enter crack already decelerating — do not slam heat *at* crack. Community espresso sometimes uses **−6…−15** after crack; Kaffe stays in **−6…−2**. A crashing design RoR is a curve fault. Maillard is rebuilt as a **declining-RoR quadratic** (yellow → crack), not a late 30 s approach pin — that pin made the 24→7 °C/min cliff on log0039.
 
 `roast_min_desired_rate_of_rise` is the **floor** of what that controller may ask for while catching the profile. The Nordic baseline copies **−0.7**. Kaffelogic Studio warns when the Bézier itself never goes below ~0.8 °C/min: −0.7 then permits an unduly negative correction. Kaffe sets the field to about **design min RoR − 1**, clamped to **[−1, −0.2]** (so typical generated curves write **−0.2**). It is saved in the `.kpro`, not a separate machine pref.
 

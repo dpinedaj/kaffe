@@ -22,6 +22,7 @@ export function InteractiveCurve({
   anchors,
   ror = [],
   fan = [],
+  yellowTime,
   fcTime,
   endTime,
   zones = [],
@@ -33,6 +34,7 @@ export function InteractiveCurve({
   anchors: Point[];
   ror?: Point[];
   fan?: Point[];
+  yellowTime?: number;
   fcTime?: number;
   endTime?: number;
   zones?: ActiveZone[];
@@ -246,6 +248,29 @@ export function InteractiveCurve({
         {rorPath && <path d={rorPath} fill="none" stroke="#FF9F0A" strokeWidth="1.6" strokeDasharray="5 4" />}
         {fanPath && <path d={fanPath} fill="none" stroke="#BF5AF2" strokeWidth="1.7" strokeDasharray="6 3" />}
         <path d={path} fill="none" stroke="#0A84FF" strokeWidth="2.2" />
+        {yellowTime != null && yellowTime > 0 && (
+          <g pointerEvents="none">
+            <line
+              x1={x(yellowTime)}
+              x2={x(yellowTime)}
+              y1={PAD.t}
+              y2={H - PAD.b}
+              stroke="#FFD60A"
+              strokeWidth="1.8"
+              strokeDasharray="5 3"
+            />
+            <text
+              x={x(yellowTime)}
+              y={H - PAD.b - 6}
+              textAnchor="middle"
+              fill="#FFD60A"
+              fontSize="11"
+              fontWeight="700"
+            >
+              CC
+            </text>
+          </g>
+        )}
         {fcTime != null && fcTime > 0 && (
           <g pointerEvents="none">
             <line
