@@ -1143,6 +1143,39 @@ function applyTempMorph(points: Point[], fcTempDelta: number): Point[] {
   }));
 }
 
+/**
+ * Interior pins on a quadratic whose RoR falls from the phase start toward
+ * `rorEnd` (°C/min). Endpoints stay exact; a single late “approach” pin is
+ * not used — that made the 24→7 °C/min cliff on log0039.
+ */
+export function decliningRorPins(
+  t0: number,
+  v0: number,
+  t1: number,
+  v1: number,
+  rorEnd: number,
+  fractions: number[],
+): Point[] {
+  const spanS = t1 - t0;
+  const dtMin = spanS / 60;
+  if (spanS < 48 || dtMin <= 0 || v1 <= v0) return [];
+  const avg = (v1 - v0) / dtMin;
+  let r1 = clamp(rorEnd, 1.2, avg - 0.6);
+  let r0 = 2 * avg - r1;
+  if (r0 > 32) {
+    r0 = 32;
+    r1 = Math.max(1.2, 2 * avg - r0);
+  }
+  if (r0 < r1 + 1) return [];
+  return fractions
+    .filter((u) => u > 0.15 && u < 0.85)
+    .map((u) => ({
+      t: Number((t0 + spanS * u).toFixed(2)),
+      v: Number((v0 + r0 * dtMin * u + 0.5 * (r1 - r0) * dtMin * u * u).toFixed(2)),
+    }))
+    .filter((p) => p.t >= t0 + 24 && p.t <= t1 - 24 && p.v > v0 + 1 && p.v < v1 - 0.8);
+}
+
 /** Stretch the Nordic baseline so yellow / FC / drop land on the duration plan. */
 export function fitAnchorsToPlan(anchors: Point[], plan: DurationPlan, fcTemp: number, dropTemp: number): Point[] {
   if (anchors.length < 3) return anchors.map((p) => ({ ...p }));
@@ -1174,16 +1207,23 @@ export function fitAnchorsToPlan(anchors: Point[], plan: DurationPlan, fcTemp: n
   const mapped = anchors.map((p) => ({ t: Math.max(1, mapT(p.t)), v: p.v }));
   mapped[0] = { ...mapped[0], t: plan.startS };
   mapped[mapped.length - 1] = { t: plan.endS + DROP_TAIL_S, v: dropTemp + DROP_TAIL_C };
+  // Warped Nordic lumps in Maillard dip then rise (log0039: 9.5 → 25 °C/min).
+  // Rebuild that span with a declining-RoR quadratic instead of a late corner pin.
+  const keepWarped = mapped.filter((p, i) => {
+    if (i === 0 || i === mapped.length - 1) return true;
+    return p.t <= plan.dryS + 12 || p.t >= plan.fcS - 8;
+  });
+  const mailSpanMin = (plan.fcS - plan.dryS) / 60;
+  const avgMail = (fcTemp - YELLOW_TEMP) / Math.max(0.5, mailSpanMin);
+  const rorFc = clamp(Math.min(5.2, avgMail * 0.38), 3.2, 6);
+  const mailPins = decliningRorPins(plan.dryS, YELLOW_TEMP, plan.fcS, fcTemp, rorFc, [0.34, 0.62]);
   const pins: Point[] = [
     { t: plan.dryS, v: YELLOW_TEMP },
+    ...mailPins,
     { t: plan.fcS, v: fcTemp },
     { t: plan.endS, v: dropTemp },
   ];
-  const approachT = plan.fcS - 30;
-  if (approachT >= plan.dryS + 24 && plan.fcS + 24 <= plan.endS && fcTemp - 2.4 > YELLOW_TEMP + 8) {
-    pins.splice(1, 0, { t: approachT, v: Number((fcTemp - 2.4).toFixed(2)) });
-  }
-  return mergePhasePins(mapped, pins, 24);
+  return mergePhasePins(keepWarped, pins, 24);
 }
 
 export function defaultIntent(): RoastIntent {
@@ -1325,6 +1365,7 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
       preheat_power: preheatPower.toFixed(1),
       roast_required_power: String(Math.max(preheatPower, 1100)),
       expect_fc: firstCrackTemp.toFixed(1),
+      expect_colrchange: YELLOW_TEMP.toFixed(1),
       roast_min_desired_rate_of_rise: minDesiredRor(rorPoly, (roastPoly[0]?.t ?? 7) + 20, totalTime).toFixed(1),
       ...zoneFields(zones),
     },
