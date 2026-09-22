@@ -76,13 +76,20 @@ function shape(id: BrewMethod) {
           <path d="M30 18c6 2 6 12 0 14" />
         </>
       );
-    case "moccamaster":
+    case "orea":
       return (
         <>
-          <rect x="10" y="10" width="12" height="26" rx="1" />
-          <path d="M22 14h14v10H22" />
-          <path d="M26 24v14h10V28" />
-          <path d="M10 36h12" />
+          <path d="M12 14h24l-3 20H15z" />
+          <path d="M18 34v5M24 34v5M30 34v5" />
+          <path d="M16 41h16" />
+        </>
+      );
+    case "coldbrew":
+      return (
+        <>
+          <rect x="14" y="10" width="20" height="28" rx="3" />
+          <path d="M16 8h16" />
+          <path d="M18 20h4M26 24h4M20 30h6" />
         </>
       );
     case "moka":
