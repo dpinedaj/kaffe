@@ -11,6 +11,7 @@ import {
   saveKitchenAltitudeM,
   snapshotFromIntent,
   snapshotFromKpro,
+  techniquesFor,
   type BrewAttach,
   type BrewMethod,
   type BrewRoastSnapshot,
@@ -47,6 +48,7 @@ export default function BrewPage({
   const [looseStyle, setLooseStyle] = useState<RoastStyleId>(snap?.roastStyle ?? "light");
   const [dose, setDose] = useState<number | undefined>();
   const [ratio, setRatio] = useState<number | undefined>();
+  const [technique, setTechnique] = useState<string | undefined>();
 
   const attachKey = attachKeyOf(attach);
   useEffect(() => {
@@ -56,6 +58,7 @@ export default function BrewPage({
     setLooseStyle(next?.roastStyle ?? "light");
     setDose(undefined);
     setRatio(undefined);
+    setTechnique(undefined);
   }, [attachKey, attach, studioSnap, library]);
 
   const style = snap?.roastStyle ?? looseStyle;
@@ -74,9 +77,11 @@ export default function BrewPage({
         beanSize: snap?.beanSize,
         coffeeG: dose,
         ratio,
+        technique,
       }),
-    [method, style, snap, days, kitchenM, dose, ratio],
+    [method, style, snap, days, kitchenM, dose, ratio, technique],
   );
+  const techniques = techniquesFor(method);
   const methodInfo = BREW_METHODS.find((m) => m.id === method);
 
   function patchKitchen(raw: string) {
@@ -139,6 +144,7 @@ export default function BrewPage({
                   setMethod(m.id);
                   setDose(undefined);
                   setRatio(undefined);
+                  setTechnique(undefined);
                 }}
                 className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 ${
                   on ? "bg-card2 text-white ring-1 ring-blue" : "bg-card text-muted"
@@ -294,7 +300,7 @@ export default function BrewPage({
             <input
               type="number"
               min={method === "espresso" ? 1.5 : 6}
-              max={method === "espresso" ? 3.5 : 22}
+              max={method === "espresso" ? 18 : method === "coldbrew" ? 18 : 22}
               step={method === "espresso" ? 0.1 : 0.5}
               value={ratio ?? recipe.ratioN}
               onChange={(e) => setRatio(e.target.value === "" ? undefined : Number(e.target.value))}
@@ -319,6 +325,53 @@ export default function BrewPage({
         </p>
       </section>
 
+      {techniques.length > 0 && (
+        <section>
+          <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
+            {method === "switch" ? "Switch valve" : "Competition recipe"}
+          </h3>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {techniques.map((m) => {
+              const on = recipe.technique === m.id;
+              const suggested = recipe.suggestedTechnique === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setTechnique(m.id)}
+                  className={`rounded-2xl px-3 py-3 text-left ${
+                    on ? "bg-blue text-white" : "bg-card text-label"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[14px] font-semibold">{m.name}</span>
+                    {suggested && (
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                          on ? "bg-white/20 text-white" : "bg-orange/15 text-orange"
+                        }`}
+                      >
+                        Suggested
+                      </span>
+                    )}
+                  </div>
+                  <p className={`mt-1 text-[12px] font-medium leading-snug ${on ? "text-white" : "text-label"}`}>
+                    {m.flavor}
+                  </p>
+                  <p className={`mt-0.5 text-[12px] leading-snug ${on ? "text-white/80" : "text-muted"}`}>
+                    {m.mechanic}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
+            Named championship or shop scripts that aim at a flavor. The orange tag is the pick for
+            this roast; tap another to override.
+          </p>
+        </section>
+      )}
+
       <section>
         <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Starting card</h3>
         <Card>
@@ -334,6 +387,15 @@ export default function BrewPage({
           <Field label="Time" value={recipe.timeLabel} />
           <Field label="Grind" value={recipe.grindNote} />
           <Field label="Rest" value={recipe.restLabel} />
+          {recipe.technique && techniques.length > 0 && (
+            <Field
+              label="Recipe"
+              value={`${techniques.find((m) => m.id === recipe.technique)?.flavor ?? ""} · ${
+                techniques.find((m) => m.id === recipe.technique)?.mechanic ?? recipe.technique
+              }`}
+            />
+          )}
+          {recipe.gaggiuino && <Field label="Gaggiuino" value={recipe.gaggiuino} />}
         </Card>
         {recipe.cappedByBoil && (
           <p className="mt-2 px-1 text-[12px] text-orange">

@@ -7,6 +7,8 @@ import {
   recommendBrew,
   snapshotFromIntent,
   snapshotFromKpro,
+  suggestedSwitchMode,
+  suggestedTechniqueId,
 } from "./brew";
 import { defaultIntent, generateProfile } from "./generate";
 import { parseKpro } from "./kpro";
@@ -247,8 +249,222 @@ describe("recommendBrew", () => {
     expect(GRIND_ORDER.indexOf(tight.grind)).toBeGreaterThan(GRIND_ORDER.indexOf(base.grind));
   });
 
+  it("does not cap cold brew at kettle boil and uses hours", () => {
+    const rec = recommendBrew({
+      method: "coldbrew",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 2600,
+    });
+    expect(rec.cappedByBoil).toBe(false);
+    expect(rec.timeLabel).toMatch(/h fridge/);
+    expect(rec.kettleNote).toMatch(/Fridge/i);
+  });
+
+  it("keeps an OREA Light card on the Wölfl cluster", () => {
+    const rec = recommendBrew({
+      method: "orea",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 0,
+    });
+    expect(rec.coffeeG).toBe(17);
+    expect(rec.wantedC).toBe(93);
+    expect(rec.steps.length).toBeGreaterThanOrEqual(4);
+  });
+
   it("formats filter time as m:ss", () => {
     expect(formatBrewTime(165)).toBe("2:45");
     expect(formatBrewTime(28)).toBe("0:28");
+  });
+});
+
+describe("Hario Switch valve modes", () => {
+  it("suggests Fukahori for Light + juicy, Super Hybrid for Light, hold for Medium, Bull for acid natural, steep for Dark", () => {
+    expect(suggestedSwitchMode("light", ["juicy"])).toBe("fukahori");
+    expect(suggestedSwitchMode("light", ["lightSweet"])).toBe("hybrid");
+    expect(suggestedSwitchMode("medium", ["lightSweet"])).toBe("hold");
+    expect(suggestedSwitchMode("dark", [])).toBe("steep");
+    expect(suggestedSwitchMode("light", ["juicy"], "natural")).toBe("bull");
+    expect(suggestedSwitchMode("light", [], "natural")).toBe("steep");
+    expect(suggestedSwitchMode("medium", ["body"])).toBe("steep");
+  });
+
+  it("uses the suggested mode on Light + juicy and rewrites steps when overridden", () => {
+    const auto = recommendBrew({
+      method: "switch",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      flavors: ["juicy"],
+    });
+    expect(auto.suggestedSwitchMode).toBe("fukahori");
+    expect(auto.switchMode).toBe("fukahori");
+    expect(auto.steps.some((s) => /open/i.test(s.title) && /pour/i.test(s.title))).toBe(true);
+    expect(auto.why.join(" ")).toMatch(/Fukahori|Suggested/);
+
+    const hold = recommendBrew({
+      method: "switch",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      flavors: ["juicy"],
+      switchMode: "hold",
+    });
+    expect(hold.switchMode).toBe("hold");
+    expect(hold.suggestedSwitchMode).toBe("fukahori");
+    expect(hold.steps.some((s) => /First pour/i.test(s.title) && /closed/i.test(s.title))).toBe(true);
+    expect(hold.why.join(" ")).toMatch(/overrode/);
+
+    const v60 = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+    });
+    expect(v60.switchMode).toBeUndefined();
+  });
+});
+
+describe("flavor-mapped competition recipes", () => {
+  it("suggests temperate AeroPress for Medium / Dark and hot inverted for Light fruit", () => {
+    expect(suggestedTechniqueId("aeropress", "medium", [])).toBe("pop");
+    expect(suggestedTechniqueId("aeropress", "dark", ["body"])).toBe("pop");
+    expect(suggestedTechniqueId("aeropress", "light", ["juicy"])).toBe("stanica");
+    expect(suggestedTechniqueId("aeropress", "light", ["floral"])).toBe("merikanto");
+  });
+
+  it("builds Pop's 84 °C brew + 50 °C bypass when tempered is selected", () => {
+    const rec = recommendBrew({
+      method: "aeropress",
+      roastStyle: "medium",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 0,
+    });
+    expect(rec.technique).toBe("pop");
+    expect(rec.wantedC).toBe(84);
+    expect(rec.bypassG).toBeGreaterThan(0);
+    expect(rec.steps.some((s) => /50|temper/i.test(`${s.title} ${s.detail}`))).toBe(true);
+    expect(rec.kettleNote).toMatch(/50/);
+  });
+
+  it("builds Merikanto's 80 °C inverted cup with no bypass", () => {
+    const rec = recommendBrew({
+      method: "aeropress",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 0,
+      flavors: ["floral"],
+    });
+    expect(rec.technique).toBe("merikanto");
+    expect(rec.wantedC).toBe(80);
+    expect(rec.bypassG).toBeUndefined();
+    expect(rec.steps.some((s) => /80|Merikanto|temperate/i.test(`${s.title} ${s.detail}`))).toBe(true);
+  });
+
+  it("maps Light + juicy V60 to 4:6 acidity and floral to Peng split-temp", () => {
+    const acid = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 0,
+      flavors: ["juicy"],
+    });
+    expect(acid.technique).toBe("kasuya-acid");
+    expect(acid.steps.some((s) => /acid/i.test(s.title))).toBe(true);
+    expect(acid.wantedC).toBeGreaterThan(96);
+
+    const floral = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 0,
+      flavors: ["floral"],
+    });
+    expect(floral.technique).toBe("peng");
+    expect(floral.steps.some((s) => /80|cool/i.test(`${s.title} ${s.detail}`))).toBe(true);
+  });
+
+  it("exposes older world wins that are a different drink: Chad, Hsu, Du, Fukahori GINA, Bull", () => {
+    const chad = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 0,
+      technique: "chad",
+    });
+    expect(chad.steps.some((s) => /centre|center/i.test(`${s.title} ${s.detail}`))).toBe(true);
+
+    const hsu = recommendBrew({
+      method: "orea",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      process: "natural",
+    });
+    expect(hsu.technique).toBe("hsu");
+    expect(hsu.steps.some((s) => /70/.test(`${s.title} ${s.detail}`))).toBe(true);
+
+    const du = recommendBrew({
+      method: "origami",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      flavors: ["juicy"],
+    });
+    expect(du.technique).toBe("du");
+    expect(du.steps.some((s) => /no separate bloom|Pour 1/i.test(`${s.title} ${s.detail}`))).toBe(true);
+
+    const gina = recommendBrew({
+      method: "clever",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      flavors: ["floral"],
+    });
+    expect(gina.technique).toBe("gina");
+    expect(gina.steps.some((s) => /80/.test(`${s.title} ${s.detail}`))).toBe(true);
+
+    expect(suggestedTechniqueId("kalita", "light")).toBe("mccarthy");
+  });
+
+  it("suggests Gaggiuino espresso scripts from roast and flavor, and prints the SproFiler name", () => {
+    expect(suggestedTechniqueId("espresso", "light", [])).toBe("adaptive-light");
+    expect(suggestedTechniqueId("espresso", "light", ["juicy"])).toBe("extractamundo");
+    expect(suggestedTechniqueId("espresso", "light", ["floral"])).toBe("blooming");
+    expect(suggestedTechniqueId("espresso", "medium", [])).toBe("londinium");
+    expect(suggestedTechniqueId("espresso", "dark", ["body"])).toBe("adaptive-dark");
+
+    const turbo = recommendBrew({
+      method: "espresso",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      flavors: ["juicy"],
+    });
+    expect(turbo.gaggiuino).toBe("Extractamundo Dos!");
+    expect(turbo.gaggiuino).not.toMatch(/\bv\d/i);
+    expect(turbo.timeS).toBeLessThan(25);
+    expect(turbo.steps.some((s) => /4\.5 bar/.test(`${s.title} ${s.detail}`))).toBe(true);
+    expect(turbo.steps.some((s) => /6 bar/.test(`${s.title} ${s.detail}`))).toBe(true);
+    expect(turbo.steps.some((s) => /paddle|flow control/i.test(`${s.title} ${s.detail}`))).toBe(true);
+    expect(turbo.steps.some((s) => s.title === "Gaggiuino" || s.at === "Note")).toBe(false);
+    expect(turbo.cappedByBoil).toBe(false);
+
+    const light = recommendBrew({
+      method: "espresso",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+    });
+    expect(light.gaggiuino).toBe("Adaptive for Light Roast");
+    expect(light.gaggiuino).not.toMatch(/\bv\d/i);
   });
 });
