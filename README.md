@@ -4,7 +4,7 @@ Local-first studio for [Kaffelogic Nano 7](https://www.kaffelogic.com/) profiles
 
 Inspired by [KL Profile](https://apps.apple.com/us/app/kl-profile/id6799672617). Overlay comparison follows the [roast-overlay](https://ryoroasts.github.io/roast-overlay/) model (MIT).
 
-**Roast science** (equations, boosts, RTD/Rest, flavors, citations) lives in **[docs/ROAST-MODEL.md](docs/ROAST-MODEL.md)**. A short version is below.
+**Roast science** (equations, boosts, RTD/Rest, flavors, citations) lives in **[docs/ROAST-MODEL.md](docs/ROAST-MODEL.md)**. **Brew science** (SCA / UC Davis, altitude, WBrC / WAC / WBC, Hoffmann skeletons) lives in **[docs/BREW.md](docs/BREW.md)**. A short roast version is below.
 
 ## Run locally
 
@@ -51,6 +51,7 @@ Live: [https://dpinedaj.github.io/kaffe/](https://dpinedaj.github.io/kaffe/)
 - **Generate** — origin, variety, process, altitude or measured density, moisture, brew, roast style, **Rest / RTD** cup timing, up to two flavor goals, recommended boost zones, live Bézier preview (add / delete / smooth spikes / reset), download `.kpro`
 - **Overlay** — compare profiles, design vs actual from a `.klog`, zone/scalar diff, phases, ±3 °C deviation. Local `npm run dev` only: Cursor overlay coach (off on GitHub Pages).
 - **Library** — save, rename, favorite, export JSON (this device only)
+- **Brew** (Preview) — starting recipe card from a Generate roast, a library profile, or a dropped `.kpro`. Kitchen altitude caps kettle temperature at local boil.
 
 `.kpro` is plain `key:value` ASCII, LF, no checksum. Curves are cubic Bézier groups of three pairs. A `.klog` already contains the design curve in the `=profile` column — Overlay uses that when a log is present, and only analyses samples up to `roast_end`.
 
@@ -130,3 +131,4 @@ Up to two goals share one budget. Floral / fruity / bright / juicy steepen the f
 | Density from altitude | `densityFromAltitude` |
 | Fan Bézier | `planFanSchedule` / `buildOfficialFanCurve` |
 | Origins, varieties, flavor copy | `src/lib/knowledge.ts` |
+| Brew starting card (Preview) | `src/lib/brew.ts` → `recommendBrew` · [docs/BREW.md](docs/BREW.md) |

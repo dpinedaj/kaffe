@@ -8,12 +8,14 @@ export default function LibraryPage({
   onToggleFavorite,
   onRename,
   onDelete,
+  onBrew,
 }: {
   items: SavedProfile[];
   onOpen: (item: SavedProfile, mode: "edit" | "base") => void;
   onToggleFavorite: (id: string) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  onBrew: (item: SavedProfile) => void;
 }) {
   const sorted = [...items].sort((a, b) => Number(b.favorite) - Number(a.favorite));
 
@@ -49,6 +51,9 @@ export default function LibraryPage({
                 </button>
                 <button type="button" className="text-blue" onClick={() => downloadText(`${item.name}.kpro`, item.kproText)}>
                   Download
+                </button>
+                <button type="button" className="text-blue" onClick={() => onBrew(item)}>
+                  Brew recipe
                 </button>
                 <button
                   type="button"
