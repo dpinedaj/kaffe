@@ -74,6 +74,10 @@ export interface RoastIntent {
   moisture?: number;
   /** Settled bulk density (g/L). Ignored while autoDensity is on. */
   densityGL?: number;
+  /** Beans weighed into the density vessel (g). Used with densityVolumeMl. */
+  densityMassG?: number;
+  /** Vessel volume (mL). g/L = mass / (volume/1000). */
+  densityVolumeMl?: number;
   /** When true (default), density follows altitude. Turn off after a measured reading. */
   autoDensity?: boolean;
   /** Probe temperature for expect_fc. When omitted, estimated from bean + flavor. */
@@ -244,14 +248,28 @@ export function densityFromAltitude(altitudeM: number, origin?: OriginInfo, vari
 export function isAutoDensity(intent: RoastIntent): boolean {
   if (intent.autoDensity === false) return false;
   if (intent.autoDensity === true) return true;
-  return intent.densityGL == null;
+  return intent.densityGL == null && (intent.densityMassG == null || intent.densityVolumeMl == null);
+}
+
+/** Settled bulk density from a filled vessel: grams of green ÷ litres. */
+export function densityFromVessel(massG?: number, volumeMl?: number): number | undefined {
+  if (massG == null || volumeMl == null || !Number.isFinite(massG) || !Number.isFinite(volumeMl)) return undefined;
+  if (massG <= 0 || volumeMl <= 0) return undefined;
+  return Math.round(Math.max(560, Math.min(800, (massG / volumeMl) * 1000)));
+}
+
+export function measuredDensityGL(intent: RoastIntent): number | undefined {
+  if (isAutoDensity(intent)) return undefined;
+  const fromVessel = densityFromVessel(intent.densityMassG, intent.densityVolumeMl);
+  if (fromVessel != null) return fromVessel;
+  if (intent.densityGL != null && Number.isFinite(intent.densityGL)) {
+    return Math.max(560, Math.min(800, intent.densityGL));
+  }
+  return undefined;
 }
 
 export function resolveDensityGL(intent: RoastIntent, origin: OriginInfo, variety: VarietyInfo): number {
-  if (!isAutoDensity(intent) && intent.densityGL != null && Number.isFinite(intent.densityGL)) {
-    return Math.max(560, Math.min(800, intent.densityGL));
-  }
-  return densityFromAltitude(intent.altitudeM, origin, variety);
+  return measuredDensityGL(intent) ?? densityFromAltitude(intent.altitudeM, origin, variety);
 }
 
 /**
@@ -649,8 +667,9 @@ export function curveName(intent: RoastIntent): string {
   if (intent.moisture != null && Number.isFinite(intent.moisture)) {
     parts.push(`${Number(intent.moisture).toFixed(1)}H`);
   }
-  if (intent.autoDensity === false && intent.densityGL != null && Number.isFinite(intent.densityGL)) {
-    parts.push(`${Math.round(intent.densityGL)}gL`);
+  const measuredGL = measuredDensityGL(intent);
+  if (measuredGL != null) {
+    parts.push(`${Math.round(measuredGL)}gL`);
   }
   if (intent.expectFc != null && Number.isFinite(intent.expectFc)) {
     parts.push(`FC${Math.round(intent.expectFc)}`);
