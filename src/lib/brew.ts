@@ -98,6 +98,7 @@ export interface BrewRecipe {
   grind: Grind;
   grindNote: string;
   restLabel: string;
+  restWarn?: string;
   switchMode?: SwitchMode;
   suggestedSwitchMode?: SwitchMode;
   technique?: string;
@@ -406,7 +407,7 @@ export interface BrewTechnique {
   mechanic: string;
   flavor: string;
   blurb: string;
-  timeS: number;
+  timeS?: number;
   wantedC?: number;
   startC?: number;
   finishC?: number;
@@ -850,6 +851,33 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       gaggiuino: "Filter",
     },
   ],
+  chemex: [
+    {
+      id: "hoffmann",
+      name: "Hoffmann Chemex",
+      mechanic: "Bloom, 60% pour, stir and shake — 30 g : 500 g, ~4:10",
+      flavor: "Clean / paper",
+      blurb: "Hoffmann Chemex as a V60. Thick bonded paper, slower and cleaner than a cone. The one published skeleton we keep.",
+    },
+  ],
+  moka: [
+    {
+      id: "hoffmann",
+      name: "Hoffmann moka",
+      mechanic: "Hot fill to the valve, no tamp, off at first blonde",
+      flavor: "Body / chocolate",
+      blurb: "Hoffmann moka. Not espresso — stop when the stream turns honey. The one published skeleton we keep.",
+    },
+  ],
+  cupping: [
+    {
+      id: "sca",
+      name: "SCA cupping",
+      mechanic: "8.25 g / 150 g, 93 °C, 4 min, break and skim",
+      flavor: "Reference / even",
+      blurb: "SCA cupping protocol. The academic reference cup, not a drink recipe.",
+    },
+  ],
 };
 
 export const SWITCH_MODES = (TECHNIQUES.switch ?? []).map((t) => ({
@@ -920,6 +948,15 @@ const RECIPE_ORIGIN: Partial<Record<BrewMethod, Record<string, string>>> = {
     "adaptive-dark": "SproFiler / Decent · Adaptive Dark",
     stock: "SproFiler · Stock 9 Bar",
     filter: "SproFiler · Filter",
+  },
+  chemex: {
+    hoffmann: "Hoffmann · Chemex as V60",
+  },
+  moka: {
+    hoffmann: "Hoffmann · moka",
+  },
+  cupping: {
+    sca: "SCA cupping protocol",
   },
 };
 
@@ -1100,7 +1137,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
   }
   const cupG = waterG + (bypassG ?? 0);
 
-  if (tech) {
+  if (tech?.timeS != null) {
     timeS = tech.timeS + Math.round(stepsN * (immersion ? 40 : 20));
     if (heavy && !tech.lockTemp) timeS += 15;
   }
@@ -1250,6 +1287,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     grind,
     grindNote,
     restLabel,
+    restWarn,
     switchMode,
     suggestedSwitchMode: query.method === "switch" ? suggestedMode : undefined,
     technique: tech?.id,

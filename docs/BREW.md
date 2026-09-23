@@ -213,6 +213,10 @@ Skipped as redundant: Domatiotis 2014 and Tøllefsen 2015 (standard V60 pulses),
 
 Fewer championship scripts, still a real fork: Hoffmann settle vs classic 4:00; long vs short Clever steep; fridge ready vs 1:8 concentrate.
 
+### Chemex / Moka / cupping
+
+One cited skeleton each — Hoffmann Chemex, Hoffmann moka, SCA cupping. The card still shows so you can see the credit and clone it. We do not invent a second fork.
+
 ---
 
 ## 5. Cards in `recommendBrew`

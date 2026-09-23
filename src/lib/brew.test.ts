@@ -10,6 +10,7 @@ import {
   snapshotFromKpro,
   suggestedSwitchMode,
   suggestedTechniqueId,
+  techniquesFor,
 } from "./brew";
 import { defaultIntent, generateProfile } from "./generate";
 import { parseKpro } from "./kpro";
@@ -567,5 +568,21 @@ describe("flavor-mapped competition recipes", () => {
       daysSinceRoast: 4,
     });
     expect(cupping.origin).toMatch(/SCA/);
+  });
+
+  it("shows a single cited card for Chemex, Moka, and cupping", () => {
+    for (const method of ["chemex", "moka", "cupping"] as const) {
+      const list = techniquesFor(method);
+      expect(list).toHaveLength(1);
+      const rec = recommendBrew({
+        method,
+        roastStyle: "light",
+        drinkPlan: "rest",
+        daysSinceRoast: 4,
+      });
+      expect(rec.technique).toBe(list[0].id);
+      expect(rec.suggestedTechnique).toBe(list[0].id);
+      expect(rec.origin).toBeTruthy();
+    }
   });
 });

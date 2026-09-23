@@ -111,6 +111,11 @@ export default function BrewPage({
   );
   const mine = mineItems.find((r) => r.id === mineId && r.method === method);
   const shown = mine ? viewUserRecipe(mine, kitchenM) : recipe;
+  const otherWarnings = shown.warnings.filter(
+    (w) =>
+      w !== recipe.restWarn &&
+      !/SCA 92|Set kitchen altitude|Local boil will not reach/.test(w),
+  );
   const mineOnMethod = mineForMethod(method, mineItems);
   const techniques = techniquesFor(method);
   const methodInfo = BREW_METHODS.find((m) => m.id === method);
@@ -451,9 +456,23 @@ export default function BrewPage({
             </div>
             <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
               What is on the bag, not a roast file. Farm metres set lot density (a click finer when
-              high). Kitchen altitude still caps the kettle. Days stay in Cup.
+              high). Kitchen altitude still caps the kettle.
             </p>
           </>
+        )}
+        <Card className="mt-2">
+          <Row label="Days since roast" last>
+            <DraftNumber
+              value={days}
+              step={1}
+              onChange={(n) => setDays(Math.max(0, Math.min(60, n)))}
+              className="w-16 bg-transparent text-right text-[15px] text-white outline-none"
+            />
+          </Row>
+        </Card>
+        <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{recipe.restLabel}</p>
+        {recipe.restWarn && (
+          <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">{recipe.restWarn}</p>
         )}
       </section>
 
@@ -613,8 +632,9 @@ export default function BrewPage({
             })}
           </div>
           <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-            Named championship or shop scripts that aim at a flavor. The orange tag is the pick for
-            this roast; tap another to override.
+            {techniques.length > 1
+              ? "Named championship or shop scripts that aim at a flavor. The orange tag is the pick for this roast; tap another to override."
+              : "The published script for this method. The orange tag is the pick for this roast."}
           </p>
         </section>
       )}
@@ -655,6 +675,23 @@ export default function BrewPage({
           This is where you brew, not where the cherry grew. Saved on this device; it does not
           change the .kpro.
         </p>
+        {shown.boilC == null && method !== "espresso" && method !== "coldbrew" && (
+          <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">
+            Set kitchen altitude. Kettle temperature is capped by local boil, not by the sea-level
+            card.
+          </p>
+        )}
+        {shown.boilC != null && shown.boilC < 92 && method !== "espresso" && method !== "coldbrew" && (
+          <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">
+            Boil ({shown.boilC.toFixed(1)} °C) sits under the SCA 92 °C certification floor. Pour at
+            boil; do not print a hotter number.
+          </p>
+        )}
+        {shown.cappedByBoil && (
+          <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">
+            Wanted {shown.wantedC.toFixed(0)} °C. Local boil will not reach it.
+          </p>
+        )}
       </section>
 
       <section>
@@ -671,7 +708,7 @@ export default function BrewPage({
               className="w-20 bg-transparent text-right text-[15px] text-white outline-none disabled:text-muted"
             />
           </Row>
-          <Row label="Ratio (1 : )">
+          <Row label="Ratio (1 : )" last>
             <DraftNumber
               key={`${method}-ratio`}
               value={mine ? shown.ratioN : (ratio ?? recipe.ratioN)}
@@ -680,14 +717,6 @@ export default function BrewPage({
               onChange={setRatio}
               onEmpty={() => setRatio(undefined)}
               className="w-20 bg-transparent text-right text-[15px] text-white outline-none disabled:text-muted"
-            />
-          </Row>
-          <Row label="Days since roast" last>
-            <DraftNumber
-              value={days}
-              step={1}
-              onChange={(n) => setDays(Math.max(0, Math.min(60, n)))}
-              className="w-16 bg-transparent text-right text-[15px] text-white outline-none"
             />
           </Row>
         </Card>
@@ -726,11 +755,6 @@ export default function BrewPage({
           {shown.origin && <Field label="Source" value={shown.origin} />}
           {shown.gaggiuino && <Field label="Gaggiuino" value={shown.gaggiuino} />}
         </Card>
-        {shown.cappedByBoil && (
-          <p className="mt-2 px-1 text-[12px] text-orange">
-            Wanted {shown.wantedC.toFixed(0)} °C. Local boil will not reach it.
-          </p>
-        )}
       </section>
 
       <section>
@@ -753,9 +777,9 @@ export default function BrewPage({
         </Card>
       </section>
 
-      {shown.warnings.length > 0 && (
+      {otherWarnings.length > 0 && (
         <Card className="space-y-2 p-4">
-          {shown.warnings.map((w) => (
+          {otherWarnings.map((w) => (
             <p key={w} className="text-[13px] leading-relaxed text-orange">
               {w}
             </p>
