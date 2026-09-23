@@ -9,6 +9,7 @@ import {
 } from "../lib/ai/overlayCoach";
 import { defaultLevel, type OverlayTrack } from "../lib/overlay";
 import { parseKpro } from "../lib/kpro";
+import { useI18n } from "../i18n/LocaleContext";
 import { Card } from "./ui";
 import { CoachMarkdown } from "./CoachMarkdown";
 
@@ -23,6 +24,7 @@ export function OverlayCoach({
   onOpenInGenerate: (intent: RoastIntent) => void;
   onAddGeneratedTrack: (track: OverlayTrack) => void;
 }) {
+  const { t } = useI18n();
   const [status, setStatus] = useState<{ enabled: boolean; reason: string | null; model: string } | null>(null);
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
@@ -45,7 +47,7 @@ export function OverlayCoach({
         }
       })
       .catch(() => {
-        if (!cancelled) setStatus({ enabled: false, reason: "Dev overlay-coach API is not running.", model: "composer-2.5" });
+        if (!cancelled) setStatus({ enabled: false, reason: t("coach.apiDown"), model: "composer-2.5" });
       });
     return () => {
       cancelled = true;
@@ -79,7 +81,7 @@ export function OverlayCoach({
       setTurns((prev) => [...prev, { role: "assistant", text: parsed.feedback }]);
       setProposal(parsed.intentPatch ? applyIntentPatch(baseIntent, parsed.intentPatch) : null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Cursor coach failed.");
+      setError(e instanceof Error ? e.message : t("coach.fail"));
     } finally {
       setBusy(false);
     }
@@ -103,11 +105,8 @@ export function OverlayCoach({
     <Card className="p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-[15px] font-semibold">Local Cursor coach</h3>
-          <p className="mt-1 text-[12px] text-muted">
-            Only on <code className="text-label">npm run dev</code>. GitHub Pages never loads this. Key stays on the Vite
-            server, not in the browser bundle.
-          </p>
+          <h3 className="text-[15px] font-semibold">{t("coach.title")}</h3>
+          <p className="mt-1 text-[12px] text-muted">{t("coach.blurb")}</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <span className="rounded-full bg-card2 px-2 py-1 text-[11px] text-muted">{status?.model ?? "…"}</span>
@@ -122,7 +121,7 @@ export function OverlayCoach({
               setError(null);
             }}
           >
-            New chat
+            {t("coach.newChat")}
           </button>
         </div>
       </div>
@@ -130,13 +129,12 @@ export function OverlayCoach({
       <div className="mb-3 max-h-[28rem] space-y-2 overflow-y-auto">
         {turns.length === 0 && (
           <p className="text-[13px] text-muted">
-            Ask why the log drifted, or request a new Generate intent (flavors, Rest/RTD, moisture). The model cannot
-            rewrite Bézier points directly — Kaffe regenerates the .kpro from parameters.
+            {t("coach.empty")}
           </p>
         )}
         {turns.map((turn, i) => (
           <div key={`${turn.role}-${i}`} className={`rounded-xl px-3 py-2 text-[13px] ${turn.role === "user" ? "bg-card2 text-white" : "bg-ink text-label"}`}>
-            <div className="mb-1.5 text-[11px] uppercase tracking-wide text-muted">{turn.role === "user" ? "You" : "Coach"}</div>
+            <div className="mb-1.5 text-[11px] uppercase tracking-wide text-muted">{turn.role === "user" ? t("coach.you") : t("coach.coach")}</div>
             {turn.role === "assistant" ? <CoachMarkdown text={turn.text} /> : <div className="whitespace-pre-wrap">{turn.text}</div>}
           </div>
         ))}
@@ -149,10 +147,10 @@ export function OverlayCoach({
             className="rounded-lg bg-blue px-3 py-2 text-[13px] font-semibold text-white"
             onClick={() => onOpenInGenerate(proposal)}
           >
-            Open proposed profile in Generate
+            {t("coach.openGenerate")}
           </button>
           <button type="button" className="rounded-lg bg-card2 px-3 py-2 text-[13px] font-semibold text-white" onClick={applyGenerated}>
-            Add generated .kpro to overlay
+            {t("coach.addOverlay")}
           </button>
         </div>
       )}
@@ -167,7 +165,7 @@ export function OverlayCoach({
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           disabled={busy || status?.enabled === false}
-          placeholder={tracks.length === 0 ? "Load a .klog or .kpro first, then ask…" : "e.g. Why did we crash into first crack?"}
+          placeholder={tracks.length === 0 ? t("coach.placeholderEmpty") : t("coach.placeholder")}
           className="min-w-0 flex-1 rounded-lg bg-card2 px-3 py-2 text-[13px] text-white outline-none placeholder:text-muted"
         />
         <button
@@ -175,7 +173,7 @@ export function OverlayCoach({
           disabled={busy || status?.enabled === false || !question.trim()}
           className="rounded-lg bg-card2 px-3 py-2 text-[13px] font-semibold text-white disabled:text-muted"
         >
-          {busy ? "Asking…" : "Ask"}
+          {busy ? t("coach.asking") : t("coach.ask")}
         </button>
       </form>
     </Card>

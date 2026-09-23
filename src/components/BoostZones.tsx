@@ -1,3 +1,5 @@
+import { useI18n } from "../i18n/LocaleContext";
+import type { MessageKey } from "../i18n/en";
 import { Card, Row, Toggle } from "./ui";
 import { formatClock } from "../lib/curve";
 import {
@@ -26,6 +28,7 @@ export function BoostZones({
   generated: GeneratedRoast;
   onChange: (partial: Pick<RoastIntent, "autoZones" | "zones">) => void;
 }) {
+  const { t } = useI18n();
   const auto = intent.autoZones !== false;
   const zones = generated.zones;
 
@@ -53,9 +56,9 @@ export function BoostZones({
 
   return (
     <section>
-      <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Boost zones</h2>
+      <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("boost.title")}</h2>
       <Card>
-        <Row label="Recommend from bean / flavor / RoR" last>
+        <Row label={t("boost.recommend")} last>
           <Toggle
             on={auto}
             onChange={(on) =>
@@ -68,11 +71,7 @@ export function BoostZones({
         </Row>
       </Card>
       <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-        A boost is °C/min added to the Nano’s RoR-error — extra energy through an endothermic dip,
-        or a brake after the bean goes exothermic. Rest never auto-adds an into-crack +boost (that
-        raised crack temperature on the Nano). Drying / Maillard / after-crack zones still fire when
-        the bean needs them. RTD still adds a Maillard RoR step and energy into crack, and skips a
-        negative after-crack brake. You can still add, remove, or edit any window by hand.
+        {t("boost.help")}
       </p>
       <div className="mt-3 space-y-2">
         {ZONE_IDS.map((id) => {
@@ -80,25 +79,32 @@ export function BoostZones({
           const on = z.enabled && z.endS > z.startS;
           return (
             <Card key={id} className="p-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div>
-                  <div className="text-[14px] font-semibold text-white">{ZONE_SLOT_META[id].title}</div>
-                  <div className="text-[11px] text-muted">{on ? formatZoneSummary(z) : "off"}</div>
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-[14px] font-semibold text-white">{t(`boost.${id}` as MessageKey)}</div>
+                    <div className="text-[11px] text-muted">{on ? formatZoneSummary(z) : t("common.off")}</div>
+                  </div>
+                  {on && (
+                    <button type="button" className="text-[12px] font-medium text-orange sm:hidden" onClick={() => removeZone(id)}>
+                      {t("common.remove")}
+                    </button>
+                  )}
                 </div>
                 {on ? (
-                  <button type="button" className="text-[12px] font-medium text-orange" onClick={() => removeZone(id)}>
-                    Remove
+                  <button type="button" className="hidden text-[12px] font-medium text-orange sm:inline" onClick={() => removeZone(id)}>
+                    {t("common.remove")}
                   </button>
                 ) : (
-                  <div className="flex flex-wrap justify-end gap-1">
+                  <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-wrap sm:justify-end">
                     {ROLES.map((role) => (
                       <button
                         key={role}
                         type="button"
-                        className="rounded-lg bg-card2 px-2 py-1 text-[11px] font-medium text-blue"
+                        className="rounded-lg bg-card2 px-2 py-2 text-[11px] font-medium text-blue sm:py-1"
                         onClick={() => addZone(id, role)}
                       >
-                        + {ZONE_ROLE_META[role].label}
+                        + {t(`boost.role.${role}` as MessageKey)}
                       </button>
                     ))}
                   </div>
@@ -109,7 +115,7 @@ export function BoostZones({
                   {z.reason && <p className="text-[12px] leading-relaxed text-label">{z.reason}</p>}
                   <label className="block">
                     <div className="mb-1 flex justify-between text-[12px] text-muted">
-                      <span>Start</span>
+                      <span>{t("common.start")}</span>
                       <span className="text-white">{formatClock(z.startS)}</span>
                     </div>
                     <input
@@ -124,7 +130,7 @@ export function BoostZones({
                   </label>
                   <label className="block">
                     <div className="mb-1 flex justify-between text-[12px] text-muted">
-                      <span>End</span>
+                      <span>{t("common.end")}</span>
                       <span className="text-white">{formatClock(z.endS)}</span>
                     </div>
                     <input
@@ -139,7 +145,7 @@ export function BoostZones({
                   </label>
                   <label className="block">
                     <div className="mb-1 flex justify-between text-[12px] text-muted">
-                      <span>Boost</span>
+                      <span>{t("common.boost")}</span>
                       <span className="text-white">
                         {z.boost > 0 ? "+" : ""}
                         {z.boost} °C/min

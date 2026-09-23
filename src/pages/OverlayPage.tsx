@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useI18n } from "../i18n/LocaleContext";
 import { InteractiveCurve } from "../components/InteractiveCurve";
 import { OverlayCoach } from "../components/OverlayCoach";
 import { OverlayChart } from "../components/RoastChart";
@@ -48,6 +49,7 @@ export default function OverlayPage({
   onOpenInGenerate: (intent: RoastIntent, existingId?: string) => void;
   studioIntent: RoastIntent;
 }) {
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -66,10 +68,10 @@ export default function OverlayPage({
           const profile = parseKpro(text, file.name);
           next.push(trackFromProfile(id, profile, PALETTE[next.length % PALETTE.length]));
         } else {
-          setError("Use .kpro or .klog files.");
+          setError(t("overlay.useFiles"));
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not parse file");
+        setError(e instanceof Error ? e.message : t("overlay.parseFail"));
       }
     }
     setTracks(next);
@@ -92,7 +94,7 @@ export default function OverlayPage({
       } else {
         const text = await fetch(`${import.meta.env.BASE_URL}examples/example-align-a.klog`).then((r) => r.text());
         if (!text || text.startsWith("<!")) {
-          setError("Example log is not bundled. Drop your own .klog.");
+          setError(t("overlay.exampleMissing"));
           return;
         }
         const log = parseKlog(text, "example-align-a.klog");
@@ -100,7 +102,7 @@ export default function OverlayPage({
         setSelectedId("ex-log");
       }
     } catch {
-      setError("Could not load examples.");
+      setError(t("overlay.exampleFail"));
     }
   }
 
@@ -161,12 +163,9 @@ export default function OverlayPage({
   return (
     <div className="mx-auto w-full max-w-[1400px] space-y-4 p-4">
       <Card className="p-5">
-        <h2 className="text-[17px] font-semibold">See the roast against its design</h2>
-        <p className="mt-1 text-[13px] text-muted">
-          Files stay in this browser. Compare several .kpro files, or drop a .klog to overlay measured
-          temperature on the machine’s own design curve.
-        </p>
-        <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-card2 px-4 py-10 text-center">
+        <h2 className="text-[17px] font-semibold">{t("overlay.title")}</h2>
+        <p className="mt-1 text-[13px] text-muted">{t("overlay.blurb")}</p>
+        <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-card2 px-4 py-6 text-center sm:py-10">
           <input
             type="file"
             accept=".kpro,.klog"
@@ -177,15 +176,15 @@ export default function OverlayPage({
               e.target.value = "";
             }}
           />
-          <div className="text-[15px] font-medium">Drop .kpro or .klog here</div>
-          <div className="mt-1 text-[13px] text-muted">or click to choose files</div>
+          <div className="text-[15px] font-medium">{t("overlay.drop")}</div>
+          <div className="mt-1 text-[13px] text-muted">{t("overlay.orClick")}</div>
         </label>
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" className="rounded-lg bg-card2 px-3 py-2 text-[13px]" onClick={() => void loadExample("profiles")}>
-            Example profiles
+            {t("overlay.exampleProfiles")}
           </button>
           <button type="button" className="rounded-lg bg-card2 px-3 py-2 text-[13px]" onClick={() => void loadExample("logs")}>
-            Example log
+            {t("overlay.exampleLog")}
           </button>
           {tracks.length > 0 && (
             <button
@@ -197,14 +196,14 @@ export default function OverlayPage({
                 setSelectedId(null);
               }}
             >
-              Clear
+              {t("common.clear")}
             </button>
           )}
         </div>
         <div className="mt-4">
-          <h3 className="mb-2 text-[13px] font-semibold text-label">From library</h3>
+          <h3 className="mb-2 text-[13px] font-semibold text-label">{t("overlay.fromLibrary")}</h3>
           {library.length === 0 ? (
-            <p className="text-[13px] text-muted">Save a generated profile first, then load it here to compare.</p>
+            <p className="text-[13px] text-muted">{t("overlay.libraryEmpty")}</p>
           ) : (
             <div className="flex flex-col gap-2">
               {library.map((item) => {
@@ -230,11 +229,11 @@ export default function OverlayPage({
                           setSelectedId(id);
                           setEditId(id);
                         } catch (e) {
-                          setError(e instanceof Error ? e.message : "Could not load library profile");
+                          setError(e instanceof Error ? e.message : t("overlay.libFail"));
                         }
                       }}
                     >
-                      {loaded ? "Added" : "Add"}
+                      {loaded ? t("common.added") : t("common.add")}
                     </button>
                   </div>
                 );
@@ -245,29 +244,16 @@ export default function OverlayPage({
         {error && <p className="mt-2 text-[13px] text-orange">{error}</p>}
       </Card>
 
-      {isLocalAiUiEnabled() && (
-        <OverlayCoach
-          tracks={tracks}
-          baseIntent={editLibraryItem?.intent ?? studioIntent}
-          onOpenInGenerate={(next) => onOpenInGenerate(next)}
-          onAddGeneratedTrack={(track) => {
-            setTracks((prev) => [...prev, track]);
-            setSelectedId(track.id);
-            if (track.kind === "profile") setEditId(track.id);
-          }}
-        />
-      )}
-
       {tracks.length > 0 && (
         <>
           <Card className="p-4">
             <OverlayChart tracks={tracks} />
             <div className="mt-3 flex flex-wrap gap-3 text-[12px] text-muted">
-              {tracks.map((t) => (
-                <span key={t.id} className="flex items-center gap-2">
-                  <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: t.color }} />
-                  {t.name} {t.log ? "(solid actual / dashed design)" : "(design)"}
-                  <span className="text-muted"> · dotted fan</span>
+              {tracks.map((track) => (
+                <span key={track.id} className="flex items-center gap-2">
+                  <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: track.color }} />
+                  {track.name} {track.log ? t("overlay.solidDashed") : t("overlay.design")}
+                  <span className="text-muted">{t("overlay.dottedFan")}</span>
                 </span>
               ))}
             </div>
@@ -286,10 +272,8 @@ export default function OverlayPage({
             <Card className="p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-[15px] font-semibold">Edit design</h3>
-                  <p className="mt-1 text-[12px] text-muted">
-                    Add or delete points on a .kpro, then Smooth curve so corners do not stay sharp.
-                  </p>
+                  <h3 className="text-[15px] font-semibold">{t("overlay.editDesign")}</h3>
+                  <p className="mt-1 text-[12px] text-muted">{t("overlay.editHelp")}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <select
@@ -319,24 +303,24 @@ export default function OverlayPage({
                         );
                         setEditId(`lib-${item.id}`);
                       }
-                      setNotice("Saved to library. Open it in Generate to edit bean info or fork it as a base.");
+                      setNotice(t("overlay.savedNotice"));
                     }}
                   >
-                    Save to library
+                    {t("studio.saveLibrary")}
                   </button>
                   <button
                     type="button"
                     className="rounded-lg bg-card2 px-3 py-2 text-[13px] font-semibold text-white"
                     onClick={() => onOpenInGenerate(intentFromEdit(), editLibraryItem?.id)}
                   >
-                    Edit in Generate
+                    {t("overlay.editGenerate")}
                   </button>
                   <button
                     type="button"
                     className="rounded-lg bg-card2 px-3 py-2 text-[13px] font-semibold text-white"
                     onClick={() => onOpenInGenerate(intentFromEdit())}
                   >
-                    Use as base
+                    {t("overlay.useBase")}
                   </button>
                   <button
                     type="button"
@@ -346,7 +330,7 @@ export default function OverlayPage({
                       downloadText(editTrack.profile.fileName || `${editTrack.name}.kpro`, text);
                     }}
                   >
-                    Download edited .kpro
+                    {t("overlay.downloadEdited")}
                   </button>
                 </div>
               </div>
@@ -372,10 +356,10 @@ export default function OverlayPage({
 
           <Card className="p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold">Level</h3>
+              <h3 className="text-[15px] font-semibold">{t("overlay.level")}</h3>
               <label className="flex items-center gap-2 text-[13px] text-muted">
                 <input type="checkbox" checked={syncLevels} onChange={(e) => setSyncLevels(e.target.checked)} />
-                Sync all
+                {t("overlay.syncAll")}
               </label>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
@@ -411,6 +395,19 @@ export default function OverlayPage({
           ))}
         </>
       )}
+
+      {isLocalAiUiEnabled() && tracks.length > 0 && (
+        <OverlayCoach
+          tracks={tracks}
+          baseIntent={editLibraryItem?.intent ?? studioIntent}
+          onOpenInGenerate={(next) => onOpenInGenerate(next)}
+          onAddGeneratedTrack={(track) => {
+            setTracks((prev) => [...prev, track]);
+            setSelectedId(track.id);
+            if (track.kind === "profile") setEditId(track.id);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -432,6 +429,7 @@ function trackFromLog(id: string, log: RoastLog, color: string): OverlayTrack {
 }
 
 function DiffTable({ tracks }: { tracks: OverlayTrack[] }) {
+  const { t } = useI18n();
   const groups = useMemo(() => visibleDiffGroups(tracks), [tracks]);
   if (tracks.length === 0) return null;
   const base = tracks[0];
@@ -440,8 +438,8 @@ function DiffTable({ tracks }: { tracks: OverlayTrack[] }) {
     <Card className="overflow-x-auto">
       <div className="flex items-end justify-between gap-3 px-4 pt-4">
         <div>
-          <h3 className="text-[15px] font-semibold">Compare parameters</h3>
-          <p className="mt-1 text-[12px] text-muted">Values that differ from the first column are highlighted.</p>
+          <h3 className="text-[15px] font-semibold">{t("overlay.compare")}</h3>
+          <p className="mt-1 text-[12px] text-muted">{t("overlay.compareHelp")}</p>
         </div>
       </div>
       <table className="mt-2 w-full text-left text-[13px]">

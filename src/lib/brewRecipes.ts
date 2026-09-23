@@ -1,3 +1,5 @@
+import type { MessageKey } from "../i18n/en";
+import { translate, type Locale } from "../i18n/translate";
 import {
   BREW_METHODS,
   boilingPointC,
@@ -94,6 +96,7 @@ export function cloneFromCard(recipe: BrewRecipe, name?: string): UserBrewRecipe
 export function viewUserRecipe(
   mine: UserBrewRecipe,
   kitchenAltitudeM?: number,
+  locale: Locale = "en",
 ): BrewRecipe {
   const waterG = Math.round(mine.coffeeG * mine.ratioN) - (mine.bypassG ?? 0);
   const boilC =
@@ -112,6 +115,7 @@ export function viewUserRecipe(
   }
   const cupG = waterG + (mine.bypassG ?? 0);
   const ratio = Number.isInteger(mine.ratioN) ? `1:${mine.ratioN}` : `1:${mine.ratioN.toFixed(1)}`;
+  const t = (key: MessageKey, vars?: Record<string, string | number>) => translate(locale, key, vars);
   return {
     method: mine.method,
     roastStyle: "light",
@@ -127,32 +131,32 @@ export function viewUserRecipe(
     cappedByBoil,
     kettleNote: openKettle
       ? cappedByBoil
-        ? `Rolling boil · local ceiling ${boilC?.toFixed(1)} °C`
+        ? t("kettle.rolling", { boil: boilC?.toFixed(1) ?? "", wanted: mine.wantedC.toFixed(0) })
         : `${kettleC.toFixed(0)} °C`
       : mine.method === "coldbrew"
-        ? "Fridge · cold or room-temp water, no kettle"
-        : "Group / boiler — pressurized, not limited by kettle boil",
+        ? t("kettle.cold")
+        : t("kettle.espresso"),
     timeLabel:
       mine.method === "espresso"
-        ? `${Math.round(mine.timeS)} s`
+        ? t("time.espresso", { s: Math.round(mine.timeS) })
         : mine.method === "coldbrew"
-          ? `${Math.round(mine.timeS / 3600)} h fridge`
+          ? t("time.cold", { h: Math.round(mine.timeS / 3600) })
           : formatBrewTime(mine.timeS),
     timeS: mine.timeS,
     grind: mine.grind,
     grindNote: mine.grind.replace("-", " "),
-    restLabel: "Yours",
+    restLabel: t("brew.yours"),
     origin: mine.origin,
     gaggiuino: mine.method === "espresso" ? mine.gaggiuino : undefined,
     steps: mine.steps,
     why: [
-      `${mine.name} is saved on this device.`,
-      mine.forkedFrom ? `Forked from ${mine.forkedFrom}. Championship cards were not edited.` : "Written here. Championship cards were not edited.",
+      t("brew.mineSaved", { name: mine.name }),
+      mine.forkedFrom ? t("brew.mineForked", { name: mine.forkedFrom }) : t("brew.mineWritten"),
     ],
-    sources: ["Yours · local device · export a .json to share"],
+    sources: [t("brew.mineSource")],
     warnings:
       cappedByBoil && boilC != null
-        ? [`Wanted ${mine.wantedC.toFixed(0)} °C. Local boil will not reach it.`]
+        ? [t("brew.warnCapped", { wanted: mine.wantedC.toFixed(0) })]
         : [],
   };
 }

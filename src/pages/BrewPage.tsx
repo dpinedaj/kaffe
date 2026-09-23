@@ -37,6 +37,17 @@ import {
   viewUserRecipe,
   type UserBrewRecipe,
 } from "../lib/brewRecipes";
+import { useI18n } from "../i18n/LocaleContext";
+import {
+  defText,
+  flavorLabel,
+  originLabel,
+  processLabel,
+  restLabelFor,
+  styleLabel,
+  varietyLabel,
+} from "../i18n/labels";
+import type { MessageKey } from "../i18n/en";
 import { curveName, type RoastIntent } from "../lib/generate";
 import { parseKpro } from "../lib/kpro";
 import {
@@ -62,6 +73,7 @@ export default function BrewPage({
   studioIntent: RoastIntent;
   library: SavedProfile[];
 }) {
+  const { t, locale } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
   const recipeFileRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -115,20 +127,30 @@ export default function BrewPage({
     beanSize: usingBag ? bagFields.beanSize : snap?.beanSize,
     coffeeG: dose,
     ratio,
+    locale,
   } as const;
   const recipe = useMemo(
     () => recommendBrew({ ...brewInput, technique }),
-    [method, style, snap, days, kitchenM, dose, ratio, technique, usingBag, bag],
+    [method, style, snap, days, kitchenM, dose, ratio, technique, usingBag, bag, locale],
+  );
+  const restShown = restLabelFor(
+    locale,
+    usingBag ? "rest" : (snap?.drinkPlan ?? "rest"),
+    days,
+    style,
   );
   const mine = mineItems.find((r) => r.id === mineId && r.method === method);
-  const shown = mine ? viewUserRecipe(mine, kitchenM) : recipe;
+  const shown = mine ? viewUserRecipe(mine, kitchenM, locale) : recipe;
   const otherWarnings = shown.warnings.filter(
     (w) =>
       w !== recipe.restWarn &&
-      !/SCA 92|Set kitchen altitude|Local boil will not reach/.test(w),
+      w !== restShown.restWarn &&
+      w !== t("brew.warnAltitude") &&
+      w !== t("brew.warnSca", { boil: shown.boilC?.toFixed(1) ?? "" }) &&
+      w !== t("brew.warnCapped", { wanted: shown.wantedC.toFixed(0) }),
   );
   const mineOnMethod = mineForMethod(method, mineItems);
-  const techniques = techniquesFor(method);
+  const techniques = techniquesFor(method, locale);
   const methodInfo = BREW_METHODS.find((m) => m.id === method);
 
   function patchKitchen(raw: string) {
@@ -196,7 +218,7 @@ export default function BrewPage({
     const name = techniques.find((t) => t.id === techniqueId)?.name ?? methodInfo?.name ?? method;
     setMineId(undefined);
     setTechnique(techniqueId);
-    setSheet(cloneFromCard(card, `My ${name}`));
+    setSheet(cloneFromCard(card, t("brew.myName", { name })));
   }
 
   function saveSheet(next: UserBrewRecipe) {
@@ -257,18 +279,13 @@ export default function BrewPage({
     <div className="mx-auto w-full max-w-3xl space-y-4 p-4">
       <div>
         <div className="flex items-center gap-2">
-          <h2 className="text-[22px] font-semibold">Brew</h2>
-          <span className="rounded-full bg-card2 px-2 py-0.5 text-[11px] font-semibold text-orange">Preview</span>
+          <h2 className="text-[22px] font-semibold">{t("brew.title")}</h2>
         </div>
-        <p className="mt-1 text-[13px] leading-relaxed text-muted">
-          Starting cards from competition, community, and academic recipes. Attach a roast, or use
-          This bag if you bought the coffee. New Recipe starts blank. Kitchen altitude caps kettle
-          temperature; farm metres stay on the lot.
-        </p>
+        <p className="mt-1 text-[13px] leading-relaxed text-muted">{t("brew.intro")}</p>
       </div>
 
       <section>
-        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Brewer</h3>
+        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.brewer")}</h3>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {BREW_METHODS.map((m) => {
             const on = method === m.id;
@@ -293,22 +310,26 @@ export default function BrewPage({
             );
           })}
         </div>
-        {methodInfo && <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{methodInfo.blurb}</p>}
+        {methodInfo && (
+          <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
+            {defText(`methodBlurb.${methodInfo.id}` as MessageKey, t, methodInfo.blurb)}
+          </p>
+        )}
       </section>
 
       <section>
-        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Roast</h3>
+        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.roast")}</h3>
         <div className="mb-2 flex rounded-lg bg-card2 p-0.5">
           {(
             [
-              ["profile", "Profile"],
-              ["bag", "This bag"],
+              ["profile", t("brew.profile")],
+              ["bag", t("brew.thisBag")],
             ] as const
           ).map(([id, label]) => (
             <button
               key={id}
               type="button"
-              className={`flex-1 rounded-md px-3 py-1.5 text-[13px] font-semibold ${
+              className={`flex-1 rounded-md px-3 py-2 text-[13px] font-semibold ${
                 roastTab === id ? "bg-blue text-white" : "text-muted"
               }`}
               onClick={() => {
@@ -323,15 +344,15 @@ export default function BrewPage({
         {roastTab === "profile" ? (
           <>
             <Card>
-              <Row label="Attached">
+              <Row label={t("brew.attached")}>
                 <select
                   value={selectValue}
                   onChange={(e) => setAttach(parseAttach(e.target.value, attach))}
-                  className="max-w-[240px] appearance-none bg-transparent text-right text-[15px] font-medium text-blue outline-none"
+                  className="w-full max-w-none appearance-none bg-transparent text-left text-[15px] font-medium text-blue outline-none sm:max-w-[240px] sm:text-right"
                 >
-                  <option value="generate">Current Generate roast</option>
-                  <option value="none">No roast — style only</option>
-                  {attach.kind === "kpro" && <option value="kpro">{snap?.label ?? "Imported .kpro"}</option>}
+                  <option value="generate">{t("brew.currentGenerate")}</option>
+                  <option value="none">{t("brew.noRoast")}</option>
+                  {attach.kind === "kpro" && <option value="kpro">{snap?.label ?? t("brew.importedKpro")}</option>}
                   {library.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.curveName}
@@ -339,40 +360,40 @@ export default function BrewPage({
                   ))}
                 </select>
               </Row>
-              <Row label="Name">
-                <span className="text-[15px] text-white">{snap?.label ?? "None"}</span>
+              <Row label={t("brew.name")}>
+                <span className="text-[15px] text-white">{snap?.label ?? t("common.none")}</span>
               </Row>
               {snap ? (
-                <Row label="Planned as" last={!snap.flavors.length}>
+                <Row label={t("brew.plannedAs")} last={!snap.flavors.length}>
                   <span className="text-[15px] text-white">
-                    {cap(snap.roastStyle)}
+                    {styleLabel(snap.roastStyle, t)}
                     {snap.level != null ? ` L${snap.level.toFixed(1)}` : ""} · {cap(snap.drinkPlan)} ·{" "}
                     {cap(snap.brew)}
                     {snap.varietyName ? ` · ${snap.varietyName}` : ""}
                   </span>
                 </Row>
               ) : (
-                <Row label="Roast style" last>
-                  <div className="flex rounded-lg bg-card2 p-0.5">
+                <Row label={t("studio.roastStyle")} last>
+                  <div className="flex w-full rounded-lg bg-card2 p-0.5 sm:w-auto">
                     {STYLES.map((s) => (
                       <button
                         key={s.id}
                         type="button"
-                        className={`rounded-md px-2.5 py-1 text-[12px] font-semibold ${
+                        className={`flex-1 rounded-md px-2.5 py-1.5 text-[12px] font-semibold sm:flex-none ${
                           looseStyle === s.id ? "bg-blue text-white" : "text-muted"
                         }`}
                         onClick={() => setLooseStyle(s.id)}
                       >
-                        {s.name}
+                        {styleLabel(s.id, t)}
                       </button>
                     ))}
                   </div>
                 </Row>
               )}
               {snap != null && snap.flavors.length > 0 && (
-                <Row label="Flavor goal" last>
+                <Row label={t("brew.flavorGoal")} last>
                   <span className="text-[15px] text-white">
-                    {snap.flavors.map((id) => id.replace(/([A-Z])/g, " $1")).join(" · ")}
+                    {snap.flavors.map((id) => flavorLabel(id, t)).join(" · ")}
                   </span>
                 </Row>
               )}
@@ -399,68 +420,68 @@ export default function BrewPage({
                   e.target.value = "";
                 }}
               />
-              <div className="text-[13px] font-medium text-white">Drop a .kpro here</div>
-              <div className="mt-0.5 text-[12px] text-muted">or click to import a roast file</div>
+              <div className="text-[13px] font-medium text-white">{t("brew.dropKpro")}</div>
+              <div className="mt-0.5 text-[12px] text-muted">{t("brew.orImport")}</div>
             </label>
             {importError && <p className="mt-2 px-1 text-[12px] text-red">{importError}</p>}
           </>
         ) : (
           <>
             <Card>
-              <Row label="Roast">
-                <div className="flex rounded-lg bg-card2 p-0.5">
+              <Row label={t("brew.roast")}>
+                <div className="flex w-full rounded-lg bg-card2 p-0.5 sm:w-auto">
                   {STYLES.map((s) => (
                     <button
                       key={s.id}
                       type="button"
-                      className={`rounded-md px-2.5 py-1 text-[12px] font-semibold ${
+                      className={`flex-1 rounded-md px-2.5 py-1.5 text-[12px] font-semibold sm:flex-none ${
                         bag.roastStyle === s.id ? "bg-blue text-white" : "text-muted"
                       }`}
                       onClick={() => patchBag({ roastStyle: s.id })}
                     >
-                      {s.name}
+                      {styleLabel(s.id, t)}
                     </button>
                   ))}
                 </div>
               </Row>
-              <Row label="Origin">
+              <Row label={t("studio.origin")}>
                 <Select value={bag.originId ?? ""} onChange={setBagOrigin}>
-                  <option value="">Not on the bag</option>
+                  <option value="">{t("origin.unknown")}</option>
                   {ORIGINS.map((o) => (
                     <option key={o.id} value={o.id}>
-                      {o.name}
+                      {originLabel(o.id, t, o.name)}
                     </option>
                   ))}
                 </Select>
               </Row>
-              <Row label="Variety">
+              <Row label={t("studio.variety")}>
                 <Select value={bag.varietyId ?? "unknown"} onChange={setBagVariety}>
                   {VARIETIES.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {v.name}
+                      {varietyLabel(v.id, t, v.name)}
                     </option>
                   ))}
                 </Select>
               </Row>
-              <Row label="Process">
+              <Row label={t("studio.process")}>
                 <Select
                   value={bag.process}
                   onChange={(id) => patchBag({ process: id as BrewBag["process"] })}
                 >
                   {PROCESSES.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name}
+                      {processLabel(p.id, t)}
                     </option>
                   ))}
                 </Select>
               </Row>
-              <Row label="Farm (m)" last>
+              <Row label={t("brew.farmM")} last>
                 <input
                   type="number"
                   min={0}
                   max={4500}
                   step={50}
-                  placeholder="e.g. 1800"
+                  placeholder={t("brew.altPh", { m: 1800 })}
                   value={bag.farmAltitudeM ?? ""}
                   onChange={(e) => {
                     if (e.target.value === "") {
@@ -476,7 +497,7 @@ export default function BrewPage({
             </Card>
             <div className="mt-3">
               <div className="mb-1 flex items-center justify-between px-1">
-                <h4 className="text-[13px] font-semibold uppercase tracking-wide text-muted">I want</h4>
+                <h4 className="text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.iWant")}</h4>
                 <span className="rounded-full bg-card2 px-2 py-0.5 text-[11px] text-muted">
                   {bag.flavors.length}/2
                 </span>
@@ -500,21 +521,17 @@ export default function BrewPage({
                         </span>
                       )}
                       <div className="text-xl">{f.icon}</div>
-                      <div className="mt-1 text-[13px] font-semibold">{f.name}</div>
+                      <div className="mt-1 text-[13px] font-semibold">{flavorLabel(f.id, t)}</div>
                     </button>
                   );
                 })}
               </div>
             </div>
-            <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-              What is on the bag, not a roast file. Origin and variety set density, seed size, and a
-              flavor lean — they do not invent a Kenya-only recipe. Farm metres refine density.
-              Kitchen altitude still caps the kettle.
-            </p>
+            <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{t("brew.bagHelp")}</p>
           </>
         )}
         <Card className="mt-2">
-          <Row label="Days since roast" last>
+          <Row label={t("brew.days")} last>
             <DraftNumber
               value={days}
               step={1}
@@ -523,14 +540,14 @@ export default function BrewPage({
             />
           </Row>
         </Card>
-        <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{recipe.restLabel}</p>
-        {recipe.restWarn && (
-          <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">{recipe.restWarn}</p>
+        <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{restShown.restLabel}</p>
+        {restShown.restWarn && (
+          <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">{restShown.restWarn}</p>
         )}
       </section>
 
       <section>
-        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">My recipes</h3>
+        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.mine")}</h3>
         {mineOnMethod.length > 0 && (
           <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {mineOnMethod.map((item) => {
@@ -565,14 +582,14 @@ export default function BrewPage({
                           setSheet(item);
                         }}
                       >
-                        Edit
+                        {t("common.edit")}
                       </button>
                       <button
                         type="button"
                         className={`text-[12px] font-semibold ${on ? "text-white/80" : "text-orange"}`}
                         onClick={() => deleteMine(item.id)}
                       >
-                        Delete
+                        {t("common.delete")}
                       </button>
                     </div>
                   </div>
@@ -581,29 +598,29 @@ export default function BrewPage({
             })}
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
-          <button type="button" className="text-[13px] font-medium text-blue" onClick={openBlankSheet}>
-            New Recipe
+        <div className="flex flex-wrap items-center gap-2 px-1">
+          <button type="button" className="rounded-lg bg-card px-3 py-2 text-[13px] font-medium text-blue" onClick={openBlankSheet}>
+            {t("brew.newRecipe")}
           </button>
-          <button type="button" className="text-[13px] font-medium text-blue" onClick={() => recipeFileRef.current?.click()}>
-            Import
+          <button type="button" className="rounded-lg bg-card px-3 py-2 text-[13px] font-medium text-blue" onClick={() => recipeFileRef.current?.click()}>
+            {t("common.import")}
           </button>
           {mine && (
             <button
               type="button"
-              className="text-[13px] font-medium text-blue"
+              className="rounded-lg bg-card px-3 py-2 text-[13px] font-medium text-blue"
               onClick={() => downloadText(recipeFileName(mine), serializeRecipe(mine))}
             >
-              Export
+              {t("common.export")}
             </button>
           )}
           {mineItems.length > 0 && (
             <button
               type="button"
-              className="text-[13px] font-medium text-blue"
+              className="rounded-lg bg-card px-3 py-2 text-[13px] font-medium text-blue"
               onClick={() => downloadText("kaffe-brew-recipes.json", serializePack(mineItems))}
             >
-              Export all
+              {t("brew.exportAll")}
             </button>
           )}
         </div>
@@ -618,17 +635,14 @@ export default function BrewPage({
             e.target.value = "";
           }}
         />
-        <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-          New Recipe starts from scratch. Edit on a card copies that recipe. They live on this
-          device — share with a .json file.
-        </p>
+        <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{t("brew.mineHelp")}</p>
         {recipeError && <p className="mt-2 px-1 text-[12px] text-red">{recipeError}</p>}
       </section>
 
       {techniques.length > 0 && (
         <section>
           <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
-            {method === "switch" ? "Switch valve" : "Competition recipe"}
+            {method === "switch" ? t("brew.switchValve") : t("brew.compRecipe")}
           </h3>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {techniques.map((m) => {
@@ -656,7 +670,7 @@ export default function BrewPage({
                               on ? "bg-white/20 text-white" : "bg-orange/15 text-orange"
                             }`}
                           >
-                            Suggested
+                            {t("common.suggested")}
                           </span>
                         )}
                       </div>
@@ -677,7 +691,7 @@ export default function BrewPage({
                       className={`shrink-0 text-[12px] font-semibold ${on ? "text-white" : "text-blue"}`}
                       onClick={() => openCreateSheet(m.id)}
                     >
-                      Edit
+                      {t("common.edit")}
                     </button>
                   </div>
                 </div>
@@ -685,72 +699,63 @@ export default function BrewPage({
             })}
           </div>
           <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-            {techniques.length > 1
-              ? "Named championship or shop scripts that aim at a flavor. The orange tag is the pick for this roast; tap another to override."
-              : "The published script for this method. The orange tag is the pick for this roast."}
+            {techniques.length > 1 ? t("brew.compHelpMany") : t("brew.compHelpOne")}
           </p>
         </section>
       )}
 
       <section>
-        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Kitchen</h3>
+        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.kitchen")}</h3>
         <Card>
-          <Row label="Altitude (m)">
+          <Row label={t("studio.altitude")}>
             <input
               type="number"
               min={0}
               max={4500}
               step={50}
-              placeholder="e.g. 1500"
+              placeholder={t("brew.altPh", { m: 1500 })}
               value={kitchenM ?? ""}
               onChange={(e) => patchKitchen(e.target.value)}
               className="w-24 bg-transparent text-right text-[15px] text-white outline-none placeholder:text-muted"
             />
           </Row>
-          <Row label="Local boil" last={!snap?.farmAltitudeM}>
+          <Row label={t("brew.localBoil")} last={!snap?.farmAltitudeM}>
             <span className="text-[15px] text-white">
-              {shown.boilC != null ? `${shown.boilC.toFixed(1)} °C` : "Set altitude"}
+              {shown.boilC != null ? `${shown.boilC.toFixed(1)} °C` : t("brew.setAltitude")}
             </span>
           </Row>
           {snap?.farmAltitudeM != null && (
-            <Row label="Same as this lot" last>
+            <Row label={t("brew.sameLot")} last>
               <button
                 type="button"
                 className="text-[15px] font-medium text-blue"
                 onClick={() => patchKitchen(String(snap.farmAltitudeM))}
               >
-                Use {snap.farmAltitudeM} m
+                {t("brew.useM", { m: snap.farmAltitudeM })}
               </button>
             </Row>
           )}
         </Card>
-        <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-          This is where you brew, not where the cherry grew. Saved on this device; it does not
-          change the .kpro.
-        </p>
+        <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{t("brew.kitchenHelp")}</p>
         {shown.boilC == null && method !== "espresso" && method !== "coldbrew" && (
-          <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">
-            Set kitchen altitude. Kettle temperature is capped by local boil, not by the sea-level
-            card.
-          </p>
+          <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">{t("brew.warnAltitude")}</p>
         )}
         {shown.boilC != null && shown.boilC < 92 && method !== "espresso" && method !== "coldbrew" && (
           <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">
-            Boil ({shown.boilC.toFixed(1)} °C) sits under the SCA 92 °C certification floor. Pour at
-            boil; do not print a hotter number.
+            {t("brew.warnSca", { boil: shown.boilC.toFixed(1) })}
           </p>
         )}
         {shown.cappedByBoil && (
           <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">
-            Wanted {shown.wantedC.toFixed(0)} °C. Local boil will not reach it.
+            {t("brew.warnCapped", { wanted: shown.wantedC.toFixed(0) })}
           </p>
         )}
       </section>
 
       <section>
-        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Cup</h3>
+        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.cup")}</h3>
         <Card>
-          <Row label="Dose (g)">
+          <Row label={t("brew.dose")}>
             <DraftNumber
               key={`${method}-dose`}
               value={mine ? shown.coffeeG : (dose ?? recipe.coffeeG)}
@@ -761,7 +766,7 @@ export default function BrewPage({
               className="w-20 bg-transparent text-right text-[15px] text-white outline-none disabled:text-muted"
             />
           </Row>
-          <Row label="Ratio (1 : )" last>
+          <Row label={t("brew.ratio")} last>
             <DraftNumber
               key={`${method}-ratio`}
               value={mine ? shown.ratioN : (ratio ?? recipe.ratioN)}
@@ -774,45 +779,52 @@ export default function BrewPage({
           </Row>
         </Card>
         <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-          {mine
-            ? "This is your card. Use Edit on it to change dose, ratio, or steps."
-            : "Water and pour weights follow dose × ratio. A bigger bed usually wants a click coarser; a tighter ratio a click finer, so brew time and extraction stay in band."}
+          {mine ? t("brew.cupMine") : t("brew.cupHelp")}
         </p>
       </section>
 
       <section>
-        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Starting card</h3>
+        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.startingCard")}</h3>
         <Card>
           <Field
-            label="Ratio"
+            label={t("common.ratio")}
             value={
               shown.bypassG
-                ? `${shown.ratio} in the cup · ${shown.coffeeG} g + ${shown.waterG} g brew + ${shown.bypassG} g bypass`
-                : `${shown.ratio} · ${shown.coffeeG} g : ${shown.waterG} g`
+                ? t("brew.ratioCup", {
+                    ratio: shown.ratio,
+                    coffee: shown.coffeeG,
+                    water: shown.waterG,
+                    bypass: shown.bypassG,
+                  })
+                : t("brew.ratioPlain", {
+                    ratio: shown.ratio,
+                    coffee: shown.coffeeG,
+                    water: shown.waterG,
+                  })
             }
           />
-          <Field label="Water" value={`${shown.kettleC.toFixed(1)} °C · ${shown.kettleNote}`} />
-          <Field label="Time" value={shown.timeLabel} />
-          <Field label="Grind" value={shown.grindNote} />
-          <Field label="Rest" value={shown.restLabel} />
-          {mine?.flavor && <Field label="Flavor" value={mine.flavor} />}
-          {mine?.mechanic && <Field label="How" value={mine.mechanic} />}
+          <Field label={t("common.water")} value={`${shown.kettleC.toFixed(1)} °C · ${shown.kettleNote}`} />
+          <Field label={t("common.time")} value={shown.timeLabel} />
+          <Field label={t("common.grind")} value={shown.grindNote} />
+          <Field label={t("common.rest")} value={restShown.restLabel} />
+          {mine?.flavor && <Field label={t("common.flavor")} value={mine.flavor} />}
+          {mine?.mechanic && <Field label={t("common.how")} value={mine.mechanic} />}
           {!mine && recipe.technique && techniques.length > 0 && (
             <Field
-              label="Recipe"
+              label={t("common.recipe")}
               value={`${techniques.find((m) => m.id === recipe.technique)?.flavor ?? ""} · ${
                 techniques.find((m) => m.id === recipe.technique)?.mechanic ?? recipe.technique
               }`}
             />
           )}
-          {shown.origin && <Field label="Source" value={shown.origin} />}
+          {shown.origin && <Field label={t("common.source")} value={shown.origin} />}
           {shown.gaggiuino && <Field label="Gaggiuino" value={shown.gaggiuino} />}
         </Card>
       </section>
 
       <section>
         <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">Steps</h3>
+          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.steps")}</h3>
           {shown.origin && (
             <span className="min-w-0 truncate text-right text-[12px] text-muted">{shown.origin}</span>
           )}
@@ -842,8 +854,8 @@ export default function BrewPage({
 
       <Card className="space-y-2 p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">Why</h3>
-          <Pill tone="orange">Not a lock</Pill>
+          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">{t("common.why")}</h3>
+          <Pill tone="orange">{t("common.notALock")}</Pill>
         </div>
         {shown.why.map((line) => (
           <p key={line} className="text-[13px] leading-relaxed text-label">
