@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DraftNumber } from "./ui";
 import { BREW_METHODS, type BrewMethod, type BrewStep } from "../lib/brew";
 import {
   GRIND_OPTIONS,
@@ -7,11 +8,13 @@ import {
 
 export default function BrewRecipeSheet({
   draft,
+  basedOn,
   onClose,
   onSave,
   onDelete,
 }: {
   draft: UserBrewRecipe;
+  basedOn?: string;
   onClose: () => void;
   onSave: (recipe: UserBrewRecipe) => void;
   onDelete?: (id: string) => void;
@@ -48,9 +51,13 @@ export default function BrewRecipeSheet({
       <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-card sm:rounded-3xl">
         <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
           <div>
-            <h3 className="text-[18px] font-semibold text-white">{saved ? "Edit recipe" : "Save this card"}</h3>
+            <h3 className="text-[18px] font-semibold text-white">{saved ? "Edit this card" : "New recipe"}</h3>
             <p className="mt-0.5 text-[12px] leading-relaxed text-muted">
-              Lives on this device. Export a file to share. Championship cards stay as they are.
+              {saved
+                ? "Changes stay on this device. Championship cards are not edited."
+                : basedOn
+                  ? `Based on ${basedOn}. The original stays as it is.`
+                  : "A blank card on this device. Add steps, then Create."}
             </p>
           </div>
           <button type="button" className="text-[15px] font-medium text-blue" onClick={onClose}>
@@ -63,7 +70,8 @@ export default function BrewRecipeSheet({
             <input
               value={rec.name}
               onChange={(e) => patch({ name: e.target.value })}
-              className="mt-1 w-full rounded-xl bg-card2 px-3 py-2 text-[15px] text-white outline-none"
+              placeholder="Name this recipe"
+              className="mt-1 w-full rounded-xl bg-card2 px-3 py-2 text-[15px] text-white outline-none placeholder:text-muted"
             />
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -206,7 +214,7 @@ export default function BrewRecipeSheet({
               className="rounded-xl bg-blue px-4 py-2 text-[14px] font-semibold text-white"
               onClick={() => onSave({ ...rec, name: rec.name.trim() || "Untitled" })}
             >
-              Save
+              {saved ? "Save" : "Create"}
             </button>
           </div>
         </div>
@@ -229,11 +237,10 @@ function Num({
   return (
     <label className="block">
       <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">{label}</span>
-      <input
-        type="number"
-        step={step}
+      <DraftNumber
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        step={step}
+        onChange={onChange}
         className="mt-1 w-full rounded-xl bg-card2 px-3 py-2 text-[15px] text-white outline-none"
       />
     </label>

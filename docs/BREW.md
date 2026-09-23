@@ -10,6 +10,8 @@ The card is built from three corpora, in this order:
 
 Implementation: `src/lib/brew.ts` (`recommendBrew`, `snapshotFromKpro`, `boilingPointC`). Farm altitude stays on Generate. **Kitchen** altitude is a separate, persisted input.
 
+The Roast section has two tabs. **Profile** attaches a Generate / library / .kpro roast. **This bag** is for a bought coffee: style, process, farm metres (density only), and up to two flavor icons. Same `recommendBrew` path; no .kpro required.
+
 ---
 
 ## 1. What the literature actually says
@@ -58,12 +60,13 @@ Community practice at elevation (Erdélyi / Perfect Daily Grind): pour at boil, 
 
 ---
 
-## 2b. Mine recipes (this device)
+## 2b. My recipes (this device)
 
 Championship chips stay **cited and read-only**. A user card is a **clone**, never an edit of Hoffmann / Kasuya / WBrC.
 
-- **Save this card** opens a sheet prefilled from the starting card (`forkedFrom` = that origin). Name, dose, ratio, temp, grind, and steps are yours.
-- **Mine** lists cards for the current method. Tap one to view it; tap a competition chip to leave it.
+- **New Recipe** (beside Import) opens a blank sheet for the current method. No championship steps are copied.
+- **Edit** on a competition card copies that card. **Edit** on a My recipes card opens the same sheet for your copy.
+- **My recipes** lists cards for the current method. Tap one to view it; tap a competition card to leave it.
 - Storage is `localStorage` (`kaffe.brew.mine.v1`), same pattern as the roast library. GitHub Pages has no server.
 - **Export** writes a single `kaffe.brew-recipe` JSON. **Export all** writes a `kaffe.brew-recipe-pack`. **Import** always creates new ids on this device.
 
@@ -88,6 +91,7 @@ Compulsory competition coffee sits roughly **Agtron 60–80** (Medium). Open-ser
 | 2017 | Chad Wang (TW) | V60 | 15 g / 250 g | 1:16.7 | 92 °C | ~2:00 | **V60 · one-pour center** |
 | 2018 | Emi Fukahori (CH) | GINA | 17 g / 220 g | 1:12.9 | 80 → 95 → 80 °C | ~3:30 | **Clever · 80/95/80** (GINA maps to Clever) |
 | 2019 | Jia-Ning Du (CN) | Origami | 16 g / 240 g | 1:15 | 94 °C | ~1:46 | **Origami · three pours, no bloom** |
+| 2012 | Matt Perger (AU) | V60 | 12 g / 200 g | 1:16.7 | 97 °C | ~2:20 | Fine grind + stir; same even-extraction school as **Rao spin** |
 | 2021 | Matt Winton (NZ) | V60 | ~20 g / 300 g | ~1:15 | 93 then 88 °C | — | Same idea as Peng; not a second chip |
 | 2022 | Shih Yuan Hsu (TW) | OREA V3 | 14 g / 200 g | 1:14.3 | **70 then 95 °C** | ~2:00 | **OREA · cool first** |
 | 2023 | Carlos Medina (CL) | Origami | 15.5–16 g / 250 g | 1:16 | 91 °C | ~2:40–3:00 | **Origami · five pulses** |
@@ -96,7 +100,7 @@ Compulsory competition coffee sits roughly **Agtron 60–80** (Medium). Open-ser
 
 US Brewers Cup 2025 (Justin Bull, Hario Switch): open first (acid), then closed steep (sweet). **Switch · open first**.
 
-WAC years we do **not** clone as extra chips (same drink family as Stanica / Pop / van Bunnik): Filip Kucharczyk 2016 (81 °C high-dose concentrate), Carolina Garay 2018 (85 °C + room-temp top-up), Akio Teramoto 2020, Jibbi Little 2022, Tay Wipvasutt 2023. Full archive: [worldaeropresschampionship.com/pages/recipes](https://worldaeropresschampionship.com/pages/recipes).
+WAC years we do **not** clone as extra chips (same drink family as Stanica / Pop / van Bunnik): Filip Kucharczyk 2016 (81 °C high-dose concentrate), Carolina Garay 2018 (85 °C + room-temp top-up), Paulina Miczka 2017, Jibbi Little 2022 (sifted dual grind). **Tay Wipvasutt 2023** is a different drink (mid-brew grounds + split bypass) — **AeroPress · mid-brew charge**. Full archive: [worldaeropresschampionship.com/pages/recipes](https://worldaeropresschampionship.com/pages/recipes).
 
 Cluster used in code: Light filter **1:14–1:16**, **91–96 °C**, **~1:45–3:00**. Recent winners are **not** on a V60. The V60 card still uses that cluster because the physics (ratio, temp, time) transfers; the pour pattern does not have to.
 
@@ -185,6 +189,7 @@ WAC winners repeatedly drop brew temperature to **keep sweetness and cut bittern
 | **Pop, WAC 2025** | Upright, **84 °C brew**, **70 g bypass at 50 °C** already in the carafe | Sweet / defined | Medium, Dark, or body / deep-sweet |
 | **Merikanto, WAC 2021** | Inverted, **80 °C**, 18 g / 200 g, gentle, no bypass | Sweet-sour, low astringency | Light + floral / light-sweet |
 | **van Bunnik, WAC 2019** | Inverted 30 g / 100 g, 40 s, dilute, serve ~60 °C | Acid + sweet together | Selectable; not the auto pick |
+| **Wipvasutt, WAC 2023** | 16 g in, **2 g more at 0:45**, press, room-temp then hot bypass | Aroma / Kenya-like | Selectable; not the auto pick |
 
 Pop and Merikanto are the “temperate water” recipes. Lock their published temperatures — do not add the usual +1 °C acid nudge on top of 80–84 °C.
 
@@ -196,14 +201,17 @@ Pop and Merikanto are the “temperate water” recipes. Lock their published te
 | Kasuya 4:6, **larger** first pour | First 40% then three equal pours | Bright / juicy. Light + acid. |
 | Kasuya 4:6, **smaller** first pour (his WBrC 2016 cup) | Same, less water in pour 1 | Honey / sweet. Light-sweet or Medium. |
 | Peng WBrC 2025, adapted | 96 °C bloom + mid, **80 °C** last pour | Floral / clean finish. Light + floral. |
+| Rao spin | Aggressive bloom spin, two pours, 4:00–4:30 | Even / high extraction. Light + clean. |
+| Hedrick double bloom | 45 g, 90 g, fast centre pour, no swirl | Clear on gassy lots. Light Rest still degassing (≤10 days), or winey. |
+| Hoffmann Japanese iced | 60% hot onto 40% ice in the server | Flash-chill / bright. Select when you want a cold cup — not fridge cold brew. |
 
 Kasuya’s lever is pour size, not a new dripper. The V60 card temperature (and the fruit-hotter-than-body nudge) stays unless you pick Peng.
+
+Skipped as redundant: Domatiotis 2014 and Tøllefsen 2015 (standard V60 pulses), Perger 2012 (same even-extraction school as Rao; needs a sieve at home).
 
 ### French press / Clever / cold brew
 
 Fewer championship scripts, still a real fork: Hoffmann settle vs classic 4:00; long vs short Clever steep; fridge ready vs 1:8 concentrate.
-
-Origami, OREA, Kalita, Chemex, moka, espresso, cupping stay on one skeleton.
 
 ---
 
@@ -328,12 +336,16 @@ KL Rest 3–5 days is when the cup *starts* to settle, not when it dies. Officia
 12g. Hsu, S. Y. (2022). World Brewers Cup. OREA, 14 g / 200 g, first pour 70 °C then 95 °C. [Cup Timer](https://www.cup-timer.com/en/recipe/shih-yuan-hsu-wbrc-2022)
 12h. Du, J. N. (2019). World Brewers Cup. Origami, 16 g / 240 g, 94 °C, three pours, no bloom, ~1:46. [Gota](https://gota.cafe/en/recipes/origami-m/origami-m-du)
 12i. Bull, J. (2025). US Brewers Cup. Hario Switch, percolation first then steep. [Barista Magazine](https://www.baristamagazine.com/justin-bull-rebounds-to-win-u-s-brewers-cup/)
+12j. Wipvasutt, T. (2023). World AeroPress Championship. 16 g + 2 g mid-brew, 89 °C, split bypass. [WAC recipe](https://worldaeropresschampionship.com/pages/1st-tay-wipvasutt-thailand-2023)
 13. World Barista Championship 2024–25 open-service espresso recipes (cluster: ~1:2–1:2.5, 90–94 °C). World Coffee Events / competitor disclosures.
 13b. SproFiler community profiles for Gaggiuino (Adaptive Light/Dark, Blooming espresso, Extractamundo Dos!, Londinium, Leva, Low High Low, Stock 9 Bar, Filter 2.1). [sprofiler.io/community-profiles](https://sprofiler.io/community-profiles)
 
 ### Community (Hoffmann and SCA-shaped)
 
 14. Hoffmann, J. *The Ultimate V60 Technique*. Bloom, 60% pour, stir. [YouTube](https://www.youtube.com/watch?v=AI4ynXzkSQo)
+14b. Rao, S. V60: bloom spin, two pours, 20 g / 330 g, ~97 °C, 4:00–4:30. [Hario UK](https://www.hario.co.uk/blogs/hario-ambassadors/hario-v60-recipe-interview-with-hario-ambassador-scott-rao)
+14c. Hedrick, L. Double bloom then one fast centre pour (gassy lots). [YouTube](https://www.youtube.com/watch?v=PNFVCmxBjQQ)
+14d. Hoffmann, J. Japanese iced filter: 65 g/L, 60% hot / 40% ice in the server. [YouTube](https://www.youtube.com/watch?v=PApBycDrPo0)
 15. Hoffmann, J. Chemex as a V60 adaptation, 30 g / 500 g, ~4:10. Write-up: [timer.coffee](https://www.timer.coffee/recipes/chemex/james-hoffmann-chemex-recipe/)
 16. Hoffmann, J. Hario Switch daily driver, 15 g / 250 g, ~2:00 steep, open ~2:15. [YouTube](https://www.youtube.com/watch?v=QjIvN8mlK9Y)
 16b. Fukahori, E. Closed bloom 50 g / 30 s, then open centre pour 14 g / 200 g, 93 °C, ~2:20. WBrC 2018; MAME shops. Recap: [European Coffee Trip](https://europeancoffeetrip.com/emi-fukahori-world-brewers-cup-2018-champion/)

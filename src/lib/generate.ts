@@ -569,8 +569,20 @@ export function formatZoneSummary(z: ZoneIntent): string {
   return `${role}${formatClock(z.startS)}–${formatClock(z.endS)} · ${sign}${z.boost} °C/min`;
 }
 
+/** Two flavor picks share one budget. A single pick keeps its own 0–1 weight. */
+export function shareFlavorBudget(picks: FlavorPick[]): FlavorPick[] {
+  if (picks.length <= 1) return picks.map((p) => ({ ...p, weight: Math.max(0, Math.min(1, p.weight)) }));
+  const live = picks.map((p) => ({ ...p, weight: Math.max(0, p.weight) }));
+  const sum = live.reduce((s, p) => s + p.weight, 0);
+  if (sum <= 0) return live.map((p, i) => ({ ...p, weight: i === 0 ? 1 : 0 }));
+  return live.map((p) => ({ ...p, weight: p.weight / sum }));
+}
+
 function flavorAdjustment(picks: FlavorPick[]): Adjustment {
-  return picks.reduce((acc, pick) => add(acc, scale(FLAVOR_DELTA[pick.id], pick.weight)), { ...ZERO });
+  return shareFlavorBudget(picks).reduce(
+    (acc, pick) => add(acc, scale(FLAVOR_DELTA[pick.id], pick.weight)),
+    { ...ZERO },
+  );
 }
 
 function processCode(process: ProcessId): string {

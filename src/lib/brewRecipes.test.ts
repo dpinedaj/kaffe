@@ -3,6 +3,7 @@ import { recommendBrew } from "./brew";
 import {
   USER_RECIPE_KIND,
   USER_RECIPE_PACK,
+  blankRecipe,
   cloneFromCard,
   importRecipes,
   loadMine,
@@ -36,6 +37,17 @@ afterEach(() => {
 describe("youOrigin", () => {
   it("prints You · ISO date", () => {
     expect(youOrigin(new Date(2026, 8, 23))).toBe("You · 2026-09-23");
+  });
+});
+
+describe("blank recipe", () => {
+  it("starts empty for the current method", () => {
+    const rec = blankRecipe("v60");
+    expect(rec.method).toBe("v60");
+    expect(rec.forkedFrom).toBeUndefined();
+    expect(rec.steps).toEqual([{ at: "", title: "", detail: "" }]);
+    expect(rec.name).toBe("");
+    expect(rec.origin).toMatch(/^You · /);
   });
 });
 
