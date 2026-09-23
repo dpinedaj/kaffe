@@ -1,6 +1,6 @@
 # Brew model (Preview)
 
-Kaffe’s Brew page is a **starting card**, not a lock. It does not read the Bézier, does not invent TDS/PE without a refractometer, and does not treat a World Brewers Cup routine as law for a home V60 at 1 800 m.
+Kaffe’s Brew page is a **starting card**, not a lock. It does not read the Bézier and does not invent TDS/PE — After brew takes a refractometer Brix or TDS and places the cup on a Lockhart / SCA control chart. It does not treat a World Brewers Cup routine as law for a home V60 at 1 800 m.
 
 The card is built from three corpora, in this order:
 

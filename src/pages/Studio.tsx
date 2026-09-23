@@ -8,6 +8,7 @@ import {
   generateProfile,
   inferFlavorsFromAdjustment,
   inferStyleFromCurve,
+  densityFromVessel,
   formatZoneSummary,
   isAutoDensity,
   signed,
@@ -43,6 +44,34 @@ import {
 } from "../lib/knowledge";
 
 type StudioTab = "parameters" | "flavor" | "curve";
+type DensityEntry = "altitude" | "gl" | "vessel";
+
+const VOLUME_KEY = "kaffe.densityVolumeMl";
+const DEFAULT_VESSEL_ML = 90;
+
+function densityEntry(intent: RoastIntent): DensityEntry {
+  if (isAutoDensity(intent)) return "altitude";
+  if (intent.densityVolumeMl != null) return "vessel";
+  return "gl";
+}
+
+function readLastVolume(): number {
+  try {
+    const raw = localStorage.getItem(VOLUME_KEY);
+    const n = raw == null ? NaN : Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : DEFAULT_VESSEL_ML;
+  } catch {
+    return DEFAULT_VESSEL_ML;
+  }
+}
+
+function rememberVolume(ml: number) {
+  try {
+    localStorage.setItem(VOLUME_KEY, String(ml));
+  } catch {
+    /* quota / private mode */
+  }
+}
 
 export default function Studio({
   intent,
@@ -204,33 +233,132 @@ export default function Studio({
                     className="w-24 bg-transparent text-right text-[15px] text-white outline-none"
                   />
                 </Row>
-                <Row label={t("studio.densityFromAlt")}>
-                  <Toggle
-                    on={isAutoDensity(intent)}
-                    onChange={(on) =>
-                      patch({
-                        autoDensity: on,
-                        densityGL: on ? undefined : generated.resolvedDensityGL,
-                      })
-                    }
-                  />
-                </Row>
-                <Row label={t("studio.densityGL")}>
-                  <input
-                    type="number"
-                    min={550}
-                    max={820}
-                    step={1}
-                    value={isAutoDensity(intent) ? generated.resolvedDensityGL : (intent.densityGL ?? "")}
-                    onChange={(e) => {
-                      if (e.target.value === "") {
-                        patch({ autoDensity: true, densityGL: undefined });
-                        return;
-                      }
-                      patch({ autoDensity: false, densityGL: Number(e.target.value) });
-                    }}
-                    className="w-24 bg-transparent text-right text-[15px] text-white outline-none"
-                  />
+                <Row label={t("studio.density")}>
+                  <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:items-end">
+                    <div className="flex w-full rounded-lg bg-card2 p-0.5 sm:w-auto">
+                      {(
+                        [
+                          ["altitude", t("studio.densityAlt")],
+                          ["gl", t("studio.densityGLShort")],
+                          ["vessel", t("studio.densityVessel")],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          className={`flex-1 rounded-md px-2.5 py-1.5 text-[12px] font-semibold sm:flex-none ${
+                            densityEntry(intent) === id ? "bg-blue text-white" : "text-muted"
+                          }`}
+                          onClick={() => {
+                            if (id === "altitude") {
+                              patch({
+                                autoDensity: true,
+                                densityGL: undefined,
+                                densityMassG: undefined,
+                                densityVolumeMl: undefined,
+                              });
+                              return;
+                            }
+                            if (id === "gl") {
+                              patch({
+                                autoDensity: false,
+                                densityGL: generated.resolvedDensityGL,
+                                densityMassG: undefined,
+                                densityVolumeMl: undefined,
+                              });
+                              return;
+                            }
+                            const volumeMl = intent.densityVolumeMl ?? readLastVolume();
+                            const massG =
+                              intent.densityMassG ??
+                              Math.round((generated.resolvedDensityGL * volumeMl) / 1000);
+                            rememberVolume(volumeMl);
+                            patch({
+                              autoDensity: false,
+                              densityVolumeMl: volumeMl,
+                              densityMassG: massG,
+                              densityGL: densityFromVessel(massG, volumeMl) ?? generated.resolvedDensityGL,
+                            });
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    {densityEntry(intent) === "altitude" && (
+                      <span className="text-[15px] text-white">{generated.resolvedDensityGL} g/L</span>
+                    )}
+                    {densityEntry(intent) === "gl" && (
+                      <input
+                        type="number"
+                        min={550}
+                        max={820}
+                        step={1}
+                        value={intent.densityGL ?? generated.resolvedDensityGL}
+                        onChange={(e) => {
+                          if (e.target.value === "") {
+                            patch({ autoDensity: true, densityGL: undefined, densityMassG: undefined, densityVolumeMl: undefined });
+                            return;
+                          }
+                          patch({
+                            autoDensity: false,
+                            densityGL: Number(e.target.value),
+                            densityMassG: undefined,
+                            densityVolumeMl: undefined,
+                          });
+                        }}
+                        className="w-24 bg-transparent text-right text-[15px] text-white outline-none"
+                      />
+                    )}
+                    {densityEntry(intent) === "vessel" && (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <label className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={20}
+                            max={2000}
+                            step={0.1}
+                            value={intent.densityMassG ?? ""}
+                            onChange={(e) => {
+                              const densityMassG = e.target.value === "" ? undefined : Number(e.target.value);
+                              const volumeMl = intent.densityVolumeMl ?? readLastVolume();
+                              patch({
+                                autoDensity: false,
+                                densityMassG,
+                                densityVolumeMl: volumeMl,
+                                densityGL: densityFromVessel(densityMassG, volumeMl) ?? intent.densityGL,
+                              });
+                            }}
+                            className="w-16 bg-transparent text-right text-[15px] text-white outline-none"
+                          />
+                          <span className="text-[12px] text-muted">{t("studio.densityMassUnit")}</span>
+                        </label>
+                        <span className="text-muted">/</span>
+                        <label className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={50}
+                            max={2000}
+                            step={1}
+                            value={intent.densityVolumeMl ?? ""}
+                            onChange={(e) => {
+                              const densityVolumeMl = e.target.value === "" ? undefined : Number(e.target.value);
+                              if (densityVolumeMl != null) rememberVolume(densityVolumeMl);
+                              patch({
+                                autoDensity: false,
+                                densityMassG: intent.densityMassG,
+                                densityVolumeMl,
+                                densityGL: densityFromVessel(intent.densityMassG, densityVolumeMl) ?? intent.densityGL,
+                              });
+                            }}
+                            className="w-16 bg-transparent text-right text-[15px] text-white outline-none"
+                          />
+                          <span className="text-[12px] text-muted">{t("studio.densityVolUnit")}</span>
+                        </label>
+                        <span className="text-[13px] text-muted">= {generated.resolvedDensityGL} g/L</span>
+                      </div>
+                    )}
+                  </div>
                 </Row>
                 <Row label={t("studio.moisture")}>
                   <input
@@ -308,7 +436,7 @@ export default function Studio({
                     })}
                   </p>
                 )}
-                {isAutoDensity(intent) ? (
+                {densityEntry(intent) === "altitude" ? (
                   <p>
                     <span className="text-label">
                       {t("studio.densityAuto", {
@@ -318,6 +446,18 @@ export default function Studio({
                       })}
                     </span>
                     {t("studio.densityAutoHelp")}
+                  </p>
+                ) : densityEntry(intent) === "vessel" ? (
+                  <p>
+                    <span className="text-label">
+                      {t("studio.densityVesselLine", {
+                        gl: generated.resolvedDensityGL,
+                        cls: densityLabel(generated.densityClass, t),
+                        g: intent.densityMassG ?? "—",
+                        ml: intent.densityVolumeMl ?? "—",
+                      })}
+                    </span>
+                    {t("studio.densityVesselHelp")}
                   </p>
                 ) : (
                   <p>

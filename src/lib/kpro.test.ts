@@ -537,6 +537,22 @@ describe("generator", () => {
     expect(measured.preheatPower).toBeGreaterThan(inferred.preheatPower);
   });
 
+  it("computes measured density from vessel mass and volume", () => {
+    const out = generateProfile({
+      ...defaultIntent(),
+      originId: "brazil",
+      varietyId: "unknown",
+      altitudeM: 1100,
+      autoDensity: false,
+      densityMassG: 180,
+      densityVolumeMl: 250,
+      flavors: [],
+    });
+    expect(out.resolvedDensityGL).toBe(720);
+    expect(out.densitySource).toBe("measured");
+    expect(out.densityClass).toBe("hard");
+  });
+
   it("does not add an into-crack boost on a light dense Rest highland lot", () => {
     const out = generateProfile({
       ...defaultIntent(),
