@@ -58,6 +58,21 @@ Community practice at elevation (Erdélyi / Perfect Daily Grind): pour at boil, 
 
 ---
 
+## 2b. Mine recipes (this device)
+
+Championship chips stay **cited and read-only**. A user card is a **clone**, never an edit of Hoffmann / Kasuya / WBrC.
+
+- **Save this card** opens a sheet prefilled from the starting card (`forkedFrom` = that origin). Name, dose, ratio, temp, grind, and steps are yours.
+- **Mine** lists cards for the current method. Tap one to view it; tap a competition chip to leave it.
+- Storage is `localStorage` (`kaffe.brew.mine.v1`), same pattern as the roast library. GitHub Pages has no server.
+- **Export** writes a single `kaffe.brew-recipe` JSON. **Export all** writes a `kaffe.brew-recipe-pack`. **Import** always creates new ids on this device.
+
+Kitchen boil still caps an open-kettle Mine card. The roast attach is unchanged.
+
+Implementation: `src/lib/brewRecipes.ts`, sheet `src/components/BrewRecipeSheet.tsx`.
+
+---
+
 ## 3. Competition cluster (Light only)
 
 WBrC / WBC / WAC recipes are written for **one coffee, one roast, one room**. Kaffe uses them to **calibrate the Light row**, not to clone a stage routine.
