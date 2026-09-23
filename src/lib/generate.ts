@@ -42,7 +42,7 @@ export const ZONE_ROLE_META: Record<ZoneRole, { label: string; hint: string }> =
   },
   "into-fc": {
     label: "Into first crack",
-    hint: "Optional. Rao: enter crack already decelerating. Kaffe does not auto-add this — it raised crack temperature on the Nano.",
+    hint: "Optional. Rao: enter crack already decelerating. Kaffe does not auto-add this.",
   },
   "after-fc": {
     label: "After first crack",

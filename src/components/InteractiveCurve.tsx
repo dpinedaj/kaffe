@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useI18n } from "../i18n/LocaleContext";
 import { clockTick, FAN_RPM_MAX, FAN_RPM_MIN, ROR_TICKS, TEMP_TICKS, timeTickAnchor, timeTicks } from "../lib/chart";
 import { deleteAnchor, formatClock, insertAnchor, sampleAtTime, smoothAnchors } from "../lib/curve";
 import type { ActiveZone, Point } from "../lib/kpro";
@@ -42,6 +43,7 @@ export function InteractiveCurve({
   onAnchorsChange: (next: Point[]) => void;
   onReset?: () => void;
 }) {
+  const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
@@ -129,7 +131,7 @@ export function InteractiveCurve({
           className="rounded-lg bg-card2 px-3 py-1.5 text-[12px] font-medium text-white disabled:text-muted"
           onClick={addAtWalk}
         >
-          Add point
+          {t("curve.addPoint")}
         </button>
         <button
           type="button"
@@ -137,7 +139,7 @@ export function InteractiveCurve({
           className="rounded-lg bg-card2 px-3 py-1.5 text-[12px] font-medium text-white disabled:text-muted"
           onClick={removeSelected}
         >
-          Delete point
+          {t("curve.deletePoint")}
         </button>
         <button
           type="button"
@@ -147,7 +149,7 @@ export function InteractiveCurve({
             onAnchorsChange(smoothAnchors(anchors));
           }}
         >
-          Smooth curve
+          {t("curve.smooth")}
         </button>
         <button
           type="button"
@@ -159,18 +161,18 @@ export function InteractiveCurve({
             onReset?.();
           }}
         >
-          Reset
+          {t("curve.reset")}
         </button>
-        <span className="text-[11px] text-muted">Walk, then Add point · Smooth eases spikes · first/last stay fixed in time</span>
+        <span className="text-[11px] text-muted">{t("curve.hint")}</span>
       </div>
 
       <div className="mb-2 grid grid-cols-2 gap-2 rounded-xl bg-card2 px-3 py-2 text-[12px] sm:grid-cols-4">
         <div>
-          <div className="text-muted">Time</div>
+          <div className="text-muted">{t("common.time")}</div>
           <div className="text-[15px] font-semibold text-white">{activeT != null ? formatClock(activeT) : "—"}</div>
         </div>
         <div>
-          <div className="text-muted">Bean</div>
+          <div className="text-muted">{t("curve.bean")}</div>
           <div className="text-[15px] font-semibold text-blue">{bean != null ? `${bean.toFixed(1)} °C` : "—"}</div>
         </div>
         <div>
@@ -368,8 +370,8 @@ export function InteractiveCurve({
 
       <label className="mt-2 block">
         <div className="mb-1 flex justify-between text-[11px] text-muted">
-          <span>Walk curve</span>
-          <span>{activeT != null ? formatClock(activeT) : "hover or drag the slider"}</span>
+          <span>{t("curve.walk")}</span>
+          <span>{activeT != null ? formatClock(activeT) : t("curve.walkHint")}</span>
         </div>
         <input
           type="range"

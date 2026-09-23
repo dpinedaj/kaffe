@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useI18n } from "../i18n/LocaleContext";
 import { Card } from "./ui";
 import { summarizeOverlayTrack, type OverlayTrack } from "../lib/overlay";
 
@@ -11,6 +12,7 @@ export function OverlayTrackDetails({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
+  const { t } = useI18n();
   const selected = tracks.find((t) => t.id === selectedId) ?? tracks[0];
   const selectedSummary = useMemo(
     () => (selected ? summarizeOverlayTrack(selected) : null),
@@ -22,11 +24,8 @@ export function OverlayTrackDetails({
   return (
     <Card className="p-4">
       <div className="mb-3">
-        <h3 className="text-[15px] font-semibold">On the board</h3>
-        <p className="mt-1 text-[12px] text-muted">
-          Select a profile or log for identity, curve, and machine parameters. Drop temperature follows the
-          Level slider.
-        </p>
+        <h3 className="text-[15px] font-semibold">{t("overlay.onBoard")}</h3>
+        <p className="mt-1 text-[12px] text-muted">{t("overlay.onBoardHelp")}</p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {tracks.map((track) => {
@@ -47,7 +46,7 @@ export function OverlayTrackDetails({
                   <div className="min-w-0">
                     <div className="truncate text-[14px] font-semibold">{track.name}</div>
                     <div className="truncate text-[11px] text-muted">
-                      {track.kind === "log" ? "Log" : "Design"}
+                      {track.kind === "log" ? t("overlay.log") : t("overlay.designKind")}
                       {summary.designer ? ` · ${summary.designer}` : ""}
                     </div>
                   </div>

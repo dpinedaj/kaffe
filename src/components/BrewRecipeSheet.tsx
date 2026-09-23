@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useI18n } from "../i18n/LocaleContext";
+import { grindLabel } from "../i18n/labels";
 import { DraftNumber } from "./ui";
 import { BREW_METHODS, type BrewMethod, type BrewStep } from "../lib/brew";
 import {
@@ -19,6 +21,7 @@ export default function BrewRecipeSheet({
   onSave: (recipe: UserBrewRecipe) => void;
   onDelete?: (id: string) => void;
 }) {
+  const { t } = useI18n();
   const [rec, setRec] = useState(draft);
   const saved = Boolean(onDelete);
 
@@ -48,35 +51,35 @@ export default function BrewRecipeSheet({
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center">
       <button type="button" className="absolute inset-0 bg-black/60" onClick={onClose} aria-label="Close" />
-      <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-card sm:rounded-3xl">
+      <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-card pb-[env(safe-area-inset-bottom)] sm:rounded-3xl">
         <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
           <div>
-            <h3 className="text-[18px] font-semibold text-white">{saved ? "Edit this card" : "New recipe"}</h3>
+            <h3 className="text-[18px] font-semibold text-white">{saved ? t("sheet.edit") : t("sheet.new")}</h3>
             <p className="mt-0.5 text-[12px] leading-relaxed text-muted">
               {saved
-                ? "Changes stay on this device. Championship cards are not edited."
+                ? t("sheet.savedHelp")
                 : basedOn
-                  ? `Based on ${basedOn}. The original stays as it is.`
-                  : "A blank card on this device. Add steps, then Create."}
+                  ? t("sheet.basedOn", { name: basedOn })
+                  : t("sheet.blankHelp")}
             </p>
           </div>
           <button type="button" className="text-[15px] font-medium text-blue" onClick={onClose}>
-            Close
+            {t("common.close")}
           </button>
         </div>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 pb-4">
           <label className="block">
-            <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">Name</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t("sheet.name")}</span>
             <input
               value={rec.name}
               onChange={(e) => patch({ name: e.target.value })}
-              placeholder="Name this recipe"
+              placeholder={t("sheet.namePh")}
               className="mt-1 w-full rounded-xl bg-card2 px-3 py-2 text-[15px] text-white outline-none placeholder:text-muted"
             />
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">Method</span>
+              <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t("sheet.method")}</span>
               <select
                 value={rec.method}
                 onChange={(e) => {
@@ -93,7 +96,7 @@ export default function BrewRecipeSheet({
               </select>
             </label>
             <label className="block">
-              <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">Origin</span>
+              <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t("sheet.origin")}</span>
               <input
                 value={rec.origin}
                 onChange={(e) => patch({ origin: e.target.value })}
@@ -102,31 +105,31 @@ export default function BrewRecipeSheet({
             </label>
           </div>
           <label className="block">
-            <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">Flavor (optional)</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t("sheet.flavor")}</span>
             <input
               value={rec.flavor}
               onChange={(e) => patch({ flavor: e.target.value })}
-              placeholder="Sweet / clear"
+              placeholder={t("sheet.flavorPh")}
               className="mt-1 w-full rounded-xl bg-card2 px-3 py-2 text-[15px] text-white outline-none placeholder:text-muted"
             />
           </label>
           <label className="block">
-            <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">How (optional)</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t("sheet.how")}</span>
             <input
               value={rec.mechanic}
               onChange={(e) => patch({ mechanic: e.target.value })}
-              placeholder="Closed bloom, then open"
+              placeholder={t("sheet.howPh")}
               className="mt-1 w-full rounded-xl bg-card2 px-3 py-2 text-[15px] text-white outline-none placeholder:text-muted"
             />
           </label>
           <div className="grid grid-cols-2 gap-3">
-            <Num label="Dose (g)" value={rec.coffeeG} onChange={(n) => patch({ coffeeG: n })} step={0.5} />
-            <Num label="Ratio (1 : )" value={rec.ratioN} onChange={(n) => patch({ ratioN: n })} step={0.1} />
-            <Num label="Temp (°C)" value={rec.wantedC} onChange={(n) => patch({ wantedC: n })} step={1} />
-            <Num label="Time (s)" value={rec.timeS} onChange={(n) => patch({ timeS: n })} step={1} />
+            <Num label={t("sheet.dose")} value={rec.coffeeG} onChange={(n) => patch({ coffeeG: n })} step={0.5} />
+            <Num label={t("sheet.ratio")} value={rec.ratioN} onChange={(n) => patch({ ratioN: n })} step={0.1} />
+            <Num label={t("sheet.temp")} value={rec.wantedC} onChange={(n) => patch({ wantedC: n })} step={1} />
+            <Num label={t("sheet.time")} value={rec.timeS} onChange={(n) => patch({ timeS: n })} step={1} />
           </div>
           <label className="block">
-            <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">Grind</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t("sheet.grind")}</span>
             <select
               value={rec.grind}
               onChange={(e) => patch({ grind: e.target.value as UserBrewRecipe["grind"] })}
@@ -134,14 +137,14 @@ export default function BrewRecipeSheet({
             >
               {GRIND_OPTIONS.map((g) => (
                 <option key={g} value={g}>
-                  {g.replace("-", " ")}
+                  {grindLabel(g, t)}
                 </option>
               ))}
             </select>
           </label>
           {rec.method === "espresso" && (
             <label className="block">
-              <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">Gaggiuino (optional)</span>
+              <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t("sheet.gaggiuino")}</span>
               <input
                 value={rec.gaggiuino ?? ""}
                 onChange={(e) => patch({ gaggiuino: e.target.value || undefined })}
@@ -150,20 +153,20 @@ export default function BrewRecipeSheet({
               />
             </label>
           )}
-          {rec.forkedFrom && <p className="text-[12px] text-muted">Forked from {rec.forkedFrom}</p>}
+          {rec.forkedFrom && <p className="text-[12px] text-muted">{t("sheet.forked", { name: rec.forkedFrom })}</p>}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">Steps</span>
+              <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t("sheet.steps")}</span>
               <button
                 type="button"
                 className="text-[13px] font-medium text-blue"
                 onClick={() =>
                   patch({
-                    steps: [...rec.steps, { at: "", title: "Step", detail: "" }],
+                    steps: [...rec.steps, { at: "", title: t("sheet.stepDefault"), detail: "" }],
                   })
                 }
               >
-                Add step
+                {t("sheet.addStep")}
               </button>
             </div>
             <div className="space-y-2">
@@ -179,7 +182,7 @@ export default function BrewRecipeSheet({
                     <input
                       value={step.title}
                       onChange={(e) => patchStep(i, { title: e.target.value })}
-                      placeholder="Title"
+                      placeholder={t("sheet.stepTitle")}
                       className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-white outline-none"
                     />
                     <button
@@ -187,7 +190,7 @@ export default function BrewRecipeSheet({
                       className="text-[12px] text-muted"
                       onClick={() => patch({ steps: rec.steps.filter((_, j) => j !== i) })}
                     >
-                      Remove
+                      {t("sheet.remove")}
                     </button>
                   </div>
                   <textarea
@@ -195,7 +198,7 @@ export default function BrewRecipeSheet({
                     onChange={(e) => patchStep(i, { detail: e.target.value })}
                     rows={2}
                     className="w-full resize-none bg-transparent text-[13px] leading-relaxed text-label outline-none"
-                    placeholder="What to do"
+                    placeholder={t("sheet.stepDetail")}
                   />
                 </div>
               ))}
@@ -205,21 +208,21 @@ export default function BrewRecipeSheet({
         <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-4">
           {onDelete ? (
             <button type="button" className="text-[14px] font-medium text-orange" onClick={() => onDelete(rec.id)}>
-              Delete
+              {t("common.delete")}
             </button>
           ) : (
             <span />
           )}
           <div className="flex gap-2">
             <button type="button" className="rounded-xl px-3 py-2 text-[14px] text-muted" onClick={onClose}>
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
               className="rounded-xl bg-blue px-4 py-2 text-[14px] font-semibold text-white"
               onClick={() => onSave({ ...rec, name: rec.name.trim() || "Untitled" })}
             >
-              {saved ? "Save" : "Create"}
+              {saved ? t("common.save") : t("common.create")}
             </button>
           </div>
         </div>
