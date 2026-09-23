@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import BrewPage from "./pages/BrewPage";
 import LibraryPage from "./pages/LibraryPage";
 import OverlayPage from "./pages/OverlayPage";
 import Studio from "./pages/Studio";
+import type { BrewAttach } from "./lib/brew";
 import { defaultIntent, generateProfile, type RoastIntent } from "./lib/generate";
 import type { OverlayTrack } from "./lib/overlay";
 import {
@@ -14,7 +16,7 @@ import {
   upsertProfile,
 } from "./lib/storage";
 
-type Route = "studio" | "overlay" | "library";
+type Route = "studio" | "overlay" | "library" | "brew";
 type StudioTab = "parameters" | "flavor" | "curve";
 
 export default function App() {
@@ -26,6 +28,7 @@ export default function App() {
   const [overlayTracks, setOverlayTracks] = useState<OverlayTrack[]>([]);
   const [overlayEditId, setOverlayEditId] = useState<string | null>(null);
   const [overlaySyncLevels, setOverlaySyncLevels] = useState(false);
+  const [brewAttach, setBrewAttach] = useState<BrewAttach>({ kind: "generate" });
 
   useEffect(() => {
     setLibrary(loadLibrary());
@@ -59,6 +62,9 @@ export default function App() {
           <NavButton active={route === "library"} onClick={() => setRoute("library")}>
             Library
           </NavButton>
+          <NavButton active={route === "brew"} onClick={() => setRoute("brew")} tag="Preview">
+            Brew
+          </NavButton>
         </nav>
         {import.meta.env.DEV && (
           <span className="hidden rounded-lg bg-card2 px-2 py-1 text-[11px] text-orange md:inline">Local AI</span>
@@ -77,6 +83,10 @@ export default function App() {
             tab={studioTab}
             setTab={setStudioTab}
             onSave={saveCurrent}
+            onBrew={() => {
+              setBrewAttach({ kind: "generate" });
+              setRoute("brew");
+            }}
           />
         )}
         <div className={route === "overlay" ? undefined : "hidden"}>
@@ -118,6 +128,18 @@ export default function App() {
               setLibrary(next);
             }}
             onDelete={(id) => setLibrary(removeProfile(id))}
+            onBrew={(item) => {
+              setBrewAttach({ kind: "library", id: item.id });
+              setRoute("brew");
+            }}
+          />
+        )}
+        {route === "brew" && (
+          <BrewPage
+            attach={brewAttach}
+            setAttach={setBrewAttach}
+            studioIntent={intent}
+            library={library}
           />
         )}
       </main>
@@ -127,6 +149,7 @@ export default function App() {
           <TabIcon label="Generate" active={route === "studio"} onClick={() => setRoute("studio")} />
           <TabIcon label="Overlay" active={route === "overlay"} onClick={() => setRoute("overlay")} />
           <TabIcon label="Library" active={route === "library"} onClick={() => setRoute("library")} />
+          <TabIcon label="Brew" tag="Preview" active={route === "brew"} onClick={() => setRoute("brew")} />
         </div>
       </nav>
     </div>
@@ -137,10 +160,12 @@ function NavButton({
   active,
   onClick,
   children,
+  tag,
 }: {
   active: boolean;
   onClick: () => void;
-  children: string;
+  children: ReactNode;
+  tag?: string;
 }) {
   return (
     <button
@@ -149,14 +174,26 @@ function NavButton({
       className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold ${active ? "bg-card2 text-white" : "text-muted"}`}
     >
       {children}
+      {tag && <span className="ml-1 text-[10px] font-semibold text-orange">{tag}</span>}
     </button>
   );
 }
 
-function TabIcon({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function TabIcon({
+  label,
+  active,
+  onClick,
+  tag,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  tag?: string;
+}) {
   return (
     <button type="button" onClick={onClick} className={`px-3 py-1 text-[11px] font-semibold ${active ? "text-blue" : "text-muted"}`}>
       {label}
+      {tag && <span className="ml-1 text-[9px] text-orange">{tag}</span>}
     </button>
   );
 }
