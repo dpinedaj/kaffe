@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrewIcon } from "../components/BrewIcon";
 import BrewRecipeSheet from "../components/BrewRecipeSheet";
+import ExtractCard from "../components/ExtractCard";
 import { Card, DraftNumber, Field, Pill, Row, Select } from "../components/ui";
 import {
   BREW_METHODS,
@@ -841,6 +842,19 @@ export default function BrewPage({
           ))}
         </Card>
       </section>
+
+      <ExtractCard
+        recipe={{
+          method,
+          coffeeG: shown.coffeeG,
+          waterG: shown.waterG,
+          grind: shown.grind,
+          timeS: shown.timeS,
+          kettleC: shown.kettleC,
+          boilC: shown.boilC,
+          cappedByBoil: shown.cappedByBoil,
+        }}
+      />
 
       {otherWarnings.length > 0 && (
         <Card className="space-y-2 p-4">
