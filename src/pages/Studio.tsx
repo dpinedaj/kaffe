@@ -15,6 +15,19 @@ import {
   type RoastIntent,
 } from "../lib/generate";
 import { activeZones } from "../lib/kpro";
+import { useI18n } from "../i18n/LocaleContext";
+import {
+  brewLabel,
+  defText,
+  densityLabel,
+  flavorLabel,
+  originLabel,
+  processLabel,
+  sizeLabel,
+  styleLabel,
+  varietyLabel,
+} from "../i18n/labels";
+import type { MessageKey } from "../i18n/en";
 import {
   BREWS,
   FLAVORS,
@@ -46,6 +59,7 @@ export default function Studio({
   onSave: () => void;
   onBrew: () => void;
 }) {
+  const { t } = useI18n();
   const generated = useMemo(() => generateProfile(intent), [intent]);
   const origin = originById(intent.originId);
   const variety = varietyById(intent.varietyId);
@@ -114,17 +128,40 @@ export default function Studio({
                 tab === id || (tab === "curve" && id === "flavor") ? "bg-card2 text-white" : "text-muted"
               }`}
             >
-              {id === "parameters" ? "Parameters" : "Flavor"}
+              {id === "parameters" ? t("studio.parameters") : t("studio.flavor")}
             </button>
           ))}
+        </div>
+        <div className="grid grid-cols-3 gap-2 lg:hidden">
+          <button
+            type="button"
+            onClick={() => downloadText(generated.profile.fileName, generated.kproText)}
+            className="rounded-xl bg-blue px-2 py-2.5 text-[13px] font-semibold text-white"
+          >
+            {t("common.download")}
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            className="rounded-xl bg-card2 px-2 py-2.5 text-[13px] font-semibold text-white"
+          >
+            {t("common.save")}
+          </button>
+          <button
+            type="button"
+            onClick={onBrew}
+            className="rounded-xl bg-card2 px-2 py-2.5 text-[13px] font-semibold text-white"
+          >
+            {t("nav.brew")}
+          </button>
         </div>
 
         {tab === "parameters" ? (
           <div className="space-y-4">
             <section>
-              <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Bean info</h2>
+              <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("studio.beanInfo")}</h2>
               <Card>
-                <Row label="Origin">
+                <Row label={t("studio.origin")}>
                   <Select value={intent.originId} onChange={(id) => {
                     const o = originById(id);
                     patch({
@@ -136,30 +173,30 @@ export default function Studio({
                   }}>
                     {ORIGINS.map((o) => (
                       <option key={o.id} value={o.id}>
-                        {o.name} ({o.regions})
+                        {originLabel(o.id, t, o.name)}
                       </option>
                     ))}
                   </Select>
                 </Row>
-                <Row label="Variety">
+                <Row label={t("studio.variety")}>
                   <Select value={intent.varietyId || "unknown"} onChange={(id) => patch({ varietyId: id })}>
                     {VARIETIES.map((v) => (
                       <option key={v.id} value={v.id}>
-                        {v.name}
+                        {varietyLabel(v.id, t, v.name)}
                       </option>
                     ))}
                   </Select>
                 </Row>
-                <Row label="Process">
+                <Row label={t("studio.process")}>
                   <Select value={intent.process} onChange={(v) => patch({ process: v as RoastIntent["process"] })}>
                     {PROCESSES.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name}
+                        {processLabel(p.id, t)}
                       </option>
                     ))}
                   </Select>
                 </Row>
-                <Row label="Altitude (m)">
+                <Row label={t("studio.altitude")}>
                   <input
                     type="number"
                     value={intent.altitudeM}
@@ -167,7 +204,7 @@ export default function Studio({
                     className="w-24 bg-transparent text-right text-[15px] text-white outline-none"
                   />
                 </Row>
-                <Row label="Density from altitude">
+                <Row label={t("studio.densityFromAlt")}>
                   <Toggle
                     on={isAutoDensity(intent)}
                     onChange={(on) =>
@@ -178,7 +215,7 @@ export default function Studio({
                     }
                   />
                 </Row>
-                <Row label="Density (g/L)">
+                <Row label={t("studio.densityGL")}>
                   <input
                     type="number"
                     min={550}
@@ -195,38 +232,38 @@ export default function Studio({
                     className="w-24 bg-transparent text-right text-[15px] text-white outline-none"
                   />
                 </Row>
-                <Row label="Moisture (%, optional)">
+                <Row label={t("studio.moisture")}>
                   <input
                     type="number"
                     min={6}
                     max={16}
                     step={0.1}
-                    placeholder="11 typ."
+                    placeholder={t("studio.moisturePh")}
                     value={intent.moisture ?? ""}
                     onChange={(e) => patch({ moisture: e.target.value === "" ? undefined : Number(e.target.value) })}
                     className="w-24 bg-transparent text-right text-[15px] text-white outline-none placeholder:text-muted"
                   />
                 </Row>
-                <Row label="Brew">
+                <Row label={t("studio.brew")}>
                   <Select value={intent.brew} onChange={(v) => patch({ brew: v as RoastIntent["brew"] })}>
                     {BREWS.map((b) => (
                       <option key={b.id} value={b.id}>
-                        {b.name}
+                        {brewLabel(b.id, t)}
                       </option>
                     ))}
                   </Select>
                 </Row>
-                <Row label="Roast style">
+                <Row label={t("studio.roastStyle")}>
                   <Select value={intent.roastStyle} onChange={(v) => patch({ roastStyle: v as RoastIntent["roastStyle"] })}>
                     {STYLES.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name}
+                        {styleLabel(s.id, t)}
                       </option>
                     ))}
                   </Select>
                 </Row>
-                <Row label="Cup timing" last>
-                  <div className="flex rounded-lg bg-card2 p-0.5">
+                <Row label={t("studio.cupTiming")} last>
+                  <div className="flex w-full rounded-lg bg-card2 p-0.5 sm:w-auto">
                     {([
                       ["rest", "Rest"],
                       ["rtd", "RTD"],
@@ -234,7 +271,7 @@ export default function Studio({
                       <button
                         key={id}
                         type="button"
-                        className={`rounded-md px-2.5 py-1 text-[12px] font-semibold ${
+                        className={`flex-1 rounded-md px-2.5 py-1.5 text-[12px] font-semibold sm:flex-none ${
                           (intent.drinkPlan ?? "rest") === id ? "bg-blue text-white" : "text-muted"
                         }`}
                         onClick={() => patch({ drinkPlan: id })}
@@ -246,80 +283,84 @@ export default function Studio({
                 </Row>
               </Card>
               <div className="mt-2 space-y-2 px-1 text-[12px] leading-relaxed text-muted">
-                {origin.notes && (
+                {(origin.notes || origin.cup) && (
                   <p>
-                    <span className="text-label">{origin.cup ? `${origin.cup}. ` : ""}</span>
-                    {origin.notes}
+                    <span className="text-label">
+                      {origin.cup
+                        ? `${defText(`originCup.${origin.id}` as MessageKey, t, origin.cup)}. `
+                        : ""}
+                    </span>
+                    {defText(`originNote.${origin.id}` as MessageKey, t, origin.notes)}
                   </p>
                 )}
                 {variety.notes && variety.id !== "unknown" && (
                   <p>
                     <span className="text-label">
-                      {variety.name}
-                      {variety.cup ? ` · ${variety.cup}. ` : ". "}
+                      {varietyLabel(variety.id, t, variety.name)}
+                      {variety.cup
+                        ? ` · ${defText(`varietyCup.${variety.id}` as MessageKey, t, variety.cup)}. `
+                        : ". "}
                     </span>
-                    {variety.notes} Seed {variety.beanSize}, {variety.density} density.
+                    {defText(`varietyNote.${variety.id}` as MessageKey, t, variety.notes)}{" "}
+                    {t("studio.seedLine", {
+                      size: sizeLabel(variety.beanSize, t),
+                      density: densityLabel(variety.density, t),
+                    })}
                   </p>
                 )}
                 {isAutoDensity(intent) ? (
                   <p>
                     <span className="text-label">
-                      {generated.resolvedDensityGL} g/L · {generated.densityClass} from {intent.altitudeM} m.{" "}
+                      {t("studio.densityAuto", {
+                        gl: generated.resolvedDensityGL,
+                        cls: densityLabel(generated.densityClass, t),
+                        m: intent.altitudeM,
+                      })}
                     </span>
-                    Higher elevation cools the tree, cherries ripen slower, and the seed packs tighter.
-                    A Nepal 2021 study went from ~620 g/L at 850 m to ~688 g/L at 1450 m. Changing
-                    altitude updates this number; type a reading if you measured the lot.
+                    {t("studio.densityAutoHelp")}
                   </p>
                 ) : (
                   <p>
                     <span className="text-label">
-                      Measured {generated.resolvedDensityGL} g/L · {generated.densityClass}.{" "}
+                      {t("studio.densityManual", {
+                        gl: generated.resolvedDensityGL,
+                        cls: densityLabel(generated.densityClass, t),
+                      })}
                     </span>
-                    Heat follows this reading. Turn “Density from altitude” back on to let elevation
-                    drive it again.
+                    {t("studio.densityManualHelp")}
                   </p>
                 )}
                 {intent.moisture != null && (
                   <p>
-                    <span className="text-label">Moisture {intent.moisture}%. </span>
+                    <span className="text-label">{t("studio.moistureLine", { n: intent.moisture })}</span>
                     {intent.moisture > 11
-                      ? "Wetter than typical export green — longer drying, more preheat and fan so the water leaves before Maillard."
+                      ? t("studio.moistureWet")
                       : intent.moisture < 11
-                        ? "Drier than typical — less preheat and a shorter dry so the front does not race (monsoon / old crop / decaf-like)."
-                        : "At the 11% reference. No extra moisture adjustment."}
+                        ? t("studio.moistureDry")
+                        : t("studio.moistureRef")}
                   </p>
                 )}
                 {(intent.drinkPlan ?? "rest") === "rtd" ? (
                   <p>
-                    <span className="text-label">RTD · drink 1–3 days. </span>
-                    Official Kaffelogic Ready-to-Drink profiles are for roasting, grinding, and brewing
-                    before the lot has degassed — guests, test roasts, or an empty jar. A fluid-bed bean
-                    keeps more CO₂ than a drum roast, so RTD forces that gas out during the roast:
-                    a RoR step after drying/Maillard, then a +boost through first crack (“T through crack”).
-                    That is the same idea as the stock RTD 1500–2000 boosts, not the BOOST kit hardware.
-                    Flavour is front-loaded and fades hard around day 4. Rest is the better pick if you
-                    can wait.
+                    <span className="text-label">{t("studio.rtdTitle")}</span>
+                    {t("studio.rtdHelp")}
                   </p>
                 ) : (
                   <p>
-                    <span className="text-label">Rest · peak 3–5 days. </span>
-                    Official Rest profiles wait for degassing. Boosts only fire when the bean actually
-                    needs them (wet drying, Maillard stall, runaway dark espresso) — never an
-                    into-crack +boost. Energy through first crack stays gentler, so CO₂ leaves in the
-                    bag and acidity/sweetness settle.
-                    Use this for the “best cup,” RTD for “drink tonight.”
+                    <span className="text-label">{t("studio.restTitle")}</span>
+                    {t("studio.restHelp")}
                   </p>
                 )}
               </div>
             </section>
 
             <section>
-              <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Roast level</h2>
+              <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("studio.roastLevel")}</h2>
               <Card>
-                <Row label="Auto level (roast-style default)">
+                <Row label={t("studio.autoLevel")}>
                   <Toggle on={intent.autoLevel} onChange={(on) => patch({ autoLevel: on })} />
                 </Row>
-                <Row label="Expected first crack (°C)" last>
+                <Row label={t("studio.expectFc")} last>
                   <input
                     type="number"
                     min={185}
@@ -335,26 +376,20 @@ export default function Studio({
                 </Row>
               </Card>
               <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-                {intent.expectFc != null ? (
-                  <>
-                    <span className="text-label">This lot’s crack {generated.firstCrackTemp.toFixed(1)} °C. </span>
-                    That is when the seed pops on the Nano probe, not the roast colour. Drop stays at the
-                    roast-style level (L{Number(generated.profile.raw.recommended_level).toFixed(1)} ·{" "}
-                    {(levelToTemp(generated.profile.roastLevels, Number(generated.profile.raw.recommended_level)) ?? 0).toFixed(1)}{" "}
-                    °C). If crack sits close to drop, development °C is short — we do not darken the roast to invent a band.
-                  </>
-                ) : (
-                  <>
-                    Leave empty to estimate from origin, variety, and flavor (
-                    {generated.autoFirstCrackTemp.toFixed(1)} °C). Set it when you already know where this
-                    lot cracks on the Nano 7 probe. Roast level is still the colour stop, not the crack.
-                  </>
-                )}
+                {intent.expectFc != null
+                  ? t("studio.expectFcSet", {
+                      fc: generated.firstCrackTemp.toFixed(1),
+                      level: Number(generated.profile.raw.recommended_level).toFixed(1),
+                      temp: (
+                        levelToTemp(generated.profile.roastLevels, Number(generated.profile.raw.recommended_level)) ?? 0
+                      ).toFixed(1),
+                    })
+                  : t("studio.expectFcEmpty", { fc: generated.autoFirstCrackTemp.toFixed(1) })}
               </p>
               {!intent.autoLevel && (
                 <Card className="mt-2 px-4 py-3">
                   <div className="mb-2 flex justify-between text-[13px] text-label">
-                    <span>Level</span>
+                    <span>{t("studio.level")}</span>
                     <span className="text-white">{intent.level.toFixed(1)}</span>
                   </div>
                   <input
@@ -380,14 +415,13 @@ export default function Studio({
           <div className="space-y-4">
             <div>
               <div className="mb-1 flex items-center justify-between px-1">
-                <h2 className="text-[17px] font-semibold">Flavor goal</h2>
+                <h2 className="text-[17px] font-semibold">{t("studio.flavorGoal")}</h2>
                 <span className="rounded-full bg-card2 px-2 py-0.5 text-[11px] text-muted">
                   {intent.flavors.length}/2
                 </span>
               </div>
               <p className="mb-3 px-1 text-[13px] text-muted">
-                Leave empty for the bean’s default curve. Two goals share 100% — move one slider
-                and the other fills the rest. They cannot add a note the green seed does not have.
+                {t("studio.flavorHelp")}
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {FLAVORS.map((f) => {
@@ -416,9 +450,13 @@ export default function Studio({
                         </span>
                       )}
                       <div className="text-xl">{f.icon}</div>
-                      <div className="mt-1 text-[13px] font-semibold">{f.name}</div>
+                      <div className="mt-1 text-[13px] font-semibold">{flavorLabel(f.id, t)}</div>
                       <Pill tone={rec === "recommended" ? "green" : rec === "avoid" ? "orange" : "muted"}>
-                        {rec === "recommended" ? "Recommended" : rec === "avoid" ? "Not recommended" : "Neutral"}
+                        {rec === "recommended"
+                          ? t("common.recommended")
+                          : rec === "avoid"
+                            ? t("common.notRecommended")
+                            : t("common.neutral")}
                       </Pill>
                     </button>
                   );
@@ -441,9 +479,13 @@ export default function Studio({
                 <Card key={f.id} className="p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <div>
-                      <div className="text-[16px] font-semibold">{f.name}</div>
+                      <div className="text-[16px] font-semibold">{flavorLabel(f.id, t)}</div>
                       <Pill tone={rec === "recommended" ? "green" : rec === "avoid" ? "orange" : "muted"}>
-                        {rec === "recommended" ? "Recommended" : rec === "avoid" ? "Not recommended" : "Neutral"}
+                        {rec === "recommended"
+                          ? t("common.recommended")
+                          : rec === "avoid"
+                            ? t("common.notRecommended")
+                            : t("common.neutral")}
                       </Pill>
                     </div>
                     <button type="button" className="text-muted" onClick={() => toggleFlavor(f.id)}>
@@ -451,7 +493,7 @@ export default function Studio({
                     </button>
                   </div>
                   <div className="mb-1 flex justify-between text-[13px] text-label">
-                    <span>Flavor adjustment</span>
+                    <span>{t("studio.flavorAdj")}</span>
                     <span className="text-white">{Math.round(pick.weight * 100)}%</span>
                   </div>
                   <input
@@ -464,29 +506,32 @@ export default function Studio({
                     className="mb-4 w-full"
                   />
                   <details open className="text-[13px]">
-                    <summary className="cursor-pointer font-semibold text-blue">Roast strategy</summary>
+                    <summary className="cursor-pointer font-semibold text-blue">{t("studio.roastStrategy")}</summary>
                     <div className="mt-3 space-y-3 text-label">
                       <p>
-                        Suggested roast level:{" "}
+                        {t("studio.suggestedLevel")}{" "}
                         <span className="text-green">
-                          {f.suggestedStyle}
+                          {styleLabel(f.suggestedStyle, t)}
                           {suggestedLevel != null ? ` L${suggestedLevel.toFixed(1)}` : ""}{" "}
-                          {f.suggestedStyle === intent.roastStyle ? "(already current)" : ""}
+                          {f.suggestedStyle === intent.roastStyle ? t("studio.alreadyCurrent") : ""}
                         </span>
                       </p>
                       <ul className="list-disc space-y-1 pl-4">
-                        {f.strategy.map((s) => (
+                        {t(`flavorStrat.${f.id}` as MessageKey).split(" · ").map((s) => (
                           <li key={s}>{s}</li>
                         ))}
                       </ul>
                       <p>
-                        <span className="text-white">Why. </span>
-                        {f.why}
+                        <span className="text-white">{t("studio.whyPrefix")}</span>
+                        {t(`flavorWhy.${f.id}` as MessageKey)}
                       </p>
                       <p>
-                        Expected: {f.expected.join(", ")} · Trade-offs: {f.tradeoffs.join(", ")}
+                        {t("studio.expected", {
+                          expected: t(`flavorExp.${f.id}` as MessageKey),
+                          tradeoffs: t(`flavorTrade.${f.id}` as MessageKey),
+                        })}
                       </p>
-                      <p className="text-orange">{f.warning}</p>
+                      <p className="text-orange">{t(`flavorWarn.${f.id}` as MessageKey)}</p>
                     </div>
                   </details>
                 </Card>
@@ -499,8 +544,8 @@ export default function Studio({
       <div className="space-y-4">
         <Card className="p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold">Curve preview</h2>
-            <span className="text-[12px] text-muted">Walk, Add point, Smooth spikes, Reset</span>
+            <h2 className="text-[15px] font-semibold">{t("studio.curvePreview")}</h2>
+            <span className="text-[12px] text-muted">{t("studio.curveHint")}</span>
           </div>
           <InteractiveCurve
             poly={generated.roastPoly}
@@ -536,139 +581,144 @@ export default function Studio({
           />
           {generated.manual && (
             <p className="mt-2 text-[12px] text-blue">
-              Curve is manual. Flavor goals and the result table follow the shape you drew.
+              {t("studio.curveManual")}
             </p>
           )}
           <div className="mt-2 flex flex-wrap gap-4 text-[12px] text-muted">
-            <span className="text-blue">Bean · handles</span>
-            <span className="text-orange">RoR (reference)</span>
-            <span className="text-[#BF5AF2]">Fan</span>
-            <span className="text-[#BF5AF2] opacity-70">Boost zones</span>
-            <span className="text-[#FFD60A]">Colour change · line</span>
-            <span className="text-red">First crack · line</span>
-            <span className="text-green">Drop · line</span>
+            <span className="text-blue">{t("studio.legendBean")}</span>
+            <span className="text-orange">{t("studio.legendRor")}</span>
+            <span className="text-[#BF5AF2]">{t("studio.legendFan")}</span>
+            <span className="text-[#BF5AF2] opacity-70">{t("studio.legendBoost")}</span>
+            <span className="text-[#FFD60A]">{t("studio.legendColor")}</span>
+            <span className="text-red">{t("studio.legendFc")}</span>
+            <span className="text-green">{t("studio.legendDrop")}</span>
           </div>
         </Card>
 
         <Card>
-          <h2 className="px-4 pt-3 text-[13px] font-semibold uppercase tracking-wide text-muted">Result</h2>
+          <h2 className="px-4 pt-3 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("studio.result")}</h2>
           <Field
-            label="Cup timing"
-            value={
-              (intent.drinkPlan ?? "rest") === "rtd" ? "RTD · brew 1–3 days" : "Rest · peak 3–5 days"
-            }
+            label={t("studio.cupTiming")}
+            value={(intent.drinkPlan ?? "rest") === "rtd" ? t("studio.cupRtd") : t("studio.cupRest")}
           />
-          <Field label="Curve name" value={generated.curveName} />
-          <Field label="On Nano" value={generated.profile.name} />
+          <Field label={t("studio.curveName")} value={generated.curveName} />
+          <Field label={t("studio.onNano")} value={generated.profile.name} />
           <Field
-            label="Drop"
+            label={t("studio.drop")}
             value={`L${Number(generated.profile.raw.recommended_level).toFixed(1)} · ${(levelToTemp(generated.profile.roastLevels, Number(generated.profile.raw.recommended_level)) ?? 0).toFixed(1)} °C`}
           />
           <Field
-            label="Colour change"
+            label={t("studio.colourChange")}
             value={`${YELLOW_TEMP.toFixed(1)} °C · ${formatClock(timeAtValue(generated.roastPoly, YELLOW_TEMP) ?? generated.dryTime)}`}
           />
           <Field
-            label="First crack temp"
-            value={`${generated.firstCrackTemp.toFixed(1)} °C${intent.expectFc != null ? " · set" : ""}`}
+            label={t("studio.fcTemp")}
+            value={`${generated.firstCrackTemp.toFixed(1)} °C${intent.expectFc != null ? t("studio.fcSet") : ""}`}
           />
-          <Field label="First crack time" value={formatClock(generated.firstCrackTime)} />
-          <Field label="Total time" value={formatClock(generated.totalTime)} />
+          <Field label={t("studio.fcTime")} value={formatClock(generated.firstCrackTime)} />
+          <Field label={t("studio.totalTime")} value={formatClock(generated.totalTime)} />
           <Field
-            label="Pace"
+            label={t("studio.pace")}
             value={
               generated.family === "nordic"
-                ? "Nordic · ~6–7 min"
+                ? t("pace.nordic")
                 : generated.family === "slow"
-                  ? "Slow · ~11 min"
-                  : "Classic · ~9 min"
+                  ? t("pace.slow")
+                  : t("pace.classic")
             }
           />
-          <Field label="DTR" value={`${(generated.dtr * 100).toFixed(1)}%`} />
+          <Field label={t("studio.dtr")} value={`${(generated.dtr * 100).toFixed(1)}%`} />
           <Field
-            label="Dehydration"
+            label={t("studio.dehydration")}
             value={`${formatClock(generated.dryTime)} · ${generated.drySlope.toFixed(1)} °C/min`}
           />
           <Field
-            label="Maillard"
+            label={t("studio.maillard")}
             value={`${formatClock(generated.mailTime)} · ${generated.mailSlope.toFixed(1)} °C/min`}
           />
           <Field
-            label="Development"
+            label={t("studio.development")}
             value={`${formatClock(generated.devTime)} · ${generated.devSlope.toFixed(1)} °C/min`}
           />
           <Field
-            label="Fan"
+            label={t("studio.fan")}
             value={`${Math.round(sampleAtTime(generated.fanPoly, 40) ?? 0).toLocaleString()} → ${Math.round(sampleAtTime(generated.fanPoly, generated.totalTime) ?? 0).toLocaleString()} RPM`}
           />
-          <Field label="Preheat power" value={`${generated.preheatPower} W`} />
-          <Field label="Density" value={`${generated.resolvedDensityGL} g/L · ${generated.densityClass}`} />
-          <Field label="Zone 1 · drying" value={formatZoneSummary(generated.zones.zone1)} />
-          <Field label="Zone 2 · into crack" value={formatZoneSummary(generated.zones.zone2)} />
-          <Field label="Zone 3 · after crack" value={formatZoneSummary(generated.zones.zone3)} />
+          <Field label={t("studio.preheat")} value={`${generated.preheatPower} W`} />
+          <Field
+            label={t("studio.density")}
+            value={`${generated.resolvedDensityGL} g/L · ${densityLabel(generated.densityClass, t)}`}
+          />
+          <Field label={t("studio.zone1")} value={formatZoneSummary(generated.zones.zone1)} />
+          <Field label={t("studio.zone2")} value={formatZoneSummary(generated.zones.zone2)} />
+          <Field label={t("studio.zone3")} value={formatZoneSummary(generated.zones.zone3)} />
         </Card>
 
         <Card className="p-4">
-          <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-muted">Adjustment breakdown</h2>
+          <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("studio.breakdown")}</h2>
           <div className="grid gap-3 text-[12px] sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             {(
               [
-                ["Origin baseline", generated.breakdown.origin],
-                [`Variety (${variety.name})`, generated.breakdown.variety],
+                [t("studio.bdOrigin"), generated.breakdown.origin],
+                [t("studio.bdVariety", { name: varietyLabel(variety.id, t, variety.name) }), generated.breakdown.variety],
                 [
                   intent.moisture != null
-                    ? `Moisture (${intent.moisture}% · 11% ref)`
-                    : "Moisture (not set)",
+                    ? t("studio.bdMoistureSet", { n: intent.moisture })
+                    : t("studio.bdMoistureOff"),
                   generated.breakdown.moisture,
                 ],
                 [
-                  `Density (${generated.resolvedDensityGL} g/L · ${generated.densityClass})`,
+                  t("studio.bdDensity", {
+                    gl: generated.resolvedDensityGL,
+                    cls: densityLabel(generated.densityClass, t),
+                  }),
                   generated.breakdown.density,
                 ],
                 [
-                  `Flavor (${intent.flavors.map((f) => flavorById(f.id).name).join(" + ") || "none"})`,
+                  t("studio.bdFlavor", {
+                    names: intent.flavors.map((f) => flavorLabel(f.id, t)).join(" + ") || t("studio.bdFlavorNone"),
+                  }),
                   generated.breakdown.flavor,
                 ],
-                ["Final total", generated.breakdown.total],
+                [t("studio.bdTotal"), generated.breakdown.total],
               ] as const
             ).map(([title, adj]) => (
               <div key={title} className="rounded-xl bg-card2 p-3">
                 <div className="mb-2 font-semibold text-white">{title}</div>
                 <div className="space-y-1 text-label">
-                  <div>FC {signed(adj.fcTemp, "°C", 1)}</div>
-                  <div>Preheat {signed(adj.preheatW, "W")}</div>
-                  <div>Drying {signed(adj.dryingS, "s")}</div>
-                  <div>Mid {signed(adj.midS, "s")}</div>
-                  <div>Development {signed(adj.developmentS, "s")}</div>
-                  <div>Fan {signed(adj.fanRpm, " RPM")}</div>
+                  <div>{t("studio.bdFc", { v: signed(adj.fcTemp, "°C", 1) })}</div>
+                  <div>{t("studio.bdPreheat", { v: signed(adj.preheatW, "W") })}</div>
+                  <div>{t("studio.bdDrying", { v: signed(adj.dryingS, "s") })}</div>
+                  <div>{t("studio.bdMid", { v: signed(adj.midS, "s") })}</div>
+                  <div>{t("studio.bdDev", { v: signed(adj.developmentS, "s") })}</div>
+                  <div>{t("studio.bdFan", { v: signed(adj.fanRpm, " RPM") })}</div>
                 </div>
               </div>
             ))}
           </div>
         </Card>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
           <button
             type="button"
             onClick={() => downloadText(generated.profile.fileName, generated.kproText)}
             className="rounded-xl bg-blue px-4 py-3 text-[15px] font-semibold text-white"
           >
-            Download .kpro
+            {t("studio.downloadKpro")}
           </button>
           <button
             type="button"
             onClick={onSave}
             className="rounded-xl bg-card2 px-4 py-3 text-[15px] font-semibold text-white"
           >
-            Save to library
+            {t("studio.saveLibrary")}
           </button>
           <button
             type="button"
             onClick={onBrew}
             className="rounded-xl bg-card2 px-4 py-3 text-[15px] font-semibold text-white"
           >
-            Brew this roast
-            <span className="ml-2 text-[11px] font-semibold text-orange">Preview</span>
+            {t("studio.brewThis")}
           </button>
         </div>
       </div>
