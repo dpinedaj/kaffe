@@ -306,7 +306,7 @@ export function readExtract(
     inRange,
     window,
     scale,
-    tips: inRange ? tipsFor({ tds, ey, yieldG: cup, eyBand, tdsBand, scale }, recipe, assumed) : [],
+    tips: inRange ? tipsFor({ yieldG: cup, eyBand, tdsBand, scale }, recipe, assumed) : [],
   };
 }
 
