@@ -466,5 +466,32 @@ describe("flavor-mapped competition recipes", () => {
     });
     expect(light.gaggiuino).toBe("Adaptive for Light Roast");
     expect(light.gaggiuino).not.toMatch(/\bv\d/i);
+    expect(turbo.origin).toMatch(/Extractamundo|IUIUIU/);
+    expect(light.origin).toMatch(/Adaptive Light/);
+  });
+
+  it("credits the competition or document on every card", () => {
+    const kasuya = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      flavors: ["juicy"],
+    });
+    expect(kasuya.origin).toMatch(/WBrC 2016/);
+    const chemex = recommendBrew({
+      method: "chemex",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+    });
+    expect(chemex.origin).toMatch(/Hoffmann/);
+    const cupping = recommendBrew({
+      method: "cupping",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+    });
+    expect(cupping.origin).toMatch(/SCA/);
   });
 });

@@ -361,6 +361,11 @@ export default function BrewPage({
                   <p className={`mt-0.5 text-[12px] leading-snug ${on ? "text-white/80" : "text-muted"}`}>
                     {m.mechanic}
                   </p>
+                  {m.origin && (
+                    <p className={`mt-1.5 text-[11px] leading-snug ${on ? "text-white/70" : "text-muted"}`}>
+                      {m.origin}
+                    </p>
+                  )}
                 </button>
               );
             })}
@@ -395,6 +400,7 @@ export default function BrewPage({
               }`}
             />
           )}
+          {recipe.origin && <Field label="Source" value={recipe.origin} />}
           {recipe.gaggiuino && <Field label="Gaggiuino" value={recipe.gaggiuino} />}
         </Card>
         {recipe.cappedByBoil && (
@@ -405,7 +411,12 @@ export default function BrewPage({
       </section>
 
       <section>
-        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Steps</h3>
+        <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
+          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">Steps</h3>
+          {recipe.origin && (
+            <span className="min-w-0 truncate text-right text-[12px] text-muted">{recipe.origin}</span>
+          )}
+        </div>
         <Card className="divide-y divide-line">
           {recipe.steps.map((step) => (
             <div key={`${step.at}-${step.title}`} className="flex gap-3 px-4 py-3">
