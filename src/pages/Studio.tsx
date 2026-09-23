@@ -37,12 +37,14 @@ export default function Studio({
   tab,
   setTab,
   onSave,
+  onBrew,
 }: {
   intent: RoastIntent;
   setIntent: (next: RoastIntent) => void;
   tab: StudioTab;
   setTab: (tab: StudioTab) => void;
   onSave: () => void;
+  onBrew: () => void;
 }) {
   const generated = useMemo(() => generateProfile(intent), [intent]);
   const origin = originById(intent.originId);
@@ -637,6 +639,14 @@ export default function Studio({
             className="rounded-xl bg-card2 px-4 py-3 text-[15px] font-semibold text-white"
           >
             Save to library
+          </button>
+          <button
+            type="button"
+            onClick={onBrew}
+            className="rounded-xl bg-card2 px-4 py-3 text-[15px] font-semibold text-white"
+          >
+            Brew this roast
+            <span className="ml-2 text-[11px] font-semibold text-orange">Preview</span>
           </button>
         </div>
       </div>
