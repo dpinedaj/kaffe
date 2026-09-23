@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrewIcon } from "../components/BrewIcon";
 import BrewRecipeSheet from "../components/BrewRecipeSheet";
-import { Card, DraftNumber, Field, Pill, Row } from "../components/ui";
+import { Card, DraftNumber, Field, Pill, Row, Select } from "../components/ui";
 import {
   BREW_METHODS,
   attachKeyOf,
+  bagBrewFields,
   defaultDays,
   defaultMethod,
-  densityFromFarmM,
+  leanFlavorsForVariety,
   loadBrewBag,
   loadKitchenAltitudeM,
   recommendBrew,
@@ -38,7 +39,16 @@ import {
 } from "../lib/brewRecipes";
 import { curveName, type RoastIntent } from "../lib/generate";
 import { parseKpro } from "../lib/kpro";
-import { FLAVORS, PROCESSES, STYLES, type FlavorId, type RoastStyleId } from "../lib/knowledge";
+import {
+  FLAVORS,
+  ORIGINS,
+  PROCESSES,
+  STYLES,
+  VARIETIES,
+  originById,
+  type FlavorId,
+  type RoastStyleId,
+} from "../lib/knowledge";
 import type { SavedProfile } from "../lib/storage";
 
 export default function BrewPage({
@@ -91,6 +101,7 @@ export default function BrewPage({
 
   const usingBag = roastTab === "bag";
   const style = usingBag ? bag.roastStyle : (snap?.roastStyle ?? looseStyle);
+  const bagFields = bagBrewFields(bag);
   const brewInput = {
     method,
     roastStyle: style,
@@ -98,10 +109,10 @@ export default function BrewPage({
     daysSinceRoast: days,
     kitchenAltitudeM: kitchenM,
     process: usingBag ? bag.process : snap?.process,
-    flavors: usingBag ? bag.flavors : snap?.flavors,
-    densityClass: usingBag ? densityFromFarmM(bag.farmAltitudeM) : snap?.densityClass,
-    varietyName: usingBag ? undefined : snap?.varietyName,
-    beanSize: usingBag ? undefined : snap?.beanSize,
+    flavors: usingBag ? bagFields.flavors : snap?.flavors,
+    densityClass: usingBag ? bagFields.densityClass : snap?.densityClass,
+    varietyName: usingBag ? bagFields.varietyName : snap?.varietyName,
+    beanSize: usingBag ? bagFields.beanSize : snap?.beanSize,
     coffeeG: dose,
     ratio,
   } as const;
@@ -208,6 +219,29 @@ export default function BrewPage({
     const has = bag.flavors.includes(id);
     const flavors = has ? bag.flavors.filter((f) => f !== id) : [...bag.flavors, id].slice(-2);
     patchBag({ flavors });
+  }
+
+  function setBagOrigin(id: string) {
+    if (!id) {
+      patchBag({ originId: undefined });
+      return;
+    }
+    const origin = originById(id);
+    const varietyId = origin.suggestedVarietyId ?? "unknown";
+    patchBag({
+      originId: id,
+      process: origin.typicalProcess,
+      farmAltitudeM: origin.typicalAltitude,
+      varietyId,
+      flavors: leanFlavorsForVariety(varietyId),
+    });
+  }
+
+  function setBagVariety(id: string) {
+    patchBag({
+      varietyId: id,
+      flavors: leanFlavorsForVariety(id),
+    });
   }
 
   function deleteMine(id: string) {
@@ -389,18 +423,36 @@ export default function BrewPage({
                   ))}
                 </div>
               </Row>
+              <Row label="Origin">
+                <Select value={bag.originId ?? ""} onChange={setBagOrigin}>
+                  <option value="">Not on the bag</option>
+                  {ORIGINS.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </Select>
+              </Row>
+              <Row label="Variety">
+                <Select value={bag.varietyId ?? "unknown"} onChange={setBagVariety}>
+                  {VARIETIES.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </Select>
+              </Row>
               <Row label="Process">
-                <select
+                <Select
                   value={bag.process}
-                  onChange={(e) => patchBag({ process: e.target.value as BrewBag["process"] })}
-                  className="max-w-[180px] appearance-none bg-transparent text-right text-[15px] font-medium text-blue outline-none"
+                  onChange={(id) => patchBag({ process: id as BrewBag["process"] })}
                 >
                   {PROCESSES.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Row>
               <Row label="Farm (m)" last>
                 <input
@@ -455,8 +507,9 @@ export default function BrewPage({
               </div>
             </div>
             <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-              What is on the bag, not a roast file. Farm metres set lot density (a click finer when
-              high). Kitchen altitude still caps the kettle.
+              What is on the bag, not a roast file. Origin and variety set density, seed size, and a
+              flavor lean — they do not invent a Kenya-only recipe. Farm metres refine density.
+              Kitchen altitude still caps the kettle.
             </p>
           </>
         )}

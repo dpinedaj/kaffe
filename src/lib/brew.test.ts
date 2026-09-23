@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   boilingPointC,
+  bagBrewFields,
   defaultDays,
   defaultMethod,
+  densityFromBag,
   densityFromFarmM,
   formatBrewTime,
   recommendBrew,
@@ -41,6 +43,79 @@ describe("defaults from the roast", () => {
     expect(densityFromFarmM(1100)).toBe("soft");
     expect(densityFromFarmM(1500)).toBe("medium");
     expect(densityFromFarmM(1800)).toBe("hard");
+  });
+
+  it("origin and variety move density, seed size, and flavor lean — not a new recipe table", () => {
+    expect(densityFromBag("ethiopia", "heirloom", 2000)).toBe("hard");
+    expect(densityFromBag("brazil", "catuai", 1100)).toBe("soft");
+    expect(densityFromBag("colombia-antioquia", "gesha", 1550)).toBe("hard");
+    expect(densityFromBag("colombia-narino", "caturra", 2050)).toBe("hard");
+
+    const gesha = bagBrewFields({
+      roastStyle: "light",
+      process: "washed",
+      flavors: [],
+      originId: "colombia",
+      varietyId: "gesha",
+      farmAltitudeM: 1800,
+    });
+    expect(gesha.flavors).toEqual(["floral", "bright"]);
+    expect(gesha.densityClass).toBe("hard");
+    expect(gesha.varietyName).toMatch(/Gesha/);
+
+    const picked = bagBrewFields({
+      roastStyle: "light",
+      process: "washed",
+      flavors: ["body"],
+      originId: "kenya",
+      varietyId: "sl28",
+      farmAltitudeM: 1750,
+    });
+    expect(picked.flavors).toEqual(["body"]);
+    expect(picked.beanSize).toBe("medium");
+
+    const kenya = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      ...bagBrewFields({
+        roastStyle: "light",
+        process: "washed",
+        flavors: [],
+        originId: "kenya",
+        varietyId: "sl28",
+        farmAltitudeM: 1750,
+      }),
+    });
+    expect(kenya.suggestedTechnique).toBe("kasuya-acid");
+    expect(kenya.why.join(" ")).toMatch(/SL28|Kenya/);
+    const plain = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+    });
+    expect(GRIND_ORDER.indexOf(kenya.grind)).toBeGreaterThan(GRIND_ORDER.indexOf(plain.grind));
+
+    const brazilBag = bagBrewFields({
+      roastStyle: "medium",
+      process: "natural",
+      flavors: [],
+      originId: "brazil",
+      varietyId: "catuai",
+      farmAltitudeM: 1100,
+    });
+    expect(brazilBag.densityClass).toBe("soft");
+    const brazil = recommendBrew({
+      method: "v60",
+      roastStyle: "medium",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      ...brazilBag,
+    });
+    expect(brazil.why.join(" ")).toMatch(/Brazil|Catuai/);
+    expect(GRIND_ORDER.indexOf(brazil.grind)).toBeLessThan(GRIND_ORDER.indexOf(kenya.grind));
   });
 
   it("does not treat farm altitude as kitchen altitude", () => {

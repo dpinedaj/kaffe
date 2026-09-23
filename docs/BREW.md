@@ -10,7 +10,7 @@ The card is built from three corpora, in this order:
 
 Implementation: `src/lib/brew.ts` (`recommendBrew`, `snapshotFromKpro`, `boilingPointC`). Farm altitude stays on Generate. **Kitchen** altitude is a separate, persisted input.
 
-The Roast section has two tabs. **Profile** attaches a Generate / library / .kpro roast. **This bag** is for a bought coffee: style, process, farm metres (density only), and up to two flavor icons. Same `recommendBrew` path; no .kpro required.
+The Roast section has two tabs. **Profile** attaches a Generate / library / .kpro roast. **This bag** is for a bought coffee: origin, variety, style, process, farm metres, and up to two flavor icons. Origin / variety move **density**, **seed size**, and a **flavor lean** (when you have not picked I want) — not a separate origin-indexed recipe table. Same `recommendBrew` path; no .kpro required.
 
 ---
 
