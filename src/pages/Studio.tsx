@@ -63,14 +63,42 @@ export default function Studio({
   function toggleFlavor(id: FlavorId) {
     const existing = intent.flavors.find((f) => f.id === id);
     if (existing) {
-      patch({ flavors: intent.flavors.filter((f) => f.id !== id) });
+      const next = intent.flavors.filter((f) => f.id !== id);
+      patch({ flavors: next.length === 1 ? [{ ...next[0], weight: 1 }] : next });
       return;
     }
     if (intent.flavors.length >= 2) {
-      patch({ flavors: [...intent.flavors.slice(1), { id, weight: 1 }] });
+      patch({
+        flavors: [
+          { ...intent.flavors[1], weight: 0.5 },
+          { id, weight: 0.5 },
+        ],
+      });
       return;
     }
-    patch({ flavors: [...intent.flavors, { id, weight: 1 }] });
+    if (intent.flavors.length === 1) {
+      patch({
+        flavors: [
+          { ...intent.flavors[0], weight: 0.5 },
+          { id, weight: 0.5 },
+        ],
+      });
+      return;
+    }
+    patch({ flavors: [{ id, weight: 1 }] });
+  }
+
+  function setFlavorWeight(id: FlavorId, weight: number) {
+    if (intent.flavors.length < 2) {
+      patch({
+        flavors: intent.flavors.map((x) => (x.id === id ? { ...x, weight } : x)),
+      });
+      return;
+    }
+    const w = Math.max(0.05, Math.min(0.95, weight));
+    patch({
+      flavors: intent.flavors.map((x) => (x.id === id ? { ...x, weight: w } : { ...x, weight: Number((1 - w).toFixed(2)) })),
+    });
   }
 
   return (
@@ -358,8 +386,8 @@ export default function Studio({
                 </span>
               </div>
               <p className="mb-3 px-1 text-[13px] text-muted">
-                Leave empty for the bean’s default curve; two goals share one adjustment budget.
-                These reshape the roast — they cannot add a note the green seed does not have.
+                Leave empty for the bean’s default curve. Two goals share 100% — move one slider
+                and the other fills the rest. They cannot add a note the green seed does not have.
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {FLAVORS.map((f) => {
@@ -432,13 +460,7 @@ export default function Studio({
                     max={1}
                     step={0.05}
                     value={pick.weight}
-                    onChange={(e) =>
-                      patch({
-                        flavors: intent.flavors.map((x) =>
-                          x.id === pick.id ? { ...x, weight: Number(e.target.value) } : x,
-                        ),
-                      })
-                    }
+                    onChange={(e) => setFlavorWeight(pick.id, Number(e.target.value))}
                     className="mb-4 w-full"
                   />
                   <details open className="text-[13px]">

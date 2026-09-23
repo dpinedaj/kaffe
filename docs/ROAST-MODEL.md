@@ -186,7 +186,7 @@ Kaffe’s **Cup timing** switch is this concept, not the BOOST kit.
 
 ## 8. Flavor goals
 
-Up to two flavors share one adjustment budget (`FLAVOR_DELTA` in `generate.ts`). They are **craft heuristics** from roasting practice (Rao; Royal Coffee Maillard/aW; SCA cupping language), not a published mapping from a flavor word to a unique curve.
+Up to two flavors share one adjustment budget (`FLAVOR_DELTA` in `generate.ts`). Two picks are a **split that sums to 1** (default 50/50; sliders are locked). A single pick keeps its own 0–1 weight. They are **craft heuristics** from roasting practice (Rao; Royal Coffee Maillard/aW; SCA cupping language), not a published mapping from a flavor word to a unique curve.
 
 Volatile group (steeper dry/Maillard, shorter DTR): floral, fruity, bright, juicy.  
 Heavy group (shallower, longer mid and development): deep sweet, body.

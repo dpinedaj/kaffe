@@ -44,6 +44,29 @@ export function youOrigin(now = new Date()): string {
   return `You · ${y}-${m}-${d}`;
 }
 
+export function blankRecipe(method: BrewMethod, name?: string): UserBrewRecipe {
+  const now = new Date().toISOString();
+  const espresso = method === "espresso";
+  const cold = method === "coldbrew";
+  const moka = method === "moka";
+  return {
+    id: newRecipeId(),
+    name: name?.trim() ?? "",
+    method,
+    flavor: "",
+    mechanic: "",
+    origin: youOrigin(),
+    coffeeG: espresso ? 18 : cold ? 70 : 15,
+    ratioN: espresso ? 2 : moka ? 8 : cold ? 13 : 16,
+    wantedC: espresso ? 93 : cold ? 20 : 93,
+    timeS: espresso ? 30 : cold ? 12 * 3600 : 180,
+    grind: espresso || moka ? "fine" : "medium",
+    steps: [{ at: "", title: "", detail: "" }],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 export function cloneFromCard(recipe: BrewRecipe, name?: string): UserBrewRecipe {
   const methodName = BREW_METHODS.find((m) => m.id === recipe.method)?.name ?? recipe.method;
   const now = new Date().toISOString();

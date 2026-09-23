@@ -3,6 +3,7 @@ import {
   boilingPointC,
   defaultDays,
   defaultMethod,
+  densityFromFarmM,
   formatBrewTime,
   recommendBrew,
   snapshotFromIntent,
@@ -32,6 +33,13 @@ describe("defaults from the roast", () => {
     expect(defaultMethod("omni")).toBe("v60");
     expect(defaultDays("rest")).toBe(4);
     expect(defaultDays("rtd")).toBe(2);
+  });
+
+  it("reads lot density from farm metres, not the kettle", () => {
+    expect(densityFromFarmM(undefined)).toBeUndefined();
+    expect(densityFromFarmM(1100)).toBe("soft");
+    expect(densityFromFarmM(1500)).toBe("medium");
+    expect(densityFromFarmM(1800)).toBe("hard");
   });
 
   it("does not treat farm altitude as kitchen altitude", () => {
@@ -88,6 +96,7 @@ describe("recommendBrew", () => {
     expect(sea.kettleC).toBe(96);
     expect(sea.cappedByBoil).toBe(false);
     expect(sea.ratio).toBe("1:16");
+    expect(sea.technique).toBe("hedrick");
     expect(sea.steps.length).toBeGreaterThanOrEqual(4);
 
     const high = recommendBrew({
@@ -184,7 +193,8 @@ describe("recommendBrew", () => {
     });
     expect(day10.restLabel).toMatch(/blooming|good/i);
     expect(day10.warnings.some((w) => /fresher bag|Stale/i.test(w))).toBe(false);
-    expect(day10.steps.some((s) => /45–60|3×/.test(s.detail))).toBe(true);
+    expect(day10.technique).toBe("hedrick");
+    expect(day10.steps.some((s) => /Bloom 2|CO₂|45–60|3×/.test(`${s.title} ${s.detail}`))).toBe(true);
     const week5 = recommendBrew({
       method: "v60",
       roastStyle: "light",
@@ -389,6 +399,70 @@ describe("flavor-mapped competition recipes", () => {
     });
     expect(floral.technique).toBe("peng");
     expect(floral.steps.some((s) => /80|cool/i.test(`${s.title} ${s.detail}`))).toBe(true);
+  });
+
+  it("adds Rao, Hedrick, Japanese iced, and Tay as distinct drinks", () => {
+    const rao = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 12,
+      kitchenAltitudeM: 0,
+      flavors: ["clean"],
+    });
+    expect(rao.technique).toBe("rao");
+    expect(rao.steps.some((s) => /spin/i.test(`${s.title} ${s.detail}`))).toBe(true);
+
+    const fresh = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 0,
+    });
+    expect(fresh.technique).toBe("hedrick");
+    expect(fresh.steps.some((s) => /Bloom 2/i.test(s.title))).toBe(true);
+
+    const rested = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 12,
+      kitchenAltitudeM: 0,
+    });
+    expect(rested.technique).toBe("hoffmann");
+
+    const winey = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 0,
+      flavors: ["winey"],
+    });
+    expect(winey.technique).toBe("hedrick");
+
+    const iced = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 0,
+      technique: "iced",
+    });
+    expect(iced.bypassG).toBeGreaterThan(0);
+    expect(iced.steps.some((s) => /ice/i.test(`${s.title} ${s.detail}`))).toBe(true);
+
+    const tay = recommendBrew({
+      method: "aeropress",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+      kitchenAltitudeM: 0,
+      technique: "tay",
+    });
+    expect(tay.origin).toMatch(/Wipvasutt|2023/);
+    expect(tay.steps.some((s) => /Charge|2 g|remaining/i.test(`${s.title} ${s.detail}`))).toBe(true);
   });
 
   it("exposes older world wins that are a different drink: Chad, Hsu, Du, Fukahori GINA, Bull", () => {
