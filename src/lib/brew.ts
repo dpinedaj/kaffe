@@ -104,6 +104,8 @@ export interface BrewRecipe {
   suggestedTechnique?: string;
   /** SproFiler / Gaggiuino profile to load, when the script is one. */
   gaggiuino?: string;
+  /** Short competition or document credit for the selected recipe. */
+  origin?: string;
   steps: BrewStep[];
   why: string[];
   sources: string[];
@@ -357,6 +359,8 @@ export interface BrewTechnique {
   lockTemp?: boolean;
   /** Exact SproFiler / Gaggiuino community profile name, when this script is one. */
   gaggiuino?: string;
+  /** Short competition or document credit. */
+  origin?: string;
 }
 
 const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
@@ -753,8 +757,91 @@ export const SWITCH_MODES = (TECHNIQUES.switch ?? []).map((t) => ({
   timeS: t.timeS,
 }));
 
+const RECIPE_ORIGIN: Partial<Record<BrewMethod, Record<string, string>>> = {
+  switch: {
+    steep: "Hoffmann · daily driver",
+    fukahori: "Fukahori / MAME · shop recipe",
+    hybrid: "Kasuya · Super Hybrid 2025",
+    hold: "Shop hybrid",
+    double: "WBrC 2024 · Ryan Wibawa (3rd)",
+    bull: "US Brewers Cup 2025 · Justin Bull",
+  },
+  aeropress: {
+    stanica: "WAC 2024 · George Stanica",
+    pop: "WAC 2025 · Némo Pop",
+    merikanto: "WAC 2021 · Tuomas Merikanto",
+    wendelien: "WAC 2019 · Wendelien van Bunnik",
+  },
+  v60: {
+    hoffmann: "Hoffmann · Ultimate V60",
+    "kasuya-acid": "WBrC 2016 · Tetsu Kasuya",
+    "kasuya-sweet": "WBrC 2016 · Tetsu Kasuya",
+    peng: "WBrC 2025 · George Peng (Solo)",
+    chad: "WBrC 2017 · Chad Wang",
+  },
+  kalita: {
+    wave: "Café / older WBrC",
+    mccarthy: "WBrC 2013 · James McCarthy",
+  },
+  origami: {
+    medina: "WBrC 2023 · Carlos Medina",
+    du: "WBrC 2019 · Jia-Ning Du",
+  },
+  orea: {
+    wolfl: "WBrC 2024 · Martin Wölfl",
+    hsu: "WBrC 2022 · Shih Yuan Hsu",
+  },
+  frenchpress: {
+    hoffmann: "Hoffmann · Ultimate French Press",
+    classic: "Community · 4:00 press",
+  },
+  coldbrew: {
+    rtd: "Hoffmann · fridge steep",
+    concentrate: "Counter Culture · concentrate",
+  },
+  clever: {
+    steep: "Hoffmann / Clever hybrid",
+    short: "Community · short steep",
+    gina: "WBrC 2018 · Emi Fukahori (GINA)",
+  },
+  espresso: {
+    "adaptive-light": "SproFiler / Decent · Adaptive Light",
+    blooming: "SproFiler / Decent · Blooming espresso",
+    extractamundo: "SproFiler / IUIUIU · Extractamundo Dos",
+    lhl: "SproFiler · Low High Low",
+    londinium: "SproFiler / Decent · Londinium",
+    "adaptive-dark": "SproFiler / Decent · Adaptive Dark",
+    stock: "SproFiler · Stock 9 Bar",
+    filter: "SproFiler · Filter",
+  },
+};
+
+const METHOD_ORIGIN: Partial<Record<BrewMethod, string>> = {
+  v60: "Hoffmann · Ultimate V60",
+  kalita: "Café / older WBrC",
+  origami: "WBrC 2023 · Carlos Medina",
+  chemex: "Hoffmann · Chemex as V60",
+  switch: "Hoffmann · daily driver",
+  clever: "Hoffmann / Clever hybrid",
+  aeropress: "WAC 2024 · George Stanica",
+  frenchpress: "Hoffmann · Ultimate French Press",
+  orea: "WBrC 2024 · Martin Wölfl",
+  coldbrew: "Hoffmann · fridge steep",
+  moka: "Hoffmann · moka",
+  espresso: "WBC Light cluster · 1:2–1:2.5",
+  cupping: "SCA cupping protocol",
+};
+
 export function techniquesFor(method: BrewMethod): BrewTechnique[] {
-  return TECHNIQUES[method] ?? [];
+  return (TECHNIQUES[method] ?? []).map((t) => ({
+    ...t,
+    origin: t.origin ?? RECIPE_ORIGIN[method]?.[t.id] ?? METHOD_ORIGIN[method],
+  }));
+}
+
+export function recipeOrigin(method: BrewMethod, techniqueId?: string): string | undefined {
+  if (techniqueId) return RECIPE_ORIGIN[method]?.[techniqueId] ?? METHOD_ORIGIN[method];
+  return METHOD_ORIGIN[method];
 }
 
 /**
@@ -1052,6 +1139,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     technique: tech?.id,
     suggestedTechnique: suggestedTech,
     gaggiuino: tech?.gaggiuino,
+    origin: recipeOrigin(query.method, tech?.id),
     steps: buildSteps(ctx),
     why,
     sources,
