@@ -1,4 +1,4 @@
-# Brew model (Preview)
+# Brew model
 
 Kaffe’s Brew page is a **starting card**, not a lock. It does not read the Bézier and does not invent TDS/PE — After brew takes a refractometer Brix or TDS and places the cup on a Lockhart / SCA control chart. It does not treat a World Brewers Cup routine as law for a home V60 at 1 800 m.
 
@@ -304,7 +304,7 @@ KL Rest 3–5 days is when the cup *starts* to settle, not when it dies. Officia
 - WBrC 2024–25 winners used OREA / SOLO, not a V60. We keep a V60 card because people own one.
 - No water chemistry (ppm, Ca/Mg). Medina specified ~65 ppm; we do not.
 - No grind microns — only a five-step qualitative scale.
-- No refractometer loop. We do not print a TDS target as if it were measured.
+- After brew takes a **measured** Brix or TDS. We do not invent a TDS target.
 - Flavor / variety nudges are **not** a paper. They will be wrong for some lots.
 - Moka and espresso are different machines. Moka is not a cheap espresso.
 
