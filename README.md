@@ -48,10 +48,10 @@ Live: [https://dpinedaj.github.io/kaffe/](https://dpinedaj.github.io/kaffe/)
 
 ## What it does
 
-- **Generate** — origin, variety, process, altitude or measured density, moisture, brew, roast style, **Rest / RTD** cup timing, up to two flavor goals, recommended boost zones, live Bézier preview (add / delete / smooth spikes / reset), download `.kpro`
+- **Generate** — origin, variety, process, altitude, typed g/L, or vessel mass/volume, moisture, brew, roast style, **Rest / RTD** cup timing, up to two flavor goals, recommended boost zones, live Bézier preview (add / delete / smooth spikes / reset), download `.kpro`
 - **Overlay** — compare profiles, design vs actual from a `.klog`, zone/scalar diff, phases, ±3 °C deviation. Local `npm run dev` only: Cursor overlay coach (off on GitHub Pages).
 - **Library** — save, rename, favorite, export JSON (this device only)
-- **Brew** (Preview) — starting recipe card from a Generate roast, a library profile, or a dropped `.kpro`. Kitchen altitude caps kettle temperature at local boil.
+- **Brew** — starting recipe card from a Generate roast, a library profile, a dropped `.kpro`, or This bag. Kitchen altitude caps kettle temperature at local boil. After brew takes a measured Brix/TDS and places the cup on a Lockhart chart.
 
 `.kpro` is plain `key:value` ASCII, LF, no checksum. Curves are cubic Bézier groups of three pairs. A `.klog` already contains the design curve in the `=profile` column — Overlay uses that when a log is present, and only analyses samples up to `roast_end`.
 
@@ -131,4 +131,4 @@ Up to two goals share one budget. Floral / fruity / bright / juicy steepen the f
 | Density from altitude | `densityFromAltitude` |
 | Fan Bézier | `planFanSchedule` / `buildOfficialFanCurve` |
 | Origins, varieties, flavor copy | `src/lib/knowledge.ts` |
-| Brew starting card (Preview) | `src/lib/brew.ts` → `recommendBrew` · [docs/BREW.md](docs/BREW.md) |
+| Brew starting card + After brew | `src/lib/brew.ts` → `recommendBrew` · `src/lib/extract.ts` · [docs/BREW.md](docs/BREW.md) |
