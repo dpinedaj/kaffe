@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-2xl bg-card ${className}`}>{children}</div>;
@@ -73,6 +73,46 @@ export function Pill({
     blue: "text-blue",
   };
   return <span className={`text-[12px] font-medium ${map[tone]}`}>{children}</span>;
+}
+
+export function DraftNumber({
+  value,
+  onChange,
+  onEmpty,
+  disabled,
+  step,
+  className = "",
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  onEmpty?: () => void;
+  disabled?: boolean;
+  step?: number;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <input
+      type="number"
+      inputMode="decimal"
+      step={step ?? "any"}
+      disabled={disabled}
+      value={draft ?? String(value)}
+      onChange={(e) => {
+        const raw = e.target.value.replace(",", ".");
+        if (raw !== "" && !/^-?\d*\.?\d*$/.test(raw)) return;
+        setDraft(raw);
+        if (raw === "" || raw === "-" || raw === ".") return;
+        const n = Number(raw);
+        if (Number.isFinite(n)) onChange(n);
+      }}
+      onBlur={() => {
+        if (draft === "" || draft === "-" || draft === ".") onEmpty?.();
+        setDraft(null);
+      }}
+      className={className}
+    />
+  );
 }
 
 export function Field({

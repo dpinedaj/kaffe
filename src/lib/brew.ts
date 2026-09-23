@@ -98,6 +98,7 @@ export interface BrewRecipe {
   grind: Grind;
   grindNote: string;
   restLabel: string;
+  restWarn?: string;
   switchMode?: SwitchMode;
   suggestedSwitchMode?: SwitchMode;
   technique?: string;
@@ -120,6 +121,64 @@ export interface BrewMethodInfo {
 }
 
 const KITCHEN_KEY = "kaffe.brew.kitchenAltitudeM";
+const BAG_KEY = "kaffe.brew.bag.v1";
+
+export interface BrewBag {
+  roastStyle: RoastStyleId;
+  process: ProcessId;
+  farmAltitudeM?: number;
+  flavors: FlavorId[];
+}
+
+export function defaultBrewBag(): BrewBag {
+  return { roastStyle: "medium", process: "washed", flavors: [] };
+}
+
+export function densityFromFarmM(metres?: number): DensityClass | undefined {
+  if (metres == null || !Number.isFinite(metres)) return undefined;
+  if (metres >= 1800) return "hard";
+  if (metres < 1300) return "soft";
+  return "medium";
+}
+
+export function loadBrewBag(): BrewBag {
+  const fallback = defaultBrewBag();
+  if (typeof localStorage === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(BAG_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<BrewBag>;
+    const styles: RoastStyleId[] = ["light", "medium", "dark"];
+    const processes: ProcessId[] = ["washed", "natural", "honey", "anaerobic", "other"];
+    const flavorIds = new Set(FLAVORS.map((f) => f.id));
+    return {
+      roastStyle: styles.includes(parsed.roastStyle as RoastStyleId)
+        ? (parsed.roastStyle as RoastStyleId)
+        : fallback.roastStyle,
+      process: processes.includes(parsed.process as ProcessId)
+        ? (parsed.process as ProcessId)
+        : fallback.process,
+      farmAltitudeM:
+        parsed.farmAltitudeM != null && Number.isFinite(parsed.farmAltitudeM)
+          ? clampAltitude(parsed.farmAltitudeM)
+          : undefined,
+      flavors: Array.isArray(parsed.flavors)
+        ? parsed.flavors.filter((id): id is FlavorId => flavorIds.has(id as FlavorId)).slice(0, 2)
+        : [],
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveBrewBag(bag: BrewBag): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(BAG_KEY, JSON.stringify(bag));
+  } catch {
+    /* quota / private mode */
+  }
+}
 const GRINDS: Grind[] = ["coarse", "medium-coarse", "medium", "medium-fine", "fine"];
 const ACID: FlavorId[] = ["fruity", "bright", "juicy", "floral", "winey"];
 const HEAVY: FlavorId[] = ["body", "deepSweet"];
@@ -325,7 +384,7 @@ const BASE: Record<BrewMethod, Record<RoastStyleId, MethodStyleBase>> = {
 };
 
 export const BREW_METHODS: BrewMethodInfo[] = [
-  { id: "v60", name: "V60", family: "pour", blurb: "Hoffmann daily, Kasuya 4:6 (acid vs sweet), Peng split-temp. Suggested from roast and flavor." },
+  { id: "v60", name: "V60", family: "pour", blurb: "Hoffmann, 4:6, Peng, Rao spin, Hedrick double bloom, Japanese iced. Suggested from roast and flavor." },
   { id: "kalita", name: "Kalita Wave", family: "pour", blurb: "Flat-bottom pulse pour. More forgiving bed than a V60; common in cafés and older WBrC routines." },
   { id: "origami", name: "Origami", family: "pour", blurb: "Faceted cone. Medina WBrC 2023: five equal 50 g pulses at 91 °C, 1:16." },
   { id: "chemex", name: "Chemex", family: "pour", blurb: "Bonded thick paper. Hoffmann V60 adaptation at 30 g : 500 g, ~4:10. Cleaner, slower than a V60." },
@@ -348,7 +407,7 @@ export interface BrewTechnique {
   mechanic: string;
   flavor: string;
   blurb: string;
-  timeS: number;
+  timeS?: number;
   wantedC?: number;
   startC?: number;
   finishC?: number;
@@ -466,6 +525,20 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       grind: "medium-coarse",
       lockTemp: true,
     },
+    {
+      id: "tay",
+      name: "Mid-brew charge",
+      mechanic: "Add 2 g more grounds at 0:45, then room-temp + hot bypass",
+      flavor: "Aroma / Kenya-like",
+      blurb: "Tay Wipvasutt, WAC 2023. 16 g in, 2 g more mid-brew, press ~75 g, then room-temp water then hot. Aroma without a second temperate kettle.",
+      timeS: 125,
+      wantedC: 89,
+      doseG: 18,
+      brewRatio: 5.6,
+      bypassRatio: 3.1,
+      grind: "medium-coarse",
+      lockTemp: true,
+    },
   ],
   v60: [
     {
@@ -511,6 +584,37 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       blurb: "Chad Wang, WBrC 2017. 15 g / 250 g at 92 °C, ~2:00. He skipped pre-warming the cone and poured only in the centre.",
       timeS: 120,
       wantedC: 92,
+    },
+    {
+      id: "rao",
+      name: "Rao spin",
+      mechanic: "Aggressive bloom spin, two pours, gentle spins",
+      flavor: "Even / high extraction",
+      blurb: "Scott Rao. Plastic V60, 20 g / 330 g at ~97 °C, 4:00–4:30. The spin levels the bed so you can push extraction without bitterness.",
+      timeS: 255,
+      wantedC: 97,
+      doseG: 20,
+      brewRatio: 16.5,
+    },
+    {
+      id: "hedrick",
+      name: "Double bloom + one pour",
+      mechanic: "45 g, 90 g, then a fast centre pour. No swirl on the blooms.",
+      flavor: "Clear / gassy lots",
+      blurb: "Lance Hedrick. Two blooms dump CO₂ so the main pour does not channel. Suggested while a Light Rest lot is still gassy.",
+      timeS: 150,
+    },
+    {
+      id: "iced",
+      name: "Japanese iced",
+      mechanic: "Hot brew onto ice in the server · 60% hot / 40% ice",
+      flavor: "Bright / flash-chill",
+      blurb: "Hoffmann iced filter. Not cold brew — aromatics lock in as the coffee hits ice. Grind a click finer. Select this when you want a cold cup.",
+      timeS: 165,
+      wantedC: 96,
+      brewRatio: 10,
+      bypassRatio: 6.7,
+      grind: "medium-fine",
     },
   ],
   kalita: [
@@ -747,6 +851,33 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       gaggiuino: "Filter",
     },
   ],
+  chemex: [
+    {
+      id: "hoffmann",
+      name: "Hoffmann Chemex",
+      mechanic: "Bloom, 60% pour, stir and shake — 30 g : 500 g, ~4:10",
+      flavor: "Clean / paper",
+      blurb: "Hoffmann Chemex as a V60. Thick bonded paper, slower and cleaner than a cone. The one published skeleton we keep.",
+    },
+  ],
+  moka: [
+    {
+      id: "hoffmann",
+      name: "Hoffmann moka",
+      mechanic: "Hot fill to the valve, no tamp, off at first blonde",
+      flavor: "Body / chocolate",
+      blurb: "Hoffmann moka. Not espresso — stop when the stream turns honey. The one published skeleton we keep.",
+    },
+  ],
+  cupping: [
+    {
+      id: "sca",
+      name: "SCA cupping",
+      mechanic: "8.25 g / 150 g, 93 °C, 4 min, break and skim",
+      flavor: "Reference / even",
+      blurb: "SCA cupping protocol. The academic reference cup, not a drink recipe.",
+    },
+  ],
 };
 
 export const SWITCH_MODES = (TECHNIQUES.switch ?? []).map((t) => ({
@@ -771,6 +902,7 @@ const RECIPE_ORIGIN: Partial<Record<BrewMethod, Record<string, string>>> = {
     pop: "WAC 2025 · Némo Pop",
     merikanto: "WAC 2021 · Tuomas Merikanto",
     wendelien: "WAC 2019 · Wendelien van Bunnik",
+    tay: "WAC 2023 · Tay Wipvasutt",
   },
   v60: {
     hoffmann: "Hoffmann · Ultimate V60",
@@ -778,6 +910,9 @@ const RECIPE_ORIGIN: Partial<Record<BrewMethod, Record<string, string>>> = {
     "kasuya-sweet": "WBrC 2016 · Tetsu Kasuya",
     peng: "WBrC 2025 · George Peng (Solo)",
     chad: "WBrC 2017 · Chad Wang",
+    rao: "Rao · V60 spin",
+    hedrick: "Hedrick · double bloom",
+    iced: "Hoffmann · Japanese iced",
   },
   kalita: {
     wave: "Café / older WBrC",
@@ -813,6 +948,15 @@ const RECIPE_ORIGIN: Partial<Record<BrewMethod, Record<string, string>>> = {
     "adaptive-dark": "SproFiler / Decent · Adaptive Dark",
     stock: "SproFiler · Stock 9 Bar",
     filter: "SproFiler · Filter",
+  },
+  chemex: {
+    hoffmann: "Hoffmann · Chemex as V60",
+  },
+  moka: {
+    hoffmann: "Hoffmann · moka",
+  },
+  cupping: {
+    sca: "SCA cupping protocol",
   },
 };
 
@@ -866,6 +1010,7 @@ export function suggestedTechniqueId(
   style: RoastStyleId,
   flavors: FlavorId[] = [],
   process?: ProcessId,
+  gassy?: boolean,
 ): string | undefined {
   if (techniquesFor(method).length === 0) return undefined;
   const acid = flavors.some((id) => ACID.includes(id));
@@ -889,8 +1034,10 @@ export function suggestedTechniqueId(
   if (method === "v60") {
     if (style === "dark" || heavy) return "hoffmann";
     if (floral) return "peng";
-    if (acid) return "kasuya-acid";
+    if (acid && !flavors.includes("winey")) return "kasuya-acid";
     if (sweet || style === "medium") return "kasuya-sweet";
+    if (gassy || flavors.includes("winey")) return "hedrick";
+    if (flavors.includes("clean")) return "rao";
     return "hoffmann";
   }
   if (method === "kalita") return style === "light" && !heavy ? "mccarthy" : "wave";
@@ -925,7 +1072,13 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
   const openKettle = query.method !== "espresso" && query.method !== "coldbrew";
   const userDose = query.coffeeG != null && Number.isFinite(query.coffeeG);
   const userRatio = query.ratio != null && Number.isFinite(query.ratio);
-  const suggestedTech = suggestedTechniqueId(query.method, query.roastStyle, flavors, query.process);
+  const suggestedTech = suggestedTechniqueId(
+    query.method,
+    query.roastStyle,
+    flavors,
+    query.process,
+    gassy,
+  );
   const techniqueId =
     query.technique ??
     (query.method === "switch" ? query.switchMode : undefined) ??
@@ -984,7 +1137,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
   }
   const cupG = waterG + (bypassG ?? 0);
 
-  if (tech) {
+  if (tech?.timeS != null) {
     timeS = tech.timeS + Math.round(stepsN * (immersion ? 40 : 20));
     if (heavy && !tech.lockTemp) timeS += 15;
   }
@@ -1134,6 +1287,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     grind,
     grindNote,
     restLabel,
+    restWarn,
     switchMode,
     suggestedSwitchMode: query.method === "switch" ? suggestedMode : undefined,
     technique: tech?.id,
@@ -1246,6 +1400,35 @@ function v60Steps(ctx: StepCtx, bloom: number, pour60: number, temp: string, t: 
       { at: t, title: "Drawdown", detail: `Done around ${t} (he was ~2:00). Clear, tea-like.${stall}` },
     ];
   }
+  if (mode === "rao") {
+    const first = Math.round(ctx.coffeeG * 3);
+    const mid = Math.round(w * (200 / 330));
+    return [
+      { at: "Prep", title: "Plastic cone", detail: "Scott Rao. Plastic V60 holds heat. Rinse, dump, coffee in, make a small well." },
+      { at: "0:00", title: "Bloom + spin", detail: `${first} g at ${temp}. Spin the dripper hard so the slurry is a whirlpool. 40 s.` },
+      { at: "0:40", title: "Pour 1", detail: `Steady low pour to ${mid} g. One gentle spin to fill the ribs.` },
+      { at: "1:30", title: "Pour 2", detail: `When ~70% has drained, pour to ${w} g. Another gentle spin. Drawdown ${t} (he aims 4:00–4:30).` },
+    ];
+  }
+  if (mode === "hedrick") {
+    const first = Math.round(ctx.coffeeG * 3);
+    const second = first * 2;
+    return [
+      { at: "Prep", title: "No swirl", detail: "Lance Hedrick. Two blooms dump gas; swirling here only slows the filter." },
+      { at: "0:00", title: "Bloom 1", detail: `${first} g at ${temp}, ~7 g/s. Do not swirl. 30 s.` },
+      { at: "0:30", title: "Bloom 2", detail: `To ${second} g. More CO₂ leaves so the main pour will not channel.` },
+      { at: "1:00", title: "Fast centre", detail: `Pour to ${w} g at ~10 g/s, small circles in the centre. Drawdown ${t} (2:00–2:30). A tiny swirl only if it finishes too fast.` },
+    ];
+  }
+  if (mode === "iced") {
+    const ice = ctx.bypassG ?? Math.round(w * 0.67);
+    return [
+      { at: "Prep", title: "Ice in the server", detail: `Hoffmann Japanese iced — not fridge cold brew. Rinse the paper over the sink so you do not warm the carafe. ${ice} g ice in the server.` },
+      { at: "0:00", title: "Bloom", detail: `${bloom} g hot, 45 s. Grind a click finer than a hot V60.` },
+      { at: "0:45", title: "Hot pour", detail: `Pour the rest to ${w} g at ${temp}. Stretch the brew toward ${t}.` },
+      { at: t, title: "Melt + serve", detail: "Swirl the server until the ice is gone. Serve over fresh ice. Aromatics lock in as it hits the first ice." },
+    ];
+  }
   if (mode === "peng") {
     const cool = ctx.finishC ?? 80;
     return [
@@ -1282,6 +1465,20 @@ function aeroSteps(ctx: StepCtx, temp: string, t: string): BrewStep[] {
       { at: "0:00", title: "Bloom", detail: `${Math.round(ctx.waterG * 0.25)} g at ${temp} (80 °C). Gentle 3-stir.` },
       { at: "0:15", title: "Fill", detail: `Pour to ${ctx.waterG} g at ${temp}. Another gentle 3-stir at 0:50.` },
       { at: "1:40", title: "Flip + press", detail: `Cap, flip, press ~20 s. Swirl to cool. No bypass — the 80 °C water is the recipe.` },
+    ];
+  }
+  if (mode === "tay") {
+    const extra = Math.max(1, Math.round(ctx.coffeeG * (2 / 18)));
+    const firstDose = ctx.coffeeG - extra;
+    const room = Math.round((bypass || 55) * 0.5);
+    const hot = (bypass || 55) - room;
+    return [
+      { at: "Prep", title: "Invert", detail: `Tay Wipvasutt WAC 2023. Start with ${firstDose} g in the chamber (he uses 16 of 18 g). One rinsed paper.` },
+      { at: "0:00", title: "Pour", detail: `${ctx.waterG} g at ${temp} (89 °C).` },
+      { at: "0:30", title: "Stir", detail: "One side of a chopstick, 5 s." },
+      { at: "0:45", title: "Charge", detail: `Add the remaining ${extra} g dry coffee. Stir 5 s at 0:55.` },
+      { at: "1:35", title: "Flip + press", detail: `Cap, flip, press ~30 s (~75 g concentrate).` },
+      { at: "2:05", title: "Split bypass", detail: `Room-temp water ~${room} g, then hot ~${hot} g. Taste and stop.` },
     ];
   }
   if (mode === "wendelien") {
