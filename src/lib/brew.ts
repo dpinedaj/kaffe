@@ -1,7 +1,9 @@
 import { inferredDensityClass, type DrinkPlan, type RoastIntent } from "./generate";
 import {
   FLAVORS,
+  ORIGINS,
   STYLES,
+  VARIETIES,
   flavorById,
   originById,
   varietyById,
@@ -128,17 +130,78 @@ export interface BrewBag {
   process: ProcessId;
   farmAltitudeM?: number;
   flavors: FlavorId[];
+  originId?: string;
+  varietyId?: string;
 }
 
 export function defaultBrewBag(): BrewBag {
   return { roastStyle: "medium", process: "washed", flavors: [] };
 }
 
+const DENSITY_RANK: Record<DensityClass, number> = { soft: 0, medium: 1, hard: 2 };
+const DENSITY_BY_RANK: DensityClass[] = ["soft", "medium", "hard"];
+
 export function densityFromFarmM(metres?: number): DensityClass | undefined {
   if (metres == null || !Number.isFinite(metres)) return undefined;
   if (metres >= 1800) return "hard";
   if (metres < 1300) return "soft";
   return "medium";
+}
+
+function bumpDensity(base: DensityClass, varietyDensity?: DensityClass): DensityClass {
+  if (!varietyDensity || varietyDensity === "medium") return base;
+  const rank = DENSITY_RANK[base] + (varietyDensity === "hard" ? 1 : -1);
+  return DENSITY_BY_RANK[Math.max(0, Math.min(2, rank))];
+}
+
+/** Lot density from origin hardness, farm metres, then a one-step variety bump. */
+export function densityFromBag(
+  originId?: string,
+  varietyId?: string,
+  farmM?: number,
+): DensityClass | undefined {
+  const origin = originId ? ORIGINS.find((o) => o.id === originId) : undefined;
+  const variety = varietyId ? varietyById(varietyId) : undefined;
+  const named = variety && variety.id !== "unknown" ? variety : undefined;
+  const alt = farmM ?? origin?.typicalAltitude;
+
+  let base: DensityClass | undefined;
+  if (origin && alt != null) base = inferredDensityClass(origin, alt);
+  else base = densityFromFarmM(farmM);
+
+  if (base == null) {
+    if (named?.density && named.density !== "medium") return named.density;
+    return origin?.density;
+  }
+  return bumpDensity(base, named?.density);
+}
+
+export function leanFlavorsForVariety(varietyId?: string): FlavorId[] {
+  if (!varietyId) return [];
+  const variety = varietyById(varietyId);
+  if (variety.id === "unknown") return [];
+  return variety.flavorLean.slice(0, 2);
+}
+
+/** Density, seed size, and flavor lean This bag feeds into `recommendBrew`. */
+export function bagBrewFields(bag: BrewBag): {
+  process: ProcessId;
+  flavors: FlavorId[];
+  densityClass?: DensityClass;
+  varietyName?: string;
+  beanSize?: BeanSize;
+} {
+  const origin = bag.originId ? ORIGINS.find((o) => o.id === bag.originId) : undefined;
+  const variety = bag.varietyId ? varietyById(bag.varietyId) : undefined;
+  const named = variety && variety.id !== "unknown" ? variety : undefined;
+  return {
+    process: bag.process,
+    flavors: bag.flavors.length ? bag.flavors : leanFlavorsForVariety(bag.varietyId),
+    densityClass: densityFromBag(bag.originId, bag.varietyId, bag.farmAltitudeM),
+    varietyName:
+      [origin?.name, named?.name].filter(Boolean).join(" · ") || undefined,
+    beanSize: named?.beanSize,
+  };
 }
 
 export function loadBrewBag(): BrewBag {
@@ -151,6 +214,8 @@ export function loadBrewBag(): BrewBag {
     const styles: RoastStyleId[] = ["light", "medium", "dark"];
     const processes: ProcessId[] = ["washed", "natural", "honey", "anaerobic", "other"];
     const flavorIds = new Set(FLAVORS.map((f) => f.id));
+    const originIds = new Set(ORIGINS.map((o) => o.id));
+    const varietyIds = new Set(VARIETIES.map((v) => v.id));
     return {
       roastStyle: styles.includes(parsed.roastStyle as RoastStyleId)
         ? (parsed.roastStyle as RoastStyleId)
@@ -165,6 +230,14 @@ export function loadBrewBag(): BrewBag {
       flavors: Array.isArray(parsed.flavors)
         ? parsed.flavors.filter((id): id is FlavorId => flavorIds.has(id as FlavorId)).slice(0, 2)
         : [],
+      originId:
+        typeof parsed.originId === "string" && originIds.has(parsed.originId)
+          ? parsed.originId
+          : undefined,
+      varietyId:
+        typeof parsed.varietyId === "string" && varietyIds.has(parsed.varietyId)
+          ? parsed.varietyId
+          : undefined,
     };
   } catch {
     return fallback;
@@ -212,7 +285,9 @@ export function snapshotFromIntent(intent: RoastIntent, label: string): BrewRoas
     farmAltitudeM: intent.altitudeM,
     flavors: intent.flavors.filter((f) => f.weight > 0).map((f) => f.id),
     densityClass: inferredDensityClass(origin, intent.altitudeM),
-    varietyName: variety.id !== "unknown" ? variety.name : undefined,
+    varietyName:
+      [origin.name, variety.id !== "unknown" ? variety.name : undefined].filter(Boolean).join(" · ") ||
+      undefined,
     beanSize: variety.beanSize,
   };
 }
