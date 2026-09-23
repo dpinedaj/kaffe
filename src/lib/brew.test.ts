@@ -660,4 +660,20 @@ describe("flavor-mapped competition recipes", () => {
       expect(rec.origin).toBeTruthy();
     }
   });
+
+  it("writes Spanish recipe descriptions and steps", () => {
+    const rec = recommendBrew({
+      method: "v60",
+      roastStyle: "medium",
+      drinkPlan: "rest",
+      daysSinceRoast: 6,
+      locale: "es",
+    });
+    expect(rec.steps[0].title).toBe("Enjuagar");
+    expect(rec.steps[0].detail).toMatch(/Kasuya|papel|cono/i);
+    expect(rec.steps.some((s) => /vertido|drenaje|enjuaga/i.test(`${s.title} ${s.detail}`))).toBe(true);
+    const techs = techniquesFor("v60", "es");
+    expect(techs.find((x) => x.id === rec.technique)?.flavor).not.toMatch(/Balanced \/ daily/);
+    expect(techs.find((x) => x.id === rec.technique)?.blurb).toMatch(/esqueleto|Kasuya|Peng|Hoffmann|Hedrick|Wang|Rao/i);
+  });
 });

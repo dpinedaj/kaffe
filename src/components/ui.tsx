@@ -14,9 +14,13 @@ export function Row({
   last?: boolean;
 }) {
   return (
-    <div className={`flex items-center justify-between gap-4 px-4 py-3 ${last ? "" : "border-b border-line"}`}>
-      <span className="text-[15px] text-white">{label}</span>
-      <div className="min-w-0 text-right">{children}</div>
+    <div
+      className={`flex flex-col items-stretch gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${
+        last ? "" : "border-b border-line"
+      }`}
+    >
+      <span className="text-[13px] text-muted sm:text-[15px] sm:text-white">{label}</span>
+      <div className="flex min-w-0 justify-end sm:block sm:text-right">{children}</div>
     </div>
   );
 }
@@ -34,7 +38,7 @@ export function Select({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="max-w-[220px] appearance-none bg-transparent text-right text-[15px] font-medium text-blue outline-none"
+      className="w-full max-w-none appearance-none bg-transparent text-left text-[15px] font-medium text-blue outline-none sm:max-w-[220px] sm:text-right"
     >
       {children}
     </select>
@@ -123,9 +127,11 @@ export function Field({
   value: string;
 }) {
   return (
-    <div className="flex items-center justify-between px-4 py-2.5">
-      <span className="text-[15px] text-label">{label}</span>
-      <span className="min-w-0 flex-1 text-right text-[15px] font-medium leading-snug break-words text-white">{value}</span>
+    <div className="flex flex-col items-start gap-0.5 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <span className="shrink-0 text-[13px] text-muted sm:text-[15px] sm:text-label">{label}</span>
+      <span className="min-w-0 w-full text-[15px] font-medium leading-snug break-words text-white sm:flex-1 sm:text-right">
+        {value}
+      </span>
     </div>
   );
 }
