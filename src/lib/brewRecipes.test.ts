@@ -85,6 +85,28 @@ describe("clone and view", () => {
     expect(view.origin).toMatch(/^You · /);
     expect(view.why.some((line) => /Championship cards were not edited/.test(line))).toBe(true);
   });
+
+  it("keeps Gaggiuino only on espresso cards", () => {
+    const espresso = recommendBrew({
+      method: "espresso",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 4,
+    });
+    expect(cloneFromCard(espresso).gaggiuino).toBeTruthy();
+    expect(viewUserRecipe(cloneFromCard(espresso)).gaggiuino).toBeTruthy();
+
+    const v60 = cloneFromCard(
+      recommendBrew({
+        method: "v60",
+        roastStyle: "light",
+        drinkPlan: "rest",
+        daysSinceRoast: 4,
+      }),
+    );
+    v60.gaggiuino = "Adaptive for Light Roast";
+    expect(viewUserRecipe(v60).gaggiuino).toBeUndefined();
+  });
 });
 
 describe("recipe files", () => {

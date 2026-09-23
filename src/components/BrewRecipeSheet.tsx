@@ -79,7 +79,10 @@ export default function BrewRecipeSheet({
               <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">Method</span>
               <select
                 value={rec.method}
-                onChange={(e) => patch({ method: e.target.value as BrewMethod })}
+                onChange={(e) => {
+                  const method = e.target.value as BrewMethod;
+                  patch(method === "espresso" ? { method } : { method, gaggiuino: undefined });
+                }}
                 className="mt-1 w-full appearance-none rounded-xl bg-card2 px-3 py-2 text-[15px] text-white outline-none"
               >
                 {BREW_METHODS.map((m) => (
@@ -136,15 +139,17 @@ export default function BrewRecipeSheet({
               ))}
             </select>
           </label>
-          <label className="block">
-            <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">Gaggiuino (optional)</span>
-            <input
-              value={rec.gaggiuino ?? ""}
-              onChange={(e) => patch({ gaggiuino: e.target.value || undefined })}
-              placeholder="Adaptive for Light Roast"
-              className="mt-1 w-full rounded-xl bg-card2 px-3 py-2 text-[15px] text-white outline-none placeholder:text-muted"
-            />
-          </label>
+          {rec.method === "espresso" && (
+            <label className="block">
+              <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">Gaggiuino (optional)</span>
+              <input
+                value={rec.gaggiuino ?? ""}
+                onChange={(e) => patch({ gaggiuino: e.target.value || undefined })}
+                placeholder="Adaptive for Light Roast"
+                className="mt-1 w-full rounded-xl bg-card2 px-3 py-2 text-[15px] text-white outline-none placeholder:text-muted"
+              />
+            </label>
+          )}
           {rec.forkedFrom && <p className="text-[12px] text-muted">Forked from {rec.forkedFrom}</p>}
           <div>
             <div className="mb-2 flex items-center justify-between">

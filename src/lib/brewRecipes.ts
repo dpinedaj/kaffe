@@ -84,7 +84,7 @@ export function cloneFromCard(recipe: BrewRecipe, name?: string): UserBrewRecipe
     timeS: recipe.timeS,
     grind: recipe.grind,
     bypassG: recipe.bypassG,
-    gaggiuino: recipe.gaggiuino,
+    gaggiuino: recipe.method === "espresso" ? recipe.gaggiuino : undefined,
     steps: recipe.steps.map((s) => ({ ...s })),
     createdAt: now,
     updatedAt: now,
@@ -143,7 +143,7 @@ export function viewUserRecipe(
     grindNote: mine.grind.replace("-", " "),
     restLabel: "Yours",
     origin: mine.origin,
-    gaggiuino: mine.gaggiuino,
+    gaggiuino: mine.method === "espresso" ? mine.gaggiuino : undefined,
     steps: mine.steps,
     why: [
       `${mine.name} is saved on this device.`,
@@ -308,7 +308,10 @@ function normalizeRecipe(raw: unknown): UserBrewRecipe | null {
     timeS: Math.max(1, Math.round(timeS)),
     grind,
     bypassG: o.bypassG != null && Number.isFinite(Number(o.bypassG)) ? Math.max(0, Math.round(Number(o.bypassG))) : undefined,
-    gaggiuino: typeof o.gaggiuino === "string" && o.gaggiuino.trim() ? o.gaggiuino.trim() : undefined,
+    gaggiuino:
+      method === "espresso" && typeof o.gaggiuino === "string" && o.gaggiuino.trim()
+        ? o.gaggiuino.trim()
+        : undefined,
     steps,
     createdAt: typeof o.createdAt === "string" ? o.createdAt : now,
     updatedAt: typeof o.updatedAt === "string" ? o.updatedAt : now,
