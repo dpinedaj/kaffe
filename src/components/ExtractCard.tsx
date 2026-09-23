@@ -204,29 +204,29 @@ function ExtractChart({
   const [compare, setCompare] = useState<{ tds: number; ey: number } | null>(null);
   const [grabbing, setGrabbing] = useState(false);
 
-  const window = reading?.window;
-  if (!reading || !window) return null;
+  if (!reading?.window) return null;
+  const plot = reading.window;
 
   const W = 360;
   const H = 292;
   const pad = { l: 42, r: 14, t: 22, b: 34 };
   const plotW = W - pad.l - pad.r;
   const plotH = H - pad.t - pad.b;
-  const x = (ey: number) => pad.l + ((ey - window.eyLo) / (window.eyHi - window.eyLo)) * plotW;
-  const y = (tds: number) => pad.t + (1 - (tds - window.tdsLo) / (window.tdsHi - window.tdsLo)) * plotH;
+  const x = (ey: number) => pad.l + ((ey - plot.eyLo) / (plot.eyHi - plot.eyLo)) * plotW;
+  const y = (tds: number) => pad.t + (1 - (tds - plot.tdsLo) / (plot.tdsHi - plot.tdsLo)) * plotH;
   const clampX = (ey: number) => Math.max(pad.l, Math.min(pad.l + plotW, x(ey)));
   const clampY = (tds: number) => Math.max(pad.t, Math.min(pad.t + plotH, y(tds)));
   const box = {
-    x: x(window.eyMin),
-    y: y(window.tdsMax),
-    w: x(window.eyMax) - x(window.eyMin),
-    h: y(window.tdsMin) - y(window.tdsMax),
+    x: x(plot.eyMin),
+    y: y(plot.tdsMax),
+    w: x(plot.eyMax) - x(plot.eyMin),
+    h: y(plot.tdsMin) - y(plot.tdsMax),
   };
   const pourRatio = recipe.waterG / recipe.coffeeG;
   const lineRatio = reading.ey / reading.tds;
   const ratioLabel = formatBrewRatio(pourRatio);
-  const beverageLine = clipRatioLine(lineRatio, window);
-  const preview = previewEy == null ? { ey: reading.ey, tds: reading.tds } : snapEyToRatio(previewEy, lineRatio, window);
+  const beverageLine = clipRatioLine(lineRatio, plot);
+  const preview = previewEy == null ? { ey: reading.ey, tds: reading.tds } : snapEyToRatio(previewEy, lineRatio, plot);
   const drifted = Math.abs(preview.ey - reading.ey) > 0.12;
   const live = drifted ? readExtract("tds", preview.tds, reading.yieldG, recipe) ?? reading : reading;
   const ghost = nextCupPoint(reading, lineRatio);
@@ -257,8 +257,8 @@ function ExtractChart({
 
   function projectEy(sx: number, sy: number) {
     if (!beverageLine) {
-      const ey = window.eyLo + ((sx - pad.l) / plotW) * (window.eyHi - window.eyLo);
-      return snapEyToRatio(ey, lineRatio, window).ey;
+      const ey = plot.eyLo + ((sx - pad.l) / plotW) * (plot.eyHi - plot.eyLo);
+      return snapEyToRatio(ey, lineRatio, plot).ey;
     }
     const x1 = x(beverageLine.pe1);
     const y1 = y(beverageLine.tds1);
@@ -337,7 +337,7 @@ function ExtractChart({
               </clipPath>
             </defs>
 
-            {peTicks(window).map((pe) => (
+            {peTicks(plot).map((pe) => (
               <g key={`pe-${pe}`}>
                 <line
                   x1={x(pe)}
@@ -353,7 +353,7 @@ function ExtractChart({
                 </text>
               </g>
             ))}
-            {tdsTicks(window).map((tds) => (
+            {tdsTicks(plot).map((tds) => (
               <g key={`tds-${tds}`}>
                 <line
                   x1={pad.l}
@@ -372,7 +372,7 @@ function ExtractChart({
 
             <g clipPath="url(#extract-plot)">
               {ratioIsolines(reading.scale).map((r) => {
-                const line = clipRatioLine(r, window);
+                const line = clipRatioLine(r, plot);
                 if (!line) return null;
                 const poured = Math.abs(r - pourRatio) < 0.35;
                 return (
@@ -430,12 +430,12 @@ function ExtractChart({
                 {t("extract.classic")}
               </text>
 
-              <text x={x(window.eyLo + 1.3)} y={y(window.tdsLo + (window.tdsHi - window.tdsLo) * 0.88)} fill="#8e8e93" fontSize="8">
+              <text x={x(plot.eyLo + 1.3)} y={y(plot.tdsLo + (plot.tdsHi - plot.tdsLo) * 0.88)} fill="#8e8e93" fontSize="8">
                 {t("extract.sourCitrus")}
               </text>
               <text
-                x={x(window.eyHi - 0.4)}
-                y={y(window.tdsLo + (window.tdsHi - window.tdsLo) * 0.88)}
+                x={x(plot.eyHi - 0.4)}
+                y={y(plot.tdsLo + (plot.tdsHi - plot.tdsLo) * 0.88)}
                 textAnchor="end"
                 fill="#8e8e93"
                 fontSize="8"
@@ -443,20 +443,20 @@ function ExtractChart({
                 {t("extract.bitterRoast")}
               </text>
               <text
-                x={x((window.eyLo + window.eyHi) / 2)}
-                y={y(window.tdsHi) + 12}
+                x={x((plot.eyLo + plot.eyHi) / 2)}
+                y={y(plot.tdsHi) + 12}
                 textAnchor="middle"
                 fill="#8e8e93"
                 fontSize="8"
               >
                 {t("extract.thick")}
               </text>
-              <text x={x(window.eyLo + 2)} y={y(window.tdsLo + (window.tdsHi - window.tdsLo) * 0.22)} fill="#8e8e93" fontSize="8">
+              <text x={x(plot.eyLo + 2)} y={y(plot.tdsLo + (plot.tdsHi - plot.tdsLo) * 0.22)} fill="#8e8e93" fontSize="8">
                 {t("extract.sweet")}
               </text>
               <text
-                x={x(window.eyHi - 0.3)}
-                y={y(window.tdsLo + (window.tdsHi - window.tdsLo) * 0.18)}
+                x={x(plot.eyHi - 0.3)}
+                y={y(plot.tdsLo + (plot.tdsHi - plot.tdsLo) * 0.18)}
                 textAnchor="end"
                 fill="#8e8e93"
                 fontSize="8"
@@ -464,8 +464,8 @@ function ExtractChart({
                 {t("extract.tea")}
               </text>
               <text
-                x={x((window.eyLo + window.eyHi) / 2)}
-                y={y(window.tdsLo) - 4}
+                x={x((plot.eyLo + plot.eyHi) / 2)}
+                y={y(plot.tdsLo) - 4}
                 textAnchor="middle"
                 fill="#8e8e93"
                 fontSize="8"
