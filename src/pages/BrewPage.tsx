@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrewIcon } from "../components/BrewIcon";
+import BrewRecipeSheet from "../components/BrewRecipeSheet";
 import { Card, Field, Pill, Row } from "../components/ui";
 import {
   BREW_METHODS,
@@ -16,6 +17,20 @@ import {
   type BrewMethod,
   type BrewRoastSnapshot,
 } from "../lib/brew";
+import {
+  cloneFromCard,
+  downloadText,
+  importRecipes,
+  loadMine,
+  mineForMethod,
+  recipeFileName,
+  removeMine,
+  serializePack,
+  serializeRecipe,
+  upsertMine,
+  viewUserRecipe,
+  type UserBrewRecipe,
+} from "../lib/brewRecipes";
 import { curveName, type RoastIntent } from "../lib/generate";
 import { parseKpro } from "../lib/kpro";
 import { STYLES, type RoastStyleId } from "../lib/knowledge";
@@ -33,8 +48,13 @@ export default function BrewPage({
   library: SavedProfile[];
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const recipeFileRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [recipeError, setRecipeError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [mineItems, setMineItems] = useState<UserBrewRecipe[]>(() => loadMine());
+  const [mineId, setMineId] = useState<string | undefined>();
+  const [sheet, setSheet] = useState<UserBrewRecipe | null>(null);
 
   const studioSnap = useMemo(
     () => snapshotFromIntent(studioIntent, curveName(studioIntent)),
@@ -59,6 +79,7 @@ export default function BrewPage({
     setDose(undefined);
     setRatio(undefined);
     setTechnique(undefined);
+    setMineId(undefined);
   }, [attachKey, attach, studioSnap, library]);
 
   const style = snap?.roastStyle ?? looseStyle;
@@ -81,6 +102,9 @@ export default function BrewPage({
       }),
     [method, style, snap, days, kitchenM, dose, ratio, technique],
   );
+  const mine = mineItems.find((r) => r.id === mineId && r.method === method);
+  const shown = mine ? viewUserRecipe(mine, kitchenM) : recipe;
+  const mineOnMethod = mineForMethod(method, mineItems);
   const techniques = techniquesFor(method);
   const methodInfo = BREW_METHODS.find((m) => m.id === method);
 
@@ -108,12 +132,52 @@ export default function BrewPage({
     }
   }
 
+  async function importRecipeFile(file: File) {
+    try {
+      const added = importRecipes(await file.text());
+      const next = loadMine();
+      setMineItems(next);
+      const match = added.find((r) => r.method === method) ?? added[0];
+      if (match) {
+        setMethod(match.method);
+        setMineId(match.id);
+        setTechnique(undefined);
+      }
+      setRecipeError(null);
+    } catch (e) {
+      setRecipeError(e instanceof Error ? e.message : "Could not read that recipe file");
+    }
+  }
+
   function onDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
-    const file = [...e.dataTransfer.files].find((f) => /\.kpro$/i.test(f.name));
-    if (file) void importKpro(file);
-    else setImportError("Drop a .kpro file.");
+    const files = [...e.dataTransfer.files];
+    const kpro = files.find((f) => /\.kpro$/i.test(f.name));
+    const json = files.find((f) => /\.json$/i.test(f.name));
+    if (kpro) void importKpro(kpro);
+    else if (json) void importRecipeFile(json);
+    else setImportError("Drop a .kpro roast or a .json recipe.");
+  }
+
+  function openSaveSheet() {
+    setSheet(cloneFromCard(recipe, `${methodInfo?.name ?? method} card`));
+  }
+
+  function saveSheet(next: UserBrewRecipe) {
+    const items = upsertMine(next);
+    setMineItems(items);
+    setMethod(next.method);
+    setMineId(next.id);
+    setTechnique(undefined);
+    setSheet(null);
+  }
+
+  function deleteMine(id: string) {
+    const items = removeMine(id);
+    setMineItems(items);
+    if (mineId === id) setMineId(undefined);
+    setSheet(null);
   }
 
   const selectValue = attach.kind === "library" ? attach.id : attach.kind;
@@ -126,8 +190,9 @@ export default function BrewPage({
           <span className="rounded-full bg-card2 px-2 py-0.5 text-[11px] font-semibold text-orange">Preview</span>
         </div>
         <p className="mt-1 text-[13px] leading-relaxed text-muted">
-          Starting cards from competition, community, and academic recipes. Taste is last. Kitchen
-          altitude caps kettle temperature; farm metres stay on the roast.
+          Starting cards from competition, community, and academic recipes. Save a copy as Mine —
+          championship cards stay as they are. Kitchen altitude caps kettle temperature; farm metres
+          stay on the roast.
         </p>
       </div>
 
@@ -145,6 +210,7 @@ export default function BrewPage({
                   setDose(undefined);
                   setRatio(undefined);
                   setTechnique(undefined);
+                  setMineId(undefined);
                 }}
                 className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 ${
                   on ? "bg-card2 text-white ring-1 ring-blue" : "bg-card text-muted"
@@ -261,7 +327,7 @@ export default function BrewPage({
           </Row>
           <Row label="Local boil" last={!snap?.farmAltitudeM}>
             <span className="text-[15px] text-white">
-              {recipe.boilC != null ? `${recipe.boilC.toFixed(1)} °C` : "Set altitude"}
+              {shown.boilC != null ? `${shown.boilC.toFixed(1)} °C` : "Set altitude"}
             </span>
           </Row>
           {snap?.farmAltitudeM != null && (
@@ -291,9 +357,10 @@ export default function BrewPage({
               min={5}
               max={80}
               step={0.5}
-              value={dose ?? recipe.coffeeG}
+              value={mine ? shown.coffeeG : (dose ?? recipe.coffeeG)}
+              disabled={Boolean(mine)}
               onChange={(e) => setDose(e.target.value === "" ? undefined : Number(e.target.value))}
-              className="w-20 bg-transparent text-right text-[15px] text-white outline-none"
+              className="w-20 bg-transparent text-right text-[15px] text-white outline-none disabled:text-muted"
             />
           </Row>
           <Row label="Ratio (1 : )">
@@ -302,9 +369,10 @@ export default function BrewPage({
               min={method === "espresso" ? 1.5 : 6}
               max={method === "espresso" ? 18 : method === "coldbrew" ? 18 : 22}
               step={method === "espresso" ? 0.1 : 0.5}
-              value={ratio ?? recipe.ratioN}
+              value={mine ? shown.ratioN : (ratio ?? recipe.ratioN)}
+              disabled={Boolean(mine)}
               onChange={(e) => setRatio(e.target.value === "" ? undefined : Number(e.target.value))}
-              className="w-20 bg-transparent text-right text-[15px] text-white outline-none"
+              className="w-20 bg-transparent text-right text-[15px] text-white outline-none disabled:text-muted"
             />
           </Row>
           <Row label="Days since roast" last>
@@ -320,9 +388,82 @@ export default function BrewPage({
           </Row>
         </Card>
         <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-          Water and pour weights follow dose × ratio. A bigger bed usually wants a click coarser; a
-          tighter ratio a click finer, so brew time and extraction stay in band.
+          {mine
+            ? "This is a saved card. Edit it from Mine if you want different numbers."
+            : "Water and pour weights follow dose × ratio. A bigger bed usually wants a click coarser; a tighter ratio a click finer, so brew time and extraction stay in band."}
         </p>
+      </section>
+
+      <section>
+        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">Mine</h3>
+        {mineOnMethod.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {mineOnMethod.map((item) => {
+              const on = mineId === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setMineId(on ? undefined : item.id)}
+                  className={`rounded-full px-3 py-1.5 text-[13px] font-semibold ${
+                    on ? "bg-blue text-white" : "bg-card text-label"
+                  }`}
+                >
+                  {item.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
+          {!mine && (
+            <button type="button" className="text-[13px] font-medium text-blue" onClick={openSaveSheet}>
+              Save this card
+            </button>
+          )}
+          {mine && (
+            <>
+              <button type="button" className="text-[13px] font-medium text-blue" onClick={() => setSheet(mine)}>
+                Edit
+              </button>
+              <button
+                type="button"
+                className="text-[13px] font-medium text-blue"
+                onClick={() => downloadText(recipeFileName(mine), serializeRecipe(mine))}
+              >
+                Export
+              </button>
+            </>
+          )}
+          <button type="button" className="text-[13px] font-medium text-blue" onClick={() => recipeFileRef.current?.click()}>
+            Import
+          </button>
+          {mineItems.length > 0 && (
+            <button
+              type="button"
+              className="text-[13px] font-medium text-blue"
+              onClick={() => downloadText("kaffe-brew-recipes.json", serializePack(mineItems))}
+            >
+              Export all
+            </button>
+          )}
+        </div>
+        <input
+          ref={recipeFileRef}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void importRecipeFile(file);
+            e.target.value = "";
+          }}
+        />
+        <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
+          A copy on this device. Championship cards stay cited and read-only. Share with a .json
+          file — there is no cloud.
+        </p>
+        {recipeError && <p className="mt-2 px-1 text-[12px] text-red">{recipeError}</p>}
       </section>
 
       {techniques.length > 0 && (
@@ -332,13 +473,16 @@ export default function BrewPage({
           </h3>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {techniques.map((m) => {
-              const on = recipe.technique === m.id;
+              const on = !mine && recipe.technique === m.id;
               const suggested = recipe.suggestedTechnique === m.id;
               return (
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => setTechnique(m.id)}
+                  onClick={() => {
+                    setMineId(undefined);
+                    setTechnique(m.id);
+                  }}
                   className={`rounded-2xl px-3 py-3 text-left ${
                     on ? "bg-blue text-white" : "bg-card text-label"
                   }`}
@@ -383,16 +527,18 @@ export default function BrewPage({
           <Field
             label="Ratio"
             value={
-              recipe.bypassG
-                ? `${recipe.ratio} in the cup · ${recipe.coffeeG} g + ${recipe.waterG} g brew + ${recipe.bypassG} g bypass`
-                : `${recipe.ratio} · ${recipe.coffeeG} g : ${recipe.waterG} g`
+              shown.bypassG
+                ? `${shown.ratio} in the cup · ${shown.coffeeG} g + ${shown.waterG} g brew + ${shown.bypassG} g bypass`
+                : `${shown.ratio} · ${shown.coffeeG} g : ${shown.waterG} g`
             }
           />
-          <Field label="Water" value={`${recipe.kettleC.toFixed(1)} °C · ${recipe.kettleNote}`} />
-          <Field label="Time" value={recipe.timeLabel} />
-          <Field label="Grind" value={recipe.grindNote} />
-          <Field label="Rest" value={recipe.restLabel} />
-          {recipe.technique && techniques.length > 0 && (
+          <Field label="Water" value={`${shown.kettleC.toFixed(1)} °C · ${shown.kettleNote}`} />
+          <Field label="Time" value={shown.timeLabel} />
+          <Field label="Grind" value={shown.grindNote} />
+          <Field label="Rest" value={shown.restLabel} />
+          {mine?.flavor && <Field label="Flavor" value={mine.flavor} />}
+          {mine?.mechanic && <Field label="How" value={mine.mechanic} />}
+          {!mine && recipe.technique && techniques.length > 0 && (
             <Field
               label="Recipe"
               value={`${techniques.find((m) => m.id === recipe.technique)?.flavor ?? ""} · ${
@@ -400,12 +546,12 @@ export default function BrewPage({
               }`}
             />
           )}
-          {recipe.origin && <Field label="Source" value={recipe.origin} />}
-          {recipe.gaggiuino && <Field label="Gaggiuino" value={recipe.gaggiuino} />}
+          {shown.origin && <Field label="Source" value={shown.origin} />}
+          {shown.gaggiuino && <Field label="Gaggiuino" value={shown.gaggiuino} />}
         </Card>
-        {recipe.cappedByBoil && (
+        {shown.cappedByBoil && (
           <p className="mt-2 px-1 text-[12px] text-orange">
-            Wanted {recipe.wantedC.toFixed(0)} °C. Local boil will not reach it.
+            Wanted {shown.wantedC.toFixed(0)} °C. Local boil will not reach it.
           </p>
         )}
       </section>
@@ -413,12 +559,12 @@ export default function BrewPage({
       <section>
         <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
           <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">Steps</h3>
-          {recipe.origin && (
-            <span className="min-w-0 truncate text-right text-[12px] text-muted">{recipe.origin}</span>
+          {shown.origin && (
+            <span className="min-w-0 truncate text-right text-[12px] text-muted">{shown.origin}</span>
           )}
         </div>
         <Card className="divide-y divide-line">
-          {recipe.steps.map((step) => (
+          {shown.steps.map((step) => (
             <div key={`${step.at}-${step.title}`} className="flex gap-3 px-4 py-3">
               <div className="w-16 shrink-0 text-[12px] font-semibold text-blue">{step.at}</div>
               <div>
@@ -430,9 +576,9 @@ export default function BrewPage({
         </Card>
       </section>
 
-      {recipe.warnings.length > 0 && (
+      {shown.warnings.length > 0 && (
         <Card className="space-y-2 p-4">
-          {recipe.warnings.map((w) => (
+          {shown.warnings.map((w) => (
             <p key={w} className="text-[13px] leading-relaxed text-orange">
               {w}
             </p>
@@ -445,14 +591,23 @@ export default function BrewPage({
           <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">Why</h3>
           <Pill tone="orange">Not a lock</Pill>
         </div>
-        {recipe.why.map((line) => (
+        {shown.why.map((line) => (
           <p key={line} className="text-[13px] leading-relaxed text-label">
             {line}
           </p>
         ))}
       </Card>
 
-      <p className="px-1 text-[11px] leading-relaxed text-muted">{recipe.sources.join(" · ")}</p>
+      <p className="px-1 text-[11px] leading-relaxed text-muted">{shown.sources.join(" · ")}</p>
+
+      {sheet && (
+        <BrewRecipeSheet
+          draft={sheet}
+          onClose={() => setSheet(null)}
+          onSave={saveSheet}
+          onDelete={mineItems.some((r) => r.id === sheet.id) ? deleteMine : undefined}
+        />
+      )}
     </div>
   );
 }
