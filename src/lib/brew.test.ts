@@ -179,31 +179,43 @@ describe("snapshotFromKpro", () => {
 });
 
 describe("recommendBrew", () => {
-  it("caps a Light V60 at local boil, compensates grind/time, and still has steps", () => {
+  it("caps a Light V60 at local boil without grinding finer while the kettle is still in the SCA band", () => {
     const sea = recommendBrew({
       method: "v60",
       roastStyle: "light",
       drinkPlan: "rest",
-      daysSinceRoast: 4,
+      daysSinceRoast: 14,
       kitchenAltitudeM: 0,
     });
     expect(sea.kettleC).toBe(96);
     expect(sea.cappedByBoil).toBe(false);
     expect(sea.ratio).toBe("1:16");
-    expect(sea.technique).toBe("hedrick");
+    expect(sea.technique).toBe("hoffmann");
     expect(sea.steps.length).toBeGreaterThanOrEqual(4);
 
-    const high = recommendBrew({
+    const at2000 = recommendBrew({
       method: "v60",
       roastStyle: "light",
       drinkPlan: "rest",
-      daysSinceRoast: 4,
-      kitchenAltitudeM: 1800,
+      daysSinceRoast: 14,
+      kitchenAltitudeM: 2000,
     });
-    expect(high.boilC).toBeCloseTo(93.7, 1);
-    expect(high.kettleC).toBeCloseTo(92.7, 1);
-    expect(high.cappedByBoil).toBe(true);
-    expect(high.timeS).toBeGreaterThan(sea.timeS);
+    expect(at2000.boilC).toBeCloseTo(93.0, 1);
+    expect(at2000.kettleC).toBeCloseTo(92.0, 1);
+    expect(at2000.cappedByBoil).toBe(true);
+    expect(at2000.grind).toBe(sea.grind);
+    expect(at2000.timeS).toBe(sea.timeS);
+
+    const bogota = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 14,
+      kitchenAltitudeM: 2600,
+    });
+    expect(bogota.kettleC).toBeLessThan(92);
+    expect(GRIND_ORDER.indexOf(bogota.grind)).toBeGreaterThan(GRIND_ORDER.indexOf(sea.grind));
+    expect(bogota.timeS).toBeGreaterThan(sea.timeS);
   });
 
   it("does not cap espresso at kettle boil", () => {
@@ -535,7 +547,8 @@ describe("flavor-mapped competition recipes", () => {
     });
     expect(acid.technique).toBe("kasuya-acid");
     expect(acid.steps.some((s) => /acid/i.test(s.title))).toBe(true);
-    expect(acid.wantedC).toBeGreaterThan(96);
+    expect(acid.wantedC).toBe(92);
+    expect(acid.kettleC).toBe(92);
 
     const floral = recommendBrew({
       method: "v60",
