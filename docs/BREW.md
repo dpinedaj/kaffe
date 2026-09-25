@@ -185,9 +185,9 @@ WAC winners repeatedly drop brew temperature to **keep sweetness and cut bittern
 
 | Recipe | Script | Flavor it aims at | Suggest when |
 |---|---|---|---|
-| **Stanica, WAC 2024** | Inverted, ~96 °C, 18 g / 100 g, dilute | Fruit / acid | Light + fruity / bright / juicy |
+| **Stanica, WAC 2024** | Inverted, ~96 °C, 18 g / 100 g, dilute | Fruit / acid | Light + fruity / bright / juicy — including juicy + light-sweet |
 | **Pop, WAC 2025** | Upright, **84 °C brew**, **70 g bypass at 50 °C** already in the carafe | Sweet / defined | Medium, Dark, or body / deep-sweet |
-| **Merikanto, WAC 2021** | Inverted, **80 °C**, 18 g / 200 g, gentle, no bypass | Sweet-sour, low astringency | Light + floral / light-sweet |
+| **Merikanto, WAC 2021** | Inverted, **80 °C**, 18 g / 200 g, gentle, no bypass | Sweet-sour, low astringency | Light + floral / winey, or light-sweet without a fruit word |
 | **van Bunnik, WAC 2019** | Inverted 30 g / 100 g, 40 s, dilute, serve ~60 °C | Acid + sweet together | Selectable; not the auto pick |
 | **Wipvasutt, WAC 2023** | 16 g in, **2 g more at 0:45**, press, room-temp then hot bypass | Aroma / Kenya-like | Selectable; not the auto pick |
 
@@ -206,6 +206,23 @@ Pop and Merikanto are the “temperate water” recipes. Lock their published te
 | Hoffmann Japanese iced | 60% hot onto 40% ice in the server | Flash-chill / bright. Select when you want a cold cup — not fridge cold brew. |
 
 Kasuya’s lever is pour size, not a new dripper. The V60 card temperature (and the fruit-hotter-than-body nudge) stays unless you pick Peng.
+
+### Gassy vs degassed (the pick, not a lock)
+
+Light Rest is still blooming through day 10. Championship no-bloom / turbo cards stay on the chip list; the **suggested** pick dumps gas until the lot is degassed.
+
+| Method | Still blooming (Light ≤10 d, Medium ≤6 d) | Degassed Light + juicy / floral |
+|---|---|---|
+| V60 | Hedrick (45 s + 45 s bloom when gassy) | 4:6 acid / Peng / Rao |
+| Switch | Super Hybrid (60 s closed bloom) | Fukahori (washed acid) or Bull (acid natural) |
+| Origami | Medina five pulses | Du (no bloom) |
+| Espresso | Blooming | Extractamundo turbo / Adaptive Light |
+| OREA | Hsu if the process clogs; else Wölfl | Hsu (natural / floral / winey) or Wölfl |
+| Clever | Full steep (or GINA if floral/sweet) | Short steep for washed acid |
+| AeroPress | Merikanto if acid / floral / winey | Stanica for fruit (juicy + light-sweet stays Stanica once degassed) |
+| Kalita / Chemex / FP | McCarthy / Hoffmann — already bloom or immerse | Same |
+
+Do **not** stack altitude + acid + hard-density finer clicks on a gassy paper or puck bed. Honey and anaerobic clog like a natural.
 
 Skipped as redundant: Domatiotis 2014 and Tøllefsen 2015 (standard V60 pulses), Perger 2012 (same even-extraction school as Rao; needs a sieve at home).
 
@@ -249,13 +266,13 @@ There is **no** published “Castillo + Light Sweet + L1.6 → this V60 pour.”
 
 | Input | Nudge |
 |---|---|
-| Flavors `fruity` / `bright` / `juicy` / `floral` / `winey` | +1 °C wanted (then cap); one grind step finer; pour-over −10 s |
+| Flavors `fruity` / `bright` / `juicy` / `floral` / `winey` | +1 °C wanted (then cap); one grind step finer **unless still blooming on paper**; pour-over −10 s |
 | Flavors `body` / `deepSweet` | −2 °C; one step coarser; +15 s |
-| Hard density or small seed | one step finer |
+| Hard density or small seed | one step finer **unless still blooming on paper** |
 | Soft density or large seed | one step coarser |
-| Natural / honey-clog risk | one step coarser on paper beds |
+| Natural / honey / anaerobic | one step coarser on paper; does not stack on the gassy coarsen |
 | Rest, day 0–2 | still degassing; 3× bloom, 45–60 s; one step coarser if the bed domes |
-| Rest Light, day 3–10 | **still good, still blooming** — KL 3–5 days is the *start* of the window. Fluid-bed CO₂ hangs around; a long bloom at day 10 is normal |
+| Rest Light, day 3–10 | **still good, still blooming**. Defaults dump gas — see the matrix below. Paper / puck beds do **not** grind finer for altitude / acid / density while gassy. Net grind shift is capped at ±2 steps. Overriding to Bull / Du / turbo / short Clever adds a warning |
 | Rest Light, day 11–21 | still good; bloom can shorten toward 2× |
 | Rest Light, day 22–35 | aging — faster drawdown, click finer if it races; freeze leftover |
 | Rest Light, day 36+ | fading. Medium / dark windows are shorter (good through ~16 / ~10) |
@@ -270,11 +287,12 @@ Ratio is **strength**. Grind is **extraction** (and, on a percolation bed, flow)
 
 | Change | Water / steps | Grind (pour-over, batch, espresso, moka) | Time |
 |---|---|---|---|
-| Bigger dose, same ratio | water = dose × ratio; bloom 2–3× dose | deeper bed → **coarser** (~1 step from 1.45× card dose) so it does not stall | pour-over scales ~dose^0.4 |
+| Bigger dose, same ratio | water = dose × ratio; bloom 2–3× dose | deeper bed → **coarser** (clicks move with bed; the grind word jumps ~1 step at 1.45× card dose) so it does not stall | pour-over scales ~dose^0.4 |
 | Smaller dose | same | shallower bed → **finer** (≤0.7×) | shorter |
 | Tighter ratio (e.g. 1:16 → 1:14) | less water | **finer** — less solvent, keep PE | same target |
 | Looser ratio | more water | **coarser** — more solvent | same target |
-| Immersion / Switch / Clever / cupping / cold brew | water follows ratio | **no grind shift** from dose/ratio | card time (hours for cold brew) |
+| Switch / Clever | water follows ratio | drain is a paper bed → **same coarsen / fine as pour-over** | card time |
+| Immersion / cupping / cold brew / AeroPress | water follows ratio | **no grind shift** from dose/ratio (Liang: equilibrium PE) | card time (hours for cold brew) |
 
 The card dose/ratio are the method default. Editing them recomputes every pour weight in the steps.
 
@@ -303,7 +321,7 @@ KL Rest 3–5 days is when the cup *starts* to settle, not when it dies. Officia
 - **Light** competition calibrates Light filter / espresso only. Medium is SCA + compulsory-coffee adjacent. **Dark is craft.**
 - WBrC 2024–25 winners used OREA / SOLO, not a V60. We keep a V60 card because people own one.
 - No water chemistry (ppm, Ca/Mg). Medina specified ~65 ppm; we do not.
-- No grind microns — only a five-step qualitative scale.
+- Grind stays a five-step word. Kitchen can search a grinder (Honest Coffee Guide charts, ~190 mills) and we print **starting clicks**. Zero is burrs touching. On pour-over / Switch / Clever / espresso / moka the click number also follows **dose vs this card** (full immersion does not — Liang). 1Zpresso / Timemore ESP read as rotation.number.tick. Not a lock — burr wear and bean density move the number. Cera+ CGE01 has no public chart yet.
 - After brew takes a **measured** Brix or TDS. We do not invent a TDS target.
 - Flavor / variety nudges are **not** a paper. They will be wrong for some lots.
 - Moka and espresso are different machines. Moka is not a cheap espresso.
