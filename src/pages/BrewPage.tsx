@@ -61,6 +61,14 @@ import {
   type FlavorId,
   type RoastStyleId,
 } from "../lib/knowledge";
+import { GrinderPicker } from "../components/GrinderPicker";
+import {
+  grindNoteWithSetting,
+  grinderById,
+  loadKitchenGrinder,
+  resolveGrindSetting,
+  saveKitchenGrinder,
+} from "../lib/grinders";
 import type { SavedProfile } from "../lib/storage";
 
 export default function BrewPage({
@@ -91,6 +99,7 @@ export default function BrewPage({
   const snap = resolveSnap(attach, studioSnap, library);
 
   const [kitchenM, setKitchenM] = useState<number | undefined>(() => loadKitchenAltitudeM());
+  const [grinderId, setGrinderId] = useState<string | undefined>(() => loadKitchenGrinder());
   const [method, setMethod] = useState<BrewMethod>(() => defaultMethod(snap?.brew ?? "filter"));
   const [days, setDays] = useState(() => defaultDays(snap?.drinkPlan ?? "rest"));
   const [looseStyle, setLooseStyle] = useState<RoastStyleId>(snap?.roastStyle ?? "light");
@@ -166,6 +175,19 @@ export default function BrewPage({
     setKitchenM(next);
     saveKitchenAltitudeM(next);
   }
+
+  function patchGrinder(id: string | undefined) {
+    const next = id || undefined;
+    setGrinderId(next);
+    saveKitchenGrinder(next);
+  }
+
+  const grindSetting = resolveGrindSetting(grinderId, method, shown.grind, {
+    coffeeG: shown.coffeeG,
+    cardDoseG: shown.cardDoseG,
+  });
+  const grindShown = grindNoteWithSetting(shown.grindNote, grindSetting);
+  const kitchenGrinder = grinderById(grinderId);
 
   async function importKpro(file: File) {
     try {
@@ -720,13 +742,13 @@ export default function BrewPage({
               className="w-24 bg-transparent text-right text-[15px] text-white outline-none placeholder:text-muted"
             />
           </Row>
-          <Row label={t("brew.localBoil")} last={!snap?.farmAltitudeM}>
+          <Row label={t("brew.localBoil")}>
             <span className="text-[15px] text-white">
               {shown.boilC != null ? `${shown.boilC.toFixed(1)} °C` : t("brew.setAltitude")}
             </span>
           </Row>
           {snap?.farmAltitudeM != null && (
-            <Row label={t("brew.sameLot")} last>
+            <Row label={t("brew.sameLot")}>
               <button
                 type="button"
                 className="text-[15px] font-medium text-blue"
@@ -736,8 +758,13 @@ export default function BrewPage({
               </button>
             </Row>
           )}
+          <Row label={t("grinders.label")} last>
+            <GrinderPicker value={grinderId} onChange={patchGrinder} />
+          </Row>
         </Card>
         <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{t("brew.kitchenHelp")}</p>
+        <p className="mt-1 px-1 text-[12px] leading-relaxed text-muted">{t("grinders.help")}</p>
+        {kitchenGrinder?.note && <p className="mt-1 px-1 text-[12px] leading-relaxed text-muted">{kitchenGrinder.note}</p>}
         {shown.boilC == null && method !== "espresso" && method !== "coldbrew" && (
           <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">{t("brew.warnAltitude")}</p>
         )}
@@ -806,7 +833,7 @@ export default function BrewPage({
           />
           <Field label={t("common.water")} value={`${shown.kettleC.toFixed(1)} °C · ${shown.kettleNote}`} />
           <Field label={t("common.time")} value={shown.timeLabel} />
-          <Field label={t("common.grind")} value={shown.grindNote} />
+          <Field label={t("common.grind")} value={grindShown} />
           <Field label={t("common.rest")} value={restShown.restLabel} />
           {mine?.flavor && <Field label={t("common.flavor")} value={mine.flavor} />}
           {mine?.mechanic && <Field label={t("common.how")} value={mine.mechanic} />}

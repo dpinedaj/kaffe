@@ -339,11 +339,20 @@ export const en = {
   "brew.useM": "Use {m} m",
   "brew.kitchenHelp":
     "This is where you brew, not where the cherry grew. Saved on this device; it does not change the .kpro.",
+  "grinders.label": "Grinder",
+  "grinders.none": "Word only",
+  "grinders.searchPh": "C3S, Encore, 1Zpresso…",
+  "grinders.empty": "No mill matches that.",
+  "grinders.n": "{n} grinders",
+  "grinders.help":
+    "Starting clicks from Honest Coffee Guide micron charts. Search brand or model. Zero is burrs touching. On pour-over, Switch, Clever, espresso, and moka a bigger dose moves a click coarser so the drain does not stall. Dial in — not a lock.",
   "brew.warnAltitude":
     "Set kitchen altitude. Kettle temperature is capped by local boil, not by the sea-level card.",
   "brew.warnSca":
     "Boil ({boil} °C) sits under the SCA 92 °C certification floor. Pour at boil; do not print a hotter number.",
   "brew.warnCapped": "Wanted {wanted} °C. Local boil will not reach it.",
+  "warn.gassyNoBloom":
+    "This script skips a gas dump. On day {days} that often channels and leaves a bitter tail — a long bloom, Super Hybrid, or Blooming espresso is safer until the lot is degassed.",
   "brew.cup": "Cup",
   "brew.dose": "Dose (g)",
   "brew.ratio": "Ratio (1 : )",
@@ -644,7 +653,10 @@ export const en = {
   "why.capped":
     "Kitchen boil is {boil} °C. Pour at a rolling boil ({kettle} °C) and move grind/time — UC Davis: at fixed TDS/PE, 87–93 °C barely changes the cup.",
   "why.clears": "Local boil {boil} °C still clears the {wanted} °C target.",
-  "why.natural": "Natural process can clog a fine bed — the grind is a step coarser; ease off if drawdown stalls.",
+  "why.clog":
+    "Natural / honey / anaerobic lots shed more fines — the grind is a step coarser on paper so the bed does not stall.",
+  "why.gassyScript":
+    "Day {days} is still blooming. We pick a script that dumps gas (long bloom or soak) instead of a no-bloom championship routine. Finer clicks wait until the lot is degassed.",
   "why.suggested": "Suggested for this roast / flavor.",
   "why.overrode": "You overrode the suggested {name}.",
   "why.dosePour":

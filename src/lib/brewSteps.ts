@@ -46,9 +46,16 @@ function formatBrewTime(sec: number): string {
   return `${m}:${(s % 60).toString().padStart(2, "0")}`;
 }
 
+function clock(sec: number): string {
+  const s = Math.max(0, Math.round(sec));
+  return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+}
+
 function switchSteps(ctx: BrewStepCtx, bloom: number, temp: string, t: string, stall: string): BrewStep[] {
   const w = ctx.waterG;
   const mode = ctx.technique ?? ctx.switchMode ?? "steep";
+  const bloomG = Math.round(ctx.coffeeG * (ctx.gassy ? 3 : 2.5));
+  const bloomWait = ctx.gassy ? 60 : 40;
   if (mode === "bull") {
     return [
       { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.switch.bull.prep.title"), detail: tx(ctx, "step.switch.bull.prep.detail") },
@@ -58,30 +65,30 @@ function switchSteps(ctx: BrewStepCtx, bloom: number, temp: string, t: string, s
     ];
   }
   if (mode === "fukahori") {
-    const bloomG = Math.max(bloom, Math.round(ctx.coffeeG * 3.5));
+    const bloomAmt = Math.max(bloom, Math.round(ctx.coffeeG * 3.5));
     return [
       { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.switch.fukahori.prep.title"), detail: tx(ctx, "step.switch.fukahori.prep.detail") },
-      { at: "0:00", title: tx(ctx, "step.switch.fukahori.bloom.title"), detail: tx(ctx, "step.switch.fukahori.bloom.detail", { bloom: bloomG, temp }) },
-      { at: "0:30", title: tx(ctx, "step.switch.fukahori.pour.title"), detail: tx(ctx, "step.switch.fukahori.pour.detail", { w }) },
+      { at: "0:00", title: tx(ctx, "step.switch.fukahori.bloom.title"), detail: tx(ctx, "step.switch.fukahori.bloom.detail", { bloom: bloomAmt, temp, wait: bloomWait }) },
+      { at: clock(bloomWait), title: tx(ctx, "step.switch.fukahori.pour.title"), detail: tx(ctx, "step.switch.fukahori.pour.detail", { w }) },
       { at: t, title: tx(ctx, "step.switch.fukahori.cut.title"), detail: tx(ctx, "step.switch.fukahori.cut.detail", { t, stall }) },
     ];
   }
   if (mode === "hybrid") {
     return [
       { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.switch.hybrid.prep.title"), detail: tx(ctx, "step.switch.hybrid.prep.detail") },
-      { at: "0:00", title: tx(ctx, "step.switch.hybrid.bloom.title"), detail: tx(ctx, "step.switch.hybrid.bloom.detail", { bloom: Math.round(ctx.coffeeG * 2.5), temp }) },
-      { at: "0:40", title: tx(ctx, "step.switch.hybrid.mid.title"), detail: tx(ctx, "step.switch.hybrid.mid.detail", { a: Math.round(w * 0.4), b: Math.round(w * (2 / 3)) }) },
-      { at: "2:10", title: tx(ctx, "step.switch.hybrid.last.title"), detail: tx(ctx, "step.switch.hybrid.last.detail", { w }) },
-      { at: "2:55", title: tx(ctx, "step.switch.hybrid.drain.title"), detail: tx(ctx, "step.switch.hybrid.drain.detail", { t }) },
+      { at: "0:00", title: tx(ctx, "step.switch.hybrid.bloom.title"), detail: tx(ctx, "step.switch.hybrid.bloom.detail", { bloom: bloomG, temp, wait: bloomWait }) },
+      { at: clock(bloomWait), title: tx(ctx, "step.switch.hybrid.mid.title"), detail: tx(ctx, "step.switch.hybrid.mid.detail", { a: Math.round(w * 0.4), b: Math.round(w * (2 / 3)) }) },
+      { at: clock(bloomWait + 90), title: tx(ctx, "step.switch.hybrid.last.title"), detail: tx(ctx, "step.switch.hybrid.last.detail", { w }) },
+      { at: clock(bloomWait + 135), title: tx(ctx, "step.switch.hybrid.drain.title"), detail: tx(ctx, "step.switch.hybrid.drain.detail", { t }) },
     ];
   }
   if (mode === "hold") {
     const first = Math.round(w * 0.6);
     return [
       { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.switch.hold.prep.title"), detail: tx(ctx, "step.switch.hold.prep.detail") },
-      { at: "0:00", title: tx(ctx, "step.switch.hold.bloom.title"), detail: tx(ctx, "step.switch.hold.bloom.detail", { bloom: Math.round(ctx.coffeeG * 2.5), temp }) },
-      { at: "0:40", title: tx(ctx, "step.switch.hold.first.title"), detail: tx(ctx, "step.switch.hold.first.detail", { first }) },
-      { at: "1:20", title: tx(ctx, "step.switch.hold.last.title"), detail: tx(ctx, "step.switch.hold.last.detail", { w }) },
+      { at: "0:00", title: tx(ctx, "step.switch.hold.bloom.title"), detail: tx(ctx, "step.switch.hold.bloom.detail", { bloom: bloomG, temp, wait: bloomWait }) },
+      { at: clock(bloomWait), title: tx(ctx, "step.switch.hold.first.title"), detail: tx(ctx, "step.switch.hold.first.detail", { first }) },
+      { at: clock(bloomWait + 40), title: tx(ctx, "step.switch.hold.last.title"), detail: tx(ctx, "step.switch.hold.last.detail", { w }) },
       { at: t, title: tx(ctx, "step.switch.hold.draw.title"), detail: tx(ctx, "step.switch.hold.draw.detail", { t, stall }) },
     ];
   }
@@ -97,8 +104,8 @@ function switchSteps(ctx: BrewStepCtx, bloom: number, temp: string, t: string, s
   }
   return [
     { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.switch.steep.prep.title"), detail: tx(ctx, "step.switch.steep.prep.detail") },
-    { at: "0:00", title: tx(ctx, "step.switch.steep.bloom.title"), detail: tx(ctx, "step.switch.steep.bloom.detail", { bloom: Math.round(ctx.coffeeG * 2.5) }) },
-    { at: "0:30", title: tx(ctx, "step.switch.steep.fill.title"), detail: tx(ctx, "step.switch.steep.fill.detail", { w, temp }) },
+    { at: "0:00", title: tx(ctx, "step.switch.steep.bloom.title"), detail: tx(ctx, "step.switch.steep.bloom.detail", { bloom: bloomG }) },
+    { at: clock(ctx.gassy ? 45 : 30), title: tx(ctx, "step.switch.steep.fill.title"), detail: tx(ctx, "step.switch.steep.fill.detail", { w, temp }) },
     { at: "2:00", title: tx(ctx, "step.switch.steep.stir.title"), detail: tx(ctx, "step.switch.steep.stir.detail") },
     { at: "2:15", title: tx(ctx, "step.switch.steep.open.title"), detail: tx(ctx, "step.switch.steep.open.detail", { t }) },
   ];
@@ -145,11 +152,13 @@ function v60Steps(ctx: BrewStepCtx, bloom: number, pour60: number, temp: string,
   if (mode === "hedrick") {
     const first = Math.round(ctx.coffeeG * 3);
     const second = first * 2;
+    const b1 = ctx.gassy ? 45 : 30;
+    const b2 = ctx.gassy ? 90 : 60;
     return [
       { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.v60.hedrick.prep.title"), detail: tx(ctx, "step.v60.hedrick.prep.detail") },
-      { at: "0:00", title: tx(ctx, "step.v60.hedrick.b1.title"), detail: tx(ctx, "step.v60.hedrick.b1.detail", { first, temp }) },
-      { at: "0:30", title: tx(ctx, "step.v60.hedrick.b2.title"), detail: tx(ctx, "step.v60.hedrick.b2.detail", { second }) },
-      { at: "1:00", title: tx(ctx, "step.v60.hedrick.pour.title"), detail: tx(ctx, "step.v60.hedrick.pour.detail", { w, t }) },
+      { at: "0:00", title: tx(ctx, "step.v60.hedrick.b1.title"), detail: tx(ctx, "step.v60.hedrick.b1.detail", { first, temp, wait: b1 }) },
+      { at: clock(b1), title: tx(ctx, "step.v60.hedrick.b2.title"), detail: tx(ctx, "step.v60.hedrick.b2.detail", { second }) },
+      { at: clock(b2), title: tx(ctx, "step.v60.hedrick.pour.title"), detail: tx(ctx, "step.v60.hedrick.pour.detail", { w, t }) },
     ];
   }
   if (mode === "iced") {

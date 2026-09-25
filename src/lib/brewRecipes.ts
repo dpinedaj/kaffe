@@ -145,6 +145,7 @@ export function viewUserRecipe(
     timeS: mine.timeS,
     grind: mine.grind,
     grindNote: mine.grind.replace("-", " "),
+    cardDoseG: mine.coffeeG,
     restLabel: t("brew.yours"),
     origin: mine.origin,
     gaggiuino: mine.method === "espresso" ? mine.gaggiuino : undefined,
