@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.1.0 — 2026-09-25
+
+Grind clicks and safer recipe picks for lots that are still blooming. Everything in [1.0.0](#100--2026-09-23) is still here.
+
+### Brew recipes
+- Light Rest is still blooming through day 10 (Medium through day 6). Suggested scripts dump gas: V60 Hedrick, Switch Super Hybrid, Origami Medina, espresso Blooming, Clever full steep
+- No-bloom championship defaults (Bull, Du, turbo, short Clever) wait until the lot is degassed. Overriding them while gassy warns
+- Flavor icons (up to two) pick the card that claims that cup. Juicy + light-sweet stays a fruit card. Body beats acid. Winey is treated as ferment
+- Honey and anaerobic clog like a natural on paper
+- Gassy paper / puck beds do not stack altitude + acid + hard-density finer clicks. Net grind shift is clamped to ±2
+- Full grid tested: 13 methods × 56 bags × style × process × gassy/degassed
+
+### Grind
+- Searchable kitchen mill picker, ~190 Honest Coffee Guide charts. Zero is burrs touching. Starting clicks — not a lock
+- Cera+ stays qualitative (no invented numbers)
+- Dose moves a click coarser on pour-over, Switch, Clever, espresso, and moka
+
+### Docs
+- [docs/BREW.md](docs/BREW.md) — gassy vs degassed suggestion matrix, grind clicks, flavor pairs
+
 ## 1.0.0 — 2026-09-23
 
 First official release. Local-first Kaffelogic Nano 7 studio: generate `.kpro` files from the bean, overlay design vs log, keep a device-local library, and brew from the roast with a measured After-brew reading.
