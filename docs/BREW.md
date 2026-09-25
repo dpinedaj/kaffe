@@ -50,11 +50,15 @@ $$
 T_{\mathrm{kettle}}=\min(T_{\mathrm{wanted}},\,T_{\mathrm{boil}}-1)
 $$
 
-Deficit $\Delta T=\max(0,\,T_{\mathrm{wanted}}-T_{\mathrm{kettle}})$. Per ~3 °C short: pour-over / batch **+20 s** and up to two grind steps finer; immersion / hybrid **+40 s**. If $\Delta T\ge 5$ °C, tighten ratio by ~7% (floor 1:13 filter, 1:7 moka). Pour at a **rolling boil** when you are against the ceiling. Do not print 96 °C when boil is 94.
+Pour at a **rolling boil** when you are against the ceiling. Do not print 96 °C when boil is 94.
+
+**Do not grind finer just because a sea-level “96 °C Light” card is out of reach.** At 2 000 m boil is ~93 °C and the kettle sits at ~92 °C — that is Kasuya’s published 4:6 temperature and the middle of the SCA 90–96 °C band. UC Davis (2020): at fixed TDS/PE, 87 vs 93 °C barely moves the cup. Extra-fine clicks at 2 000 m are a fake deficit.
+
+Grind / time / ratio only move when the kettle sits **under the SCA 92 °C floor** (roughly above ~2 300 m: Bogotá, Cuzco). Then per ~3 °C short of 92: pour-over **+20 s** and up to two grind steps finer; immersion / hybrid **+40 s**. If the gap under 92 is ≥3 °C, tighten ratio by ~7%.
 
 **Espresso is pressurized.** A 93 °C group is still reachable at altitude. Only the fill water on a moka is kettle-capped.
 
-Community practice at elevation (Erdélyi / Perfect Daily Grind): pour at boil, grind finer, stay longer, and/or dose slightly higher. Bogotá / Cuzco boil is too cool for an unadjusted sea-level Light card.
+Published recipe temperatures stay on the card: Kasuya / Chad **92 °C**, Medina **91 °C**, Wölfl **93 °C**, Peng **96 then 80 °C**, Rao **~97 °C**, Stanica **96 °C**. Hoffmann “just off boil” is 96 °C at sea level — at altitude that becomes local boil, not two finer clicks. The acid nudge never prints above **96 °C** (SCA ceiling). Rao is the one selectable exception because he published ~97.
 
 `intent.altitudeM` is **farm** metres (density / heat). Brew uses a device-local kitchen setting. “Same as this lot” is optional, never the default.
 
@@ -242,15 +246,15 @@ Wanted temperatures are sea-level. Open-kettle methods are then capped (§2). Do
 
 | Method | Light | Medium | Dark |
 |---|---|---|---|
-| V60 | 15 g · 1:16 · 96 °C · 2:45 · med-fine | 15 g · 1:16.7 · 93 °C · 2:35 · med | 15 g · 1:17 · 90 °C · 2:20 · med |
+| V60 | 15 g · 1:16 · 96 °C · 2:45 · med | 15 g · 1:16.7 · 93 °C · 2:35 · med | 15 g · 1:17 · 90 °C · 2:20 · med |
 | Kalita Wave | 15 g · 1:16 · 96 °C · 3:00 · med | 15 g · 1:16.5 · 93 °C · 2:50 · med | 15 g · 1:17 · 90 °C · 2:35 · med-coarse |
-| Origami | 15.5 g · 1:16 · **91 °C** · 2:40 · med-fine (Medina) | 15 g · 1:16 · 93 °C · 2:35 · med | 15 g · 1:16.5 · 90 °C · 2:25 · med |
+| Origami | 15.5 g · 1:16 · **91 °C** · 2:40 · med (Medina) | 15 g · 1:16 · 93 °C · 2:35 · med | 15 g · 1:16.5 · 90 °C · 2:25 · med |
 | Chemex | 30 g · 1:16.7 · 96 °C · 4:10 · med | same, 93 °C | 30 g · 1:17 · 90 °C · 3:50 · med-coarse |
 | Switch | 15 g · 1:16.7 · 96 °C · 2:45 · med | 15 g · 1:16.7 · 93 °C · 2:45 · med-coarse | 15 g · 1:16.7 · 90 °C · 2:30 · med-coarse |
 | Clever | 15 g · 1:16.7 · 96 °C · 3:00 · med | 15 g · 1:16.7 · 93 °C · 3:00 · med-coarse | 15 g · 1:17 · 90 °C · 2:45 · med-coarse |
 | AeroPress | 15 g · 1:6 brew + 1:5 bypass · 96 °C · inverted | 15 g · 1:14.7 · 93 °C · upright | 15 g · 1:15.3 · 85 °C · upright |
 | French press | 30 g · 1:16.7 · 96 °C · 9:00 (Hoffmann settle) | same, 93 °C | 30 g · 1:16.7 · 90 °C · 4:00 (no long settle) |
-| OREA | 17 g · 1:15.9 · **93 °C** · 2:20 · med-fine (Wölfl) | 16 g · 1:16 · 93 °C · 2:45 · med | 16 g · 1:16.5 · 90 °C · 2:35 · med |
+| OREA | 17 g · 1:15.9 · **93 °C** · 2:20 · med (Wölfl) | 16 g · 1:16 · 93 °C · 2:45 · med | 16 g · 1:16.5 · 90 °C · 2:35 · med |
 | Cold brew | 60 g · 1:13.3 · fridge · **16 h** · med | 60 g · 1:13.3 · 14 h · med-coarse | 60 g · 1:13.3 · 12 h · med-coarse |
 | Moka | 18 g · 1:10 fill · 96 °C · ~1:15 to blonde · med-fine | 18 g · 1:9 · 93 °C | 18 g · 1:8 · 90 °C · fine |
 | Espresso | 18 g · 1:2.3 · 93 °C group · 28 s | 18 g · 1:2 · 92 °C · 27 s | 18 g · 1:2 · 90 °C · 25 s |
@@ -272,7 +276,7 @@ There is **no** published “Castillo + Light Sweet + L1.6 → this V60 pour.”
 | Soft density or large seed | one step coarser |
 | Natural / honey / anaerobic | one step coarser on paper; does not stack on the gassy coarsen |
 | Rest, day 0–2 | still degassing; 3× bloom, 45–60 s; one step coarser if the bed domes |
-| Rest Light, day 3–10 | **still good, still blooming**. Defaults dump gas — see the matrix below. Paper / puck beds do **not** grind finer for altitude / acid / density while gassy. Net grind shift is capped at ±2 steps. Overriding to Bull / Du / turbo / short Clever adds a warning |
+| Rest Light, day 3–10 | **still good, still blooming**. Defaults dump gas — see the matrix below. Paper / puck beds do **not** grind finer for altitude / acid / density while gassy. Altitude only grinds finer when the kettle is **under 92 °C**, not at 2 000 m. Net grind shift is capped at ±2 steps. Overriding to Bull / Du / turbo / short Clever adds a warning |
 | Rest Light, day 11–21 | still good; bloom can shorten toward 2× |
 | Rest Light, day 22–35 | aging — faster drawdown, click finer if it races; freeze leftover |
 | Rest Light, day 36+ | fading. Medium / dark windows are shorter (good through ~16 / ~10) |
@@ -321,7 +325,7 @@ KL Rest 3–5 days is when the cup *starts* to settle, not when it dies. Officia
 - **Light** competition calibrates Light filter / espresso only. Medium is SCA + compulsory-coffee adjacent. **Dark is craft.**
 - WBrC 2024–25 winners used OREA / SOLO, not a V60. We keep a V60 card because people own one.
 - No water chemistry (ppm, Ca/Mg). Medina specified ~65 ppm; we do not.
-- Grind stays a five-step word. Kitchen can search a grinder (Honest Coffee Guide charts, ~190 mills) and we print **starting clicks**. Zero is burrs touching. On pour-over / Switch / Clever / espresso / moka the click number also follows **dose vs this card** (full immersion does not — Liang). 1Zpresso / Timemore ESP read as rotation.number.tick. Not a lock — burr wear and bean density move the number. Cera+ CGE01 has no public chart yet.
+- Grind stays a five-step word. Kitchen can search a grinder (Honest Coffee Guide charts, ~190 mills) and we print **starting clicks**. Zero is burrs touching. Each HCG band is already that method — **medium sits near the middle of the V60 / steep / espresso window**, not the fine edge. Light V60 starts **medium**; juicy steps once to medium-fine. On pour-over / Switch / Clever / espresso / moka the click number also follows **dose vs this card** (full immersion does not — Liang). 1Zpresso / Timemore ESP read as rotation.number.tick. Not a lock — burr wear and bean density move the number. Cera+ CGE01 has no public chart yet.
 - After brew takes a **measured** Brix or TDS. We do not invent a TDS target.
 - Flavor / variety nudges are **not** a paper. They will be wrong for some lots.
 - Moka and espresso are different machines. Moka is not a cheap espresso.
