@@ -407,7 +407,7 @@ interface MethodStyleBase {
  */
 const BASE: Record<BrewMethod, Record<RoastStyleId, MethodStyleBase>> = {
   v60: {
-    light: { ratio: 16, wantedC: 96, timeS: 165, grind: "medium-fine", doseG: 15 },
+    light: { ratio: 16, wantedC: 96, timeS: 165, grind: "medium", doseG: 15 },
     medium: { ratio: 16.7, wantedC: 93, timeS: 155, grind: "medium", doseG: 15 },
     dark: { ratio: 17, wantedC: 90, timeS: 140, grind: "medium", doseG: 15 },
   },
@@ -417,7 +417,7 @@ const BASE: Record<BrewMethod, Record<RoastStyleId, MethodStyleBase>> = {
     dark: { ratio: 17, wantedC: 90, timeS: 155, grind: "medium-coarse", doseG: 15 },
   },
   origami: {
-    light: { ratio: 16, wantedC: 91, timeS: 160, grind: "medium-fine", doseG: 15.5 },
+    light: { ratio: 16, wantedC: 91, timeS: 160, grind: "medium", doseG: 15.5 },
     medium: { ratio: 16, wantedC: 93, timeS: 155, grind: "medium", doseG: 15 },
     dark: { ratio: 16.5, wantedC: 90, timeS: 145, grind: "medium", doseG: 15 },
   },
@@ -447,7 +447,7 @@ const BASE: Record<BrewMethod, Record<RoastStyleId, MethodStyleBase>> = {
     dark: { ratio: 16.7, wantedC: 90, timeS: 240, grind: "medium-coarse", doseG: 30 },
   },
   orea: {
-    light: { ratio: 15.9, wantedC: 93, timeS: 140, grind: "medium-fine", doseG: 17 },
+    light: { ratio: 15.9, wantedC: 93, timeS: 140, grind: "medium", doseG: 17 },
     medium: { ratio: 16, wantedC: 93, timeS: 165, grind: "medium", doseG: 16 },
     dark: { ratio: 16.5, wantedC: 90, timeS: 155, grind: "medium", doseG: 16 },
   },
@@ -584,6 +584,7 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       blurb: "George Stanica, WAC 2024. Hot inverted 18 g / 100 g at 96 °C, press ~76–79 g, dilute. Bright Light filter in an AeroPress.",
       timeS: 125,
       wantedC: 96,
+      lockTemp: true,
     },
     {
       id: "pop",
@@ -658,6 +659,8 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       flavor: "Bright / juicy",
       blurb: "Tetsu Kasuya, WBrC 2016. First 40% sets acid vs sweet: more water in pour 1 = more acidity. Then three equal pours for strength.",
       timeS: 210,
+      wantedC: 92,
+      lockTemp: true,
     },
     {
       id: "kasuya-sweet",
@@ -666,6 +669,8 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       flavor: "Honey / sweet",
       blurb: "Same 4:6 method. Less water in pour 1, more in pour 2 — Kasuya’s own WBrC 2016 cup was this sweet side.",
       timeS: 210,
+      wantedC: 92,
+      lockTemp: true,
     },
     {
       id: "peng",
@@ -697,6 +702,7 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       wantedC: 97,
       doseG: 20,
       brewRatio: 16.5,
+      lockTemp: true,
     },
     {
       id: "hedrick",
@@ -1212,7 +1218,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
 
   let wantedC = tech?.wantedC ?? base.wantedC;
   if (!tech?.lockTemp) {
-    if (acid && openKettle) wantedC = Math.min(100, wantedC + 1);
+    if (acid && openKettle) wantedC = Math.min(96, wantedC + 1);
     if (heavy && openKettle) wantedC = Math.max(85, wantedC - 2);
   }
 
@@ -1231,8 +1237,9 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     }
   }
 
-  const deficit = openKettle ? Math.max(0, wantedC - kettleC) : 0;
-  const stepsN = deficit / 3;
+  /** Only treat the kettle as “cool” when it sits under the SCA 92 °C floor — not when it is short of a sea-level 96 card. */
+  const belowScaFloor = openKettle && boilC != null && kettleC < 92;
+  const stepsN = belowScaFloor ? (92 - kettleC) / 3 : 0;
   const immersion = info.family === "immersion" || info.family === "hybrid" || info.family === "cupping";
   let timeS = base.timeS + Math.round(stepsN * (immersion ? 40 : 20));
   if (heavy) timeS += 15;
@@ -1242,7 +1249,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
   const bypassR = tech?.brewRatio != null ? (tech.bypassRatio ?? 0) : (base.bypassRatio ?? 0);
   const cardCup = brewR + bypassR;
   let cupRatio = userRatio ? clampRatio(query.ratio as number, query.method) : cardCup;
-  if (!userRatio && openKettle && deficit >= 5 && query.method !== "espresso") {
+  if (!userRatio && belowScaFloor && 92 - kettleC >= 3 && query.method !== "espresso") {
     cupRatio = Math.max(query.method === "moka" ? 7 : 13, round1(cupRatio * 0.93));
   }
 
@@ -1280,8 +1287,8 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     query.method === "espresso";
   const skipFinerOnGas = gassy && paperBed;
   let grindShift = 0;
-  if (pourAltitude && stepsN >= 0.5 && !skipFinerOnGas) {
-    grindShift += Math.min(2, Math.round(stepsN));
+  if (pourAltitude && belowScaFloor && !skipFinerOnGas) {
+    grindShift += Math.min(2, Math.max(1, Math.round(stepsN)));
   }
   if (acid && !skipFinerOnGas) grindShift += 1;
   if (heavy) grindShift -= 1;
@@ -1298,7 +1305,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     if (userRatio && cupRatio >= cardCup + 1.2) grindShift -= 1;
   }
   const grindBase = tech?.grind ?? base.grind;
-  const grind = shiftFiner(grindBase, grindShift);
+  const grind = clampFilterGrind(query.method, shiftFiner(grindBase, grindShift));
   const grindWord = (g: Grind) => t(`grind.${g}` as MessageKey);
   const grindNote =
     grind !== grindBase
@@ -1612,6 +1619,13 @@ function parseFlavorNames(text: string): FlavorId[] {
 function shiftFiner(grind: Grind, steps: number): Grind {
   const i = Math.min(GRINDS.length - 1, Math.max(0, GRINDS.indexOf(grind) + steps));
   return GRINDS[i];
+}
+
+/** HCG method bands already encode espresso vs V60. Filter cards stop at medium-fine. */
+function clampFilterGrind(method: BrewMethod, grind: Grind): Grind {
+  if (method === "espresso" || method === "moka") return grind;
+  if (grind === "fine") return "medium-fine";
+  return grind;
 }
 
 function formatRatio(ratio: number): string {

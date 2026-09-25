@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { recommendBrew } from "./brew";
+import { BREW_METHODS, recommendBrew, type BrewMethod } from "./brew";
+import type { FlavorId, ProcessId } from "./knowledge";
 import {
   GRINDERS,
   bandForMethod,
@@ -23,11 +24,11 @@ describe("grinders", () => {
     expect(bandForMethod("frenchpress")).toBe("frenchPress");
   });
 
-  it("places a medium V60 on the C3S Pro around 14 clicks from zero", () => {
+  it("places a medium V60 on the C3S Pro around 15 clicks from zero", () => {
     const out = resolveGrindSetting("timemore-c3s-pro", "v60", "medium");
     expect(out?.lo).toBe(11);
     expect(out?.hi).toBe(18);
-    expect(out?.at).toBeCloseTo(11 + 0.52 * 7, 5);
+    expect(out?.at).toBeCloseTo(11 + 0.58 * 7, 5);
     expect(out?.label).toMatch(/clicks/);
     expect(out?.label).toMatch(/11–18/);
   });
@@ -117,6 +118,37 @@ describe("grinders", () => {
     expect(switch30?.at).toBeGreaterThan(switch20?.at ?? 0);
   });
 
+  it("keeps a Light V60 in the middle of the C3S V60 window, not the fine edge", () => {
+    const plain = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 14,
+    });
+    expect(plain.grind).toBe("medium");
+    const plainClicks = resolveGrindSetting("timemore-c3s-pro", "v60", plain.grind, {
+      coffeeG: plain.coffeeG,
+      cardDoseG: plain.cardDoseG,
+    });
+    expect(plainClicks?.at).toBeGreaterThanOrEqual(14.5);
+    expect(plainClicks?.at).toBeLessThanOrEqual(16);
+
+    const juicy = recommendBrew({
+      method: "v60",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 14,
+      flavors: ["juicy"],
+    });
+    expect(juicy.grind).toBe("medium-fine");
+    const juicyClicks = resolveGrindSetting("timemore-c3s-pro", "v60", juicy.grind, {
+      coffeeG: juicy.coffeeG,
+      cardDoseG: juicy.cardDoseG,
+    });
+    expect(juicyClicks?.at).toBeGreaterThanOrEqual(13.5);
+    expect(juicyClicks?.at).toBeLessThan(plainClicks?.at ?? 0);
+  });
+
   it("lands a day-7 Colombia natural Switch near 18 clicks on the C3S Pro, not 14", () => {
     const rec = recommendBrew({
       method: "switch",
@@ -141,5 +173,126 @@ describe("grinders", () => {
     const out = resolveGrindSetting("1zpresso-j-max", "v60", "medium");
     expect(out?.label).toMatch(/\d\.\d\.\d/);
     expect(formatSetting(69, "dotted")).toBe("0.6.9");
+  });
+});
+
+const ALL_FLAVORS: FlavorId[] = [
+  "fruity",
+  "lightSweet",
+  "deepSweet",
+  "bright",
+  "juicy",
+  "winey",
+  "floral",
+  "body",
+  "clean",
+  "balance",
+];
+
+function allFlavorCombos(): FlavorId[][] {
+  const out: FlavorId[][] = [[]];
+  for (const a of ALL_FLAVORS) out.push([a]);
+  for (let i = 0; i < ALL_FLAVORS.length; i++) {
+    for (let j = i + 1; j < ALL_FLAVORS.length; j++) out.push([ALL_FLAVORS[i], ALL_FLAVORS[j]]);
+  }
+  return out;
+}
+
+function bandPos(at: number, lo: number, hi: number): number {
+  return hi === lo ? 0.5 : (at - lo) / (hi - lo);
+}
+
+const FILTER: BrewMethod[] = [
+  "v60",
+  "kalita",
+  "origami",
+  "chemex",
+  "switch",
+  "clever",
+  "aeropress",
+  "frenchpress",
+  "orea",
+  "coldbrew",
+  "cupping",
+];
+
+describe("grind size across every method and flavor bag", () => {
+  const combos = allFlavorCombos();
+  const mills = ["timemore-c3s-pro", "baratza-encore-esp", "1zpresso-j-max"] as const;
+
+  it("never suggests a fine filter grind, and keeps C3S / Encore / J-Max off the fine edge of the HCG band", () => {
+    for (const method of BREW_METHODS.map((m) => m.id)) {
+      for (const process of ["washed", "natural"] as ProcessId[]) {
+        for (const days of [4, 14]) {
+          for (const flavors of combos) {
+            const rec = recommendBrew({
+              method,
+              roastStyle: "light",
+              drinkPlan: "rest",
+              daysSinceRoast: days,
+              kitchenAltitudeM: 2000,
+              process,
+              flavors,
+              densityClass: "hard",
+            });
+            const label = `${method} d${days} ${process} ${flavors.join("+") || "none"} ${rec.grind}`;
+            if (FILTER.includes(method)) {
+              expect(rec.grind, label).not.toBe("fine");
+            }
+            const setting = resolveGrindSetting("timemore-c3s-pro", method, rec.grind, {
+              coffeeG: rec.coffeeG,
+              cardDoseG: rec.cardDoseG,
+            });
+            if (!setting) continue;
+            const t = bandPos(setting.at, setting.lo, setting.hi);
+            if (method === "espresso" || method === "moka") {
+              expect(t, label).toBeGreaterThanOrEqual(0.18);
+            } else {
+              expect(t, label).toBeGreaterThanOrEqual(0.28);
+            }
+            expect(t, label).toBeLessThanOrEqual(0.94);
+          }
+        }
+      }
+    }
+  });
+
+  it("puts medium in the middle of the HCG window on the mills people actually test", () => {
+    for (const id of mills) {
+      for (const method of ["v60", "switch", "espresso"] as const) {
+        const out = resolveGrindSetting(id, method, "medium");
+        if (!out) continue;
+        const t = bandPos(out.at, out.lo, out.hi);
+        expect(t, `${id} ${method}`).toBeGreaterThanOrEqual(0.5);
+        expect(t, `${id} ${method}`).toBeLessThanOrEqual(0.7);
+      }
+    }
+  });
+
+  it("coarsens a blooming bag vs the same degassed bag, never the reverse", () => {
+    for (const method of FILTER) {
+      for (const flavors of combos) {
+        const gassy = recommendBrew({
+          method,
+          roastStyle: "light",
+          drinkPlan: "rest",
+          daysSinceRoast: 4,
+          process: "washed",
+          flavors,
+        });
+        const rested = recommendBrew({
+          method,
+          roastStyle: "light",
+          drinkPlan: "rest",
+          daysSinceRoast: 14,
+          process: "washed",
+          flavors,
+        });
+        const order = ["coarse", "medium-coarse", "medium", "medium-fine", "fine"];
+        expect(order.indexOf(gassy.grind), `${method} ${flavors.join("+") || "none"}`).toBeLessThanOrEqual(
+          order.indexOf(rested.grind),
+        );
+      }
+    }
   });
 });
