@@ -132,3 +132,4 @@ Up to two goals share one budget. Floral / fruity / bright / juicy steepen the f
 | Fan Bézier | `planFanSchedule` / `buildOfficialFanCurve` |
 | Origins, varieties, flavor copy | `src/lib/knowledge.ts` |
 | Brew starting card + After brew | `src/lib/brew.ts` → `recommendBrew` · `src/lib/extract.ts` · [docs/BREW.md](docs/BREW.md) |
+| Grind clicks (HCG charts) | `src/lib/grinders.ts` · `src/lib/grinders.catalog.ts` |
