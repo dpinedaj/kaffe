@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.1 — 2026-09-25
+
+Starting grind and kettle targets match published recipes, not a stacked “Light + 96 °C + altitude” card.
+
+### Temperature
+- Kasuya 4:6 stays at the published **92 °C** (it was inheriting 96 and then +1 for juicy)
+- Acid nudge never prints above **96 °C** (SCA ceiling). Rao stays ~97 because he published that
+- At 2 000 m the kettle is ~92 °C — already in the SCA band. No extra-fine clicks or tighter ratio just because a sea-level 96 card is out of reach
+- Grind / time / ratio only move when the kettle sits **under 92 °C** (roughly above ~2 300 m)
+
+### Grind
+- Honest Coffee Guide bands already mean “V60 / steep / espresso”. **Medium sits in the middle** of that window
+- Light V60 / Origami / OREA start **medium**. Juicy steps once to medium-fine — never to fine on a filter card
+- Full grind grid tested on C3S Pro, Encore ESP, and J-Max: every method × 56 bags × washed/natural × gassy/degassed
+
 ## 1.1.0 — 2026-09-25
 
 Grind clicks and safer recipe picks for lots that are still blooming. Everything in [1.0.0](#100--2026-09-23) is still here.

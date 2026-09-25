@@ -45,12 +45,13 @@ export interface GrindSetting {
   label: string;
 }
 
+/** Position inside an HCG *method* band. The band is already V60 / steep / espresso — do not sit on the fine edge. */
 const GRIND_T: Record<Grind, number> = {
-  fine: 0.22,
-  "medium-fine": 0.38,
-  medium: 0.52,
-  "medium-coarse": 0.7,
-  coarse: 0.86,
+  fine: 0.3,
+  "medium-fine": 0.45,
+  medium: 0.58,
+  "medium-coarse": 0.74,
+  coarse: 0.9,
 };
 
 const BRAND_ALIASES: Record<string, string[]> = {
@@ -158,7 +159,7 @@ export function doseGrindT(
 
 export function settingAt(lo: number, hi: number, grind: Grind, minSafe?: number, extraT = 0): number {
   let t = (GRIND_T[grind] ?? 0.52) + extraT;
-  t = Math.max(0.08, Math.min(0.94, t));
+  t = Math.max(0.18, Math.min(0.94, t));
   let at = lo + t * (hi - lo);
   if (minSafe != null) at = Math.max(minSafe, at);
   return at;
