@@ -15,6 +15,10 @@ export default defineConfig(({ mode }) => {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
       },
     },
+    server: {
+      host: true,
+      allowedHosts: [".trycloudflare.com", "localhost"],
+    },
     test: {
       environment: "node",
       include: ["src/**/*.test.ts"],

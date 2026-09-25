@@ -57,7 +57,7 @@ describe("clone and view", () => {
       method: "v60",
       roastStyle: "light",
       drinkPlan: "rest",
-      daysSinceRoast: 4,
+      daysSinceRoast: 14,
       flavors: ["juicy"],
     });
     const mine = cloneFromCard(card, "House V60");
