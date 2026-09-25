@@ -104,6 +104,8 @@ export interface BrewRecipe {
   timeS: number;
   grind: Grind;
   grindNote: string;
+  /** Method / technique card dose. Clicks nudge when the cup dose leaves this. */
+  cardDoseG: number;
   restLabel: string;
   restWarn?: string;
   switchMode?: SwitchMode;
@@ -260,6 +262,14 @@ export function saveBrewBag(bag: BrewBag): void {
 const GRINDS: Grind[] = ["coarse", "medium-coarse", "medium", "medium-fine", "fine"];
 const ACID: FlavorId[] = ["fruity", "bright", "juicy", "floral", "winey"];
 const HEAVY: FlavorId[] = ["body", "deepSweet"];
+const CLOGS: ProcessId[] = ["natural", "honey", "anaerobic"];
+/** Championship scripts that skip a gas dump. Suggested pick never lands here while gassy. */
+const GASSY_RISKY = new Set(["bull", "du", "extractamundo", "short"]);
+
+/** Mucilage / ferment lots shed fines. Same paper-bed stall risk as a natural. */
+export function processClogsPaper(process?: ProcessId): boolean {
+  return process != null && CLOGS.includes(process);
+}
 
 /** Barometric engineering fit, inhabited elevations: −1 °C per ~285 m. */
 export function boilingPointC(altitudeM: number): number {
@@ -478,6 +488,18 @@ export const BREW_METHODS: BrewMethodInfo[] = [
   { id: "espresso", name: "Espresso", family: "pressure", blurb: "Gaggiuino / SproFiler scripts — blooming, turbo, adaptive, lever — suggested from roast and flavor. Not one 1:2 shot." },
   { id: "cupping", name: "Cupping", family: "cupping", blurb: "SCA protocol 8.25 g / 150 g at 93 °C, 4 min, break and skim. The academic reference cup." },
 ];
+
+/** Deeper bed resists the drain. Switch / Clever are hybrids, but they empty through paper. */
+export function bedResistsDose(method: BrewMethod): boolean {
+  const family = BREW_METHODS.find((m) => m.id === method)?.family;
+  return (
+    family === "pour" ||
+    method === "espresso" ||
+    method === "moka" ||
+    method === "switch" ||
+    method === "clever"
+  );
+}
 
 const METHOD_NAME = Object.fromEntries(BREW_METHODS.map((m) => [m.id, m.name])) as Record<BrewMethod, string>;
 
@@ -1074,14 +1096,16 @@ export function recipeOrigin(method: BrewMethod, techniqueId?: string): string |
 /**
  * Pick a Switch valve pattern from roast style, flavor goals, and process.
  * Acid Light → Fukahori open pour. Heavy / Dark / natural → full steep.
+ * Any gassy Rest → Super Hybrid (long bloom; Bull / Fukahori wait until degassed).
  * Otherwise Kasuya Super Hybrid (closed last pour, cooler finish).
  */
 export function suggestedSwitchMode(
   style: RoastStyleId,
   flavors: FlavorId[] = [],
   process?: ProcessId,
+  gassy?: boolean,
 ): SwitchMode {
-  return suggestedTechniqueId("switch", style, flavors, process) as SwitchMode;
+  return suggestedTechniqueId("switch", style, flavors, process, gassy) as SwitchMode;
 }
 
 /**
@@ -1097,49 +1121,63 @@ export function suggestedTechniqueId(
 ): string | undefined {
   if (techniquesFor(method).length === 0) return undefined;
   const acid = flavors.some((id) => ACID.includes(id));
+  const fruit = flavors.some((id) => id === "fruity" || id === "bright" || id === "juicy");
   const heavy = flavors.some((id) => HEAVY.includes(id));
   const floral = flavors.includes("floral");
+  const winey = flavors.includes("winey");
   const sweet = flavors.includes("lightSweet");
+
+  const clogs = processClogsPaper(process);
 
   if (method === "switch") {
     if (style === "dark" || heavy) return "steep";
-    if (process === "natural" && acid) return "bull";
-    if (process === "natural") return "steep";
+    if (gassy || winey) return "hybrid";
+    if (clogs && acid) return "bull";
+    if (clogs) return "steep";
     if (style === "light" && acid) return "fukahori";
     if (style === "medium") return "hold";
     return "hybrid";
   }
   if (method === "aeropress") {
     if (style === "dark" || heavy || style === "medium") return "pop";
-    if (floral || sweet) return "merikanto";
+    if (gassy && acid) return "merikanto";
+    if (floral || winey) return "merikanto";
+    if (sweet && !fruit) return "merikanto";
     return "stanica";
   }
   if (method === "v60") {
     if (style === "dark" || heavy) return "hoffmann";
+    if (gassy || winey) return "hedrick";
     if (floral) return "peng";
-    if (acid && !flavors.includes("winey")) return "kasuya-acid";
+    if (acid) return "kasuya-acid";
     if (sweet || style === "medium") return "kasuya-sweet";
-    if (gassy || flavors.includes("winey")) return "hedrick";
     if (flavors.includes("clean")) return "rao";
     return "hoffmann";
   }
   if (method === "kalita") return style === "light" && !heavy ? "mccarthy" : "wave";
-  if (method === "origami") return style === "light" && (acid || floral) ? "du" : "medina";
-  if (method === "orea") return process === "natural" || floral || flavors.includes("winey") ? "hsu" : "wolfl";
+  if (method === "origami") {
+    if (gassy || heavy) return "medina";
+    return style === "light" && (acid || floral) ? "du" : "medina";
+  }
+  if (method === "orea") {
+    if (clogs || floral || winey) return "hsu";
+    return "wolfl";
+  }
   if (method === "frenchpress") return style === "dark" || heavy ? "classic" : "hoffmann";
   if (method === "coldbrew") return style === "dark" || heavy ? "concentrate" : "rtd";
   if (method === "clever") {
+    if (style === "dark" || heavy || clogs) return "steep";
     if (style === "light" && (floral || sweet)) return "gina";
-    if (style === "dark" || heavy || process === "natural") return "steep";
+    if (gassy || winey) return "steep";
     if (style === "light" && acid) return "short";
     return "steep";
   }
   if (method === "espresso") {
     if (style === "dark" || heavy) return "adaptive-dark";
+    if (gassy) return "blooming";
     if (style === "medium") return "londinium";
-    if (floral) return "blooming";
+    if (floral || winey) return "blooming";
     if (acid) return "extractamundo";
-    if (sweet) return "adaptive-light";
     return "adaptive-light";
   }
   return techniquesFor(method)[0]?.id;
@@ -1169,7 +1207,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     (query.method === "switch" ? query.switchMode : undefined) ??
     suggestedTech;
   const tech = techniquesFor(query.method, locale).find((t) => t.id === techniqueId);
-  const suggestedMode = suggestedSwitchMode(query.roastStyle, flavors, query.process);
+  const suggestedMode = suggestedSwitchMode(query.roastStyle, flavors, query.process, gassy);
   const switchMode = query.method === "switch" ? ((techniqueId as SwitchMode | undefined) ?? suggestedMode) : undefined;
 
   let wantedC = tech?.wantedC ?? base.wantedC;
@@ -1208,9 +1246,10 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     cupRatio = Math.max(query.method === "moka" ? 7 : 13, round1(cupRatio * 0.93));
   }
 
+  const cardDoseG = tech?.doseG ?? base.doseG;
   const coffeeG = userDose
     ? clampDose(query.coffeeG as number)
-    : niceDose(tech?.doseG ?? base.doseG);
+    : niceDose(cardDoseG);
   let waterG: number;
   let bypassG: number | undefined;
   if (bypassR > 0) {
@@ -1227,24 +1266,36 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     if (heavy && !tech.lockTemp) timeS += 15;
   }
   if (info.family === "pour") {
-    timeS = Math.round(timeS * Math.pow(coffeeG / (tech?.doseG ?? base.doseG), 0.4));
+    timeS = Math.round(timeS * Math.pow(coffeeG / cardDoseG, 0.4));
   }
 
-  let grindShift = stepsN >= 0.5 ? Math.min(2, Math.round(stepsN)) : 0;
-  if (acid) grindShift += 1;
-  if (heavy) grindShift -= 1;
-  if (query.densityClass === "hard" || query.beanSize === "small") grindShift += 1;
-  if (query.densityClass === "soft" || query.beanSize === "large") grindShift -= 1;
-  if (query.process === "natural" && query.method !== "espresso") grindShift -= 1;
-  if (gassy) grindShift -= 1;
-  const pourLike =
+  const pourAltitude =
     info.family === "pour" || query.method === "espresso" || query.method === "moka";
-  if (pourLike) {
-    const doseRel = coffeeG / base.doseG;
+  const paperBed =
+    info.family === "pour" ||
+    query.method === "switch" ||
+    query.method === "clever" ||
+    query.method === "moka" ||
+    query.method === "aeropress" ||
+    query.method === "espresso";
+  const skipFinerOnGas = gassy && paperBed;
+  let grindShift = 0;
+  if (pourAltitude && stepsN >= 0.5 && !skipFinerOnGas) {
+    grindShift += Math.min(2, Math.round(stepsN));
+  }
+  if (acid && !skipFinerOnGas) grindShift += 1;
+  if (heavy) grindShift -= 1;
+  if (!skipFinerOnGas && (query.densityClass === "hard" || query.beanSize === "small")) grindShift += 1;
+  if (query.densityClass === "soft" || query.beanSize === "large") grindShift -= 1;
+  if (gassy) grindShift -= 1;
+  else if (processClogsPaper(query.process) && query.method !== "espresso") grindShift -= 1;
+  grindShift = Math.max(-2, Math.min(2, grindShift));
+  if (bedResistsDose(query.method)) {
+    const doseRel = coffeeG / cardDoseG;
     if (doseRel >= 1.45) grindShift -= 1;
     else if (doseRel <= 0.7) grindShift += 1;
-    if (cupRatio <= cardCup - 1.2) grindShift += 1;
-    if (cupRatio >= cardCup + 1.2) grindShift -= 1;
+    if (userRatio && cupRatio <= cardCup - 1.2) grindShift += 1;
+    if (userRatio && cupRatio >= cardCup + 1.2) grindShift -= 1;
   }
   const grindBase = tech?.grind ?? base.grind;
   const grind = shiftFiner(grindBase, grindShift);
@@ -1278,7 +1329,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     timeS,
     grind,
     gassy,
-    natural: query.process === "natural",
+    natural: processClogsPaper(query.process),
     roastStyle: query.roastStyle,
     switchMode,
     technique: tech?.id,
@@ -1319,8 +1370,11 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
   } else if (openKettle && boilC != null) {
     why.push(t("why.clears", { boil: boilC.toFixed(1), wanted: wantedC.toFixed(0) }));
   }
-  if (query.process === "natural" && query.method !== "espresso") {
-    why.push(t("why.natural"));
+  if (processClogsPaper(query.process) && query.method !== "espresso") {
+    why.push(t("why.clog"));
+  }
+  if (gassy && query.method !== "coldbrew" && query.method !== "cupping") {
+    why.push(t("why.gassyScript", { days: query.daysSinceRoast ?? 4 }));
   }
   if (tech) {
     why.push(
@@ -1336,7 +1390,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
   }
   if (userDose || userRatio) {
     why.push(
-      t(pourLike ? "why.dosePour" : "why.doseImmersion", {
+       t(bedResistsDose(query.method) ? "why.dosePour" : "why.doseImmersion", {
         coffee: coffeeG,
         ratio: round1(cupRatio),
         water: waterG,
@@ -1360,6 +1414,9 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     warnings.push(t("why.origami"));
   }
   if (restWarn) warnings.push(restWarn);
+  if (gassy && tech && GASSY_RISKY.has(tech.id)) {
+    warnings.push(t("warn.gassyNoBloom", { days: query.daysSinceRoast ?? 4 }));
+  }
 
   const sources = methodSources(query.method, query.roastStyle, openKettle);
 
@@ -1381,6 +1438,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     timeS,
     grind,
     grindNote,
+    cardDoseG,
     restLabel,
     restWarn,
     switchMode,

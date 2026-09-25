@@ -341,11 +341,20 @@ export const es: Record<MessageKey, string> = {
   "brew.useM": "Usar {m} m",
   "brew.kitchenHelp":
     "Aquí preparas, no donde creció la cereza. Se guarda en este dispositivo; no cambia el .kpro.",
+  "grinders.label": "Molinillo",
+  "grinders.none": "Solo palabra",
+  "grinders.searchPh": "C3S, Encore, 1Zpresso…",
+  "grinders.empty": "Ningún molinillo coincide.",
+  "grinders.n": "{n} molinillos",
+  "grinders.help":
+    "Clicks de partida de las cartas de micras de Honest Coffee Guide. Busca marca o modelo. Cero es burrs tocando. En pour-over, Switch, Clever, espresso y moka, más dosis mueve un click más grueso para que el drenaje no se atasque. Afina — no es un candado.",
   "brew.warnAltitude":
     "Pon la altitud de la cocina. La tetera está limitada por la ebullición local, no por la carta a nivel del mar.",
   "brew.warnSca":
     "La ebullición ({boil} °C) queda bajo el piso SCA de 92 °C. Vierte en ebullición; no imprimas un número más caliente.",
   "brew.warnCapped": "Se buscaban {wanted} °C. La ebullición local no llega.",
+  "warn.gassyNoBloom":
+    "Este script no saca el gas. En el día {days} suele canalizar y dejar cola amarga — un bloom largo, Super Hybrid o espresso Blooming es más seguro hasta que el lote desgasifique.",
   "brew.cup": "Taza",
   "brew.dose": "Dosis (g)",
   "brew.ratio": "Ratio (1 : )",
@@ -660,8 +669,10 @@ export const es: Record<MessageKey, string> = {
   "why.capped":
     "La ebullición de la cocina es {boil} °C. Vierte en ebullición rodante ({kettle} °C) y mueve molienda/tiempo — UC Davis: a TDS/PE fijos, 87–93 °C casi no cambia la taza.",
   "why.clears": "La ebullición local {boil} °C todavía cubre el objetivo de {wanted} °C.",
-  "why.natural":
-    "El proceso Natural puede tapar una cama fina — la molienda va un click más gruesa; suelta si el drawdown se atasca.",
+  "why.clog":
+    "Natural / honey / anaerobic sueltan más finos — la molienda va un click más gruesa en papel para que la cama no se atasque.",
+  "why.gassyScript":
+    "Día {days} todavía está blooming. Elegimos un script que saca el gas (bloom largo o soak), no una rutina de campeonato sin bloom. Los clicks más finos esperan a que el lote desgasifique.",
   "why.suggested": "Sugerido para este tueste / sabor.",
   "why.overrode": "Cambiaste la sugerida {name}.",
   "why.dosePour":
