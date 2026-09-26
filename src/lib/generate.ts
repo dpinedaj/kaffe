@@ -45,8 +45,8 @@ export const ZONE_ROLE_META: Record<ZoneRole, { label: string; hint: string }> =
     hint: "Optional. Rao: enter crack already decelerating. Kaffe does not auto-add this.",
   },
   "after-fc": {
-    label: "After first crack",
-    hint: "Bean goes exothermic. Negative boost tames a flick. Official KL notes are cautious — use only if the roast runs away.",
+    label: "Flick brake",
+    hint: "Negative boost that finishes before first crack (Kaffelogic guidance) so the run-up does not flick. Use only if the roast runs away.",
   },
 };
 
@@ -59,6 +59,9 @@ export interface ZoneIntent {
   kd: number;
   role?: ZoneRole;
   reason?: string;
+  /** i18n key for `reason`, so the UI can show it in the current language. */
+  reasonKey?: string;
+  reasonVars?: Record<string, string | number>;
 }
 
 export type ZoneSet = Record<ZoneId, ZoneIntent>;
@@ -190,10 +193,10 @@ export const FLAVOR_DELTA: Record<FlavorId, Adjustment> = {
 
 /** Hard-bean charge: more energy, longer dry, modest extra air. Matches origin.density === "hard". */
 export const HARD_DENSITY_ADJ: Adjustment = {
-  fcTemp: -1,
+  fcTemp: 0,
   preheatW: 10,
   dryingS: 3,
-  midS: -5,
+  midS: 0,
   developmentS: 0,
   fanRpm: 50,
 };
@@ -292,7 +295,7 @@ export function densityAdjustment(densityGL?: number): Adjustment {
 function originAdjustment(process: ProcessId, brew: BrewId): Adjustment {
   let adj: Adjustment = { ...ZERO };
   if (process === "washed") adj = add(adj, { ...ZERO, dryingS: -6, midS: -4, developmentS: -4, fcTemp: -0.5 });
-  if (process === "natural") adj = add(adj, { ...ZERO, dryingS: 4, midS: 4, fanRpm: 80 });
+  if (process === "natural") adj = add(adj, { ...ZERO, fcTemp: 0.3, dryingS: 4, midS: 4, fanRpm: 80 });
   if (process === "anaerobic") adj = add(adj, { ...ZERO, dryingS: 6, developmentS: -8 });
   if (process === "honey") adj = add(adj, { ...ZERO, midS: 6, developmentS: 2 });
   if (brew === "filter") adj = add(adj, { ...ZERO, developmentS: -6 });
@@ -314,7 +317,7 @@ export function moistureAdjustment(moisture?: number): Adjustment {
   const d = pct - REFERENCE_MOISTURE;
   if (Math.abs(d) < 0.05) return { ...ZERO };
   return {
-    fcTemp: Number((d * 0.15).toFixed(2)),
+    fcTemp: 0,
     preheatW: Math.round(d * 18),
     dryingS: Math.round(d * 10),
     midS: Math.round(d * 2),
@@ -366,12 +369,29 @@ export function zoneTemplate(role: ZoneRole, firstCrackTime: number, totalTime: 
       role,
     };
   }
+  const b = boost ?? -3;
+  if (b < 0) {
+    /**
+     * Kaffelogic: finish any negative boost before first crack. The crack itself is
+     * endothermic, so a brake running through it can crash RoR. Damp the run-up instead.
+     */
+    const brakeEnd = Math.round(Math.max(60, fc - 3));
+    return {
+      enabled: true,
+      startS: Math.round(Math.max(45, fc - 45)),
+      endS: brakeEnd,
+      boost: b,
+      kp: 1,
+      kd: 1,
+      role,
+    };
+  }
   const afterStart = Math.round(Math.max(fc + 12, Math.min(end - 12, fc + 15)));
   return {
     enabled: true,
     startS: afterStart,
     endS: Math.round(Math.max(afterStart + 12, end)),
-    boost: boost ?? -3,
+    boost: b,
     kp: 1,
     kd: 1,
     role,
@@ -427,6 +447,8 @@ export function suggestedZones(
             moisture != null && moisture >= 12
               ? `Wet green (${moisture}%). Extra RoR while water leaves so drying does not stall.`
               : "Dense natural/anaerobic lot. Extra RoR through the wet front.",
+          reasonKey: moisture != null && moisture >= 12 ? "zoneWhy.dryWet" : "zoneWhy.dryDense",
+          reasonVars: { m: moisture ?? 11 },
         }
       : null;
 
@@ -442,6 +464,7 @@ export function suggestedZones(
             heavy >= 0.6
               ? "Body / deep-sweet goal. Hold RoR through color change so sugars brown without a stall."
               : "Honey process. Color-change dip — a small +boost keeps Maillard moving.",
+          reasonKey: heavy >= 0.6 ? "zoneWhy.mailBody" : "zoneWhy.mailHoney",
         }
       : null;
 
@@ -471,7 +494,9 @@ export function suggestedZones(
             .filter(Boolean)
             .join(", ")
             .replace(/^./, (c) => c.toUpperCase()) +
-            ". Negative boost after crack to absorb the exotherm (KL community −6…−15; we stay conservative).",
+            ". Negative boost that ends just before first crack, so a hot run-up does not flick — Kaffelogic says to finish negative boosts before crack onset.",
+          reasonKey: "zoneWhy.brake",
+          reasonVars: { ror: rorFc.toFixed(1) },
         }
       : offZone("after-fc");
 
@@ -511,6 +536,8 @@ function suggestedRtdZones(
             moisture != null && moisture >= 12
               ? `Wet green (${moisture}%). RTD still dries first so the later CO₂ step has a stable front.`
               : "Dense natural/anaerobic lot. Extra RoR through the wet front before the RTD step.",
+          reasonKey: moisture != null && moisture >= 12 ? "zoneWhy.rtdDryWet" : "zoneWhy.rtdDryDense",
+          reasonVars: { m: moisture ?? 11 },
         }
       : null;
 
@@ -531,6 +558,7 @@ function suggestedRtdZones(
     role: "maillard",
     reason:
       "RTD RoR step after drying/Maillard (see KL RTD 1500–2000). Extra °C/min here moves CO₂ out so the cup is ready in 1–3 days, not 3–5.",
+    reasonKey: "zoneWhy.rtdMail",
   };
   const intoStart = Math.round(Math.min(Math.max(mailEnd, fc - 32), fc - 8));
   const intoEnd = tightLevel ? fc : Math.round(Math.min(end, Math.max(intoStart + 16, fc + 12)));
@@ -545,6 +573,7 @@ function suggestedRtdZones(
     reason: tightLevel
       ? "RTD through-crack energy, truncated at first crack so the roast-level drop still has a 4 °C band."
       : "RTD “T through crack”: keep energy on into first crack. Forces remaining CO₂ out and flattens the dip/flick. Rest profiles do this much less.",
+    reasonKey: tightLevel ? "zoneWhy.rtdIntoTight" : "zoneWhy.rtdInto",
   };
 
   if (zone1Dry) return { zone1: zone1Dry, zone2: zoneMail, zone3: zoneInto };
@@ -580,10 +609,14 @@ export function zoneFields(zones: ZoneSet): Record<string, string> {
   return raw;
 }
 
-export function formatZoneSummary(z: ZoneIntent): string {
-  if (!z.enabled || z.endS <= z.startS) return "off";
+export function formatZoneSummary(
+  z: ZoneIntent,
+  roleLabel: (role: ZoneRole) => string = (r) => ZONE_ROLE_META[r].label,
+  off = "off",
+): string {
+  if (!z.enabled || z.endS <= z.startS) return off;
   const sign = z.boost > 0 ? "+" : "";
-  const role = z.role ? `${ZONE_ROLE_META[z.role].label} · ` : "";
+  const role = z.role ? `${roleLabel(z.role)} · ` : "";
   return `${role}${formatClock(z.startS)}–${formatClock(z.endS)} · ${sign}${z.boost} °C/min`;
 }
 
@@ -958,6 +991,12 @@ export function pickRoastFamilyFromTotal(endS: number): RoastFamily {
 }
 
 export const CHARGE_TEMP = 50;
+/**
+ * Shortest development Kaffe will design. Official Nordic Light cores run about a
+ * minute; Alstrup et al. (2020) tested 90 s as their shortest arm on a drum, so below
+ * ~60 s the curve is extrapolating past any published cup data.
+ */
+export const MIN_DEVELOPMENT_S = 60;
 export const YELLOW_TEMP = 150;
 /** Official Nordic last minute is ~1 °C/min. Cooling is klog roast_end, not this tail. */
 const DROP_TAIL_S = 60;
@@ -975,14 +1014,12 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
 
-export function estimateFirstCrackTemp(intent: RoastIntent, adj: Adjustment, densityGL: number): number {
+export function estimateFirstCrackTemp(_intent: RoastIntent, adj: Adjustment, densityGL: number): number {
   const rho = clamp(densityGL, 560, 800);
   return clamp(
     FC_TEMP_REF +
       (3.8 * (rho - REFERENCE_DENSITY_GL)) / 80 +
-      adj.fcTemp +
-      (intent.process === "washed" ? -0.4 : 0) +
-      (intent.process === "natural" ? 0.3 : 0),
+      adj.fcTemp,
     196,
     212,
   );
@@ -1122,7 +1159,7 @@ export function durationPlan(
     0.27,
   );
   const dtrDev = (targetDtr * preTotal) / (1 - targetDtr);
-  development = clamp(0.4 * development + 0.6 * dtrDev, 50, 220);
+  development = clamp(0.4 * development + 0.6 * dtrDev, MIN_DEVELOPMENT_S, 220);
 
   const startS = 7;
   const fcS = startS + dry + maillard;
@@ -1298,7 +1335,24 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
   let level = resolved.level;
   let endTemp = resolved.dropTemp;
 
-  const beanPlan = durationPlan({ ...intent, flavors: [], expectFc: undefined }, variety, beanAdj, resolvedDensityGL, endTemp);
+  /**
+   * Moisture and density already set the drying / Maillard slopes through k_bean, so
+   * their second-count offsets must not be added again when timing the phases. They
+   * still move preheat and fan.
+   */
+  const slopeOnly = (adj: Adjustment): Adjustment => ({
+    ...adj,
+    dryingS: adj.dryingS - moistureAdj.dryingS - densityAdj.dryingS,
+    midS: adj.midS - moistureAdj.midS - densityAdj.midS,
+    developmentS: adj.developmentS - moistureAdj.developmentS - densityAdj.developmentS,
+  });
+  const beanPlan = durationPlan(
+    { ...intent, flavors: [], expectFc: undefined },
+    variety,
+    slopeOnly(beanAdj),
+    resolvedDensityGL,
+    endTemp,
+  );
   const beanAnchors = fitAnchorsToPlan(
     applyTempMorph(base.roast.anchors, beanAdj.fcTemp),
     beanPlan,
@@ -1311,7 +1365,7 @@ export function generateProfile(intent: RoastIntent): GeneratedRoast {
       ? { ...intent, expectFc: requestedFc }
       : { ...intent, expectFc: undefined },
     variety,
-    total,
+    slopeOnly(total),
     resolvedDensityGL,
     endTemp,
   );

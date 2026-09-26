@@ -10,6 +10,16 @@ export type EyBand = "under" | "ok" | "over";
 export type TdsBand = "weak" | "ok" | "strong";
 export type ExtractVerdict = EyBand | "out";
 export type ExtractScale = "filter" | "espresso" | "moka" | "coldbrew";
+/**
+ * What the extraction is computed on.
+ * `immersion`: liquid left in the grounds is as strong as the cup, so use total water (Liang 2021; Barista Hustle).
+ * `percolation`: the drained bed keeps ~2 g water per g coffee, so the cup is water − 2 × dose.
+ * `beverage`: the recipe water already is the weighed shot (espresso).
+ */
+export type ExtractBasis = "immersion" | "percolation" | "beverage";
+/** Strength box on the filter chart. SCA Golden Cup vs the European (ECBC) band. */
+export type ExtractTarget = "sca" | "ecbc";
+export const EXTRACT_TARGETS: ExtractTarget[] = ["sca", "ecbc"];
 
 export interface ExtractWindow {
   tdsMin: number;
@@ -69,6 +79,9 @@ export interface ExtractRecipe {
   method: BrewMethod;
   coffeeG: number;
   waterG: number;
+  /** Water added after the brew (AeroPress bypass, iced ice, filter-on-espresso dilution). */
+  bypassG?: number;
+  technique?: string;
   grind: Grind;
   timeS: number;
   kettleC: number;
@@ -84,15 +97,35 @@ export interface ExtractHistoryItem {
 }
 
 const HISTORY_KEY = "kaffe.extract.v1";
+const TARGET_KEY = "kaffe.extract.target";
 
-export function scaleFor(method: BrewMethod): ExtractScale {
+/** Retained water per gram of coffee in a drained percolation bed. */
+export const RETAINED_G_PER_G = 2;
+
+const PERCOLATION_SWITCH = new Set(["fukahori"]);
+
+export function extractBasis(method: BrewMethod, technique?: string): ExtractBasis {
+  if (method === "espresso") return "beverage";
+  if (method === "frenchpress" || method === "coldbrew" || method === "cupping" || method === "clever") return "immersion";
+  if (method === "aeropress" || method === "siphon") return "immersion";
+  if (method === "switch") return technique && PERCOLATION_SWITCH.has(technique) ? "percolation" : "immersion";
+  return "percolation";
+}
+
+/** Plotted ratio (extraction mass ÷ dose) for a poured cup ratio ((water + bypass) ÷ dose). */
+export function plotRatio(basis: ExtractBasis, cupRatio: number): number {
+  return basis === "percolation" ? Math.max(0.5, cupRatio - RETAINED_G_PER_G) : cupRatio;
+}
+
+export function scaleFor(method: BrewMethod, technique?: string): ExtractScale {
+  if (method === "espresso" && technique === "filter") return "filter";
   if (method === "espresso") return "espresso";
   if (method === "moka") return "moka";
   if (method === "coldbrew") return "coldbrew";
   return "filter";
 }
 
-/** Classic Lockhart: TDS% = PE% / (water/coffee). Diagonals are constant brew ratio. */
+/** TDS% = PE% ÷ (extraction mass ÷ dose). Pass the plotted ratio, not the poured one. */
 export function tdsFromPe(pe: number, ratioN: number): number {
   return ratioN > 0 ? pe / ratioN : 0;
 }
@@ -101,7 +134,7 @@ export function ratioIsolines(scale: ExtractScale): number[] {
   if (scale === "espresso") return [1.5, 2, 2.5, 3];
   if (scale === "moka") return [7, 8, 10, 12];
   if (scale === "coldbrew") return [8, 10, 13, 16];
-  return [12, 14, 16, 18, 20, 22];
+  return [10, 12, 14, 16, 18, 20];
 }
 
 /** One grind/time click on the same recipe. About 1.5–2 PE on filter. */
@@ -198,7 +231,32 @@ export function tdsTicks(window: ExtractWindow): number[] {
   return out;
 }
 
-export function extractWindow(scale: ExtractScale): ExtractWindow {
+/**
+ * Recipe-specific extraction goals. Rao publishes 22–24.5% for his spin V60; judging it
+ * against 18–22% would call the app’s own recipe “over”.
+ */
+const TECHNIQUE_EY: Record<string, { eyMin: number; eyMax: number }> = {
+  rao: { eyMin: 20, eyMax: 24.5 },
+  extractamundo: { eyMin: 20, eyMax: 24 },
+};
+
+/** Long shots sit far off the 8–12% espresso box: a 1:5 allongé at ~22% PE is ~4.5% TDS. */
+const TECHNIQUE_WINDOW: Record<string, ExtractWindow> = {
+  allonge: { tdsMin: 3.8, tdsMax: 5.2, eyMin: 20, eyMax: 24, tdsLo: 2.5, tdsHi: 8, eyLo: 14, eyHi: 28 },
+};
+
+export function extractWindow(
+  scale: ExtractScale,
+  target: ExtractTarget = "sca",
+  technique?: string,
+): ExtractWindow {
+  if (technique && TECHNIQUE_WINDOW[technique]) return TECHNIQUE_WINDOW[technique];
+  const base = scaleWindow(scale, target);
+  const ey = technique ? TECHNIQUE_EY[technique] : undefined;
+  return ey ? { ...base, ...ey } : base;
+}
+
+function scaleWindow(scale: ExtractScale, target: ExtractTarget): ExtractWindow {
   if (scale === "espresso") {
     return { tdsMin: 8, tdsMax: 12, eyMin: 18, eyMax: 22, tdsLo: 6, tdsHi: 16, eyLo: 14, eyHi: 26 };
   }
@@ -208,7 +266,27 @@ export function extractWindow(scale: ExtractScale): ExtractWindow {
   if (scale === "coldbrew") {
     return { tdsMin: 1.25, tdsMax: 2.1, eyMin: 16, eyMax: 21, tdsLo: 0.8, tdsHi: 2.8, eyLo: 12, eyHi: 24 };
   }
-  return { tdsMin: 1.15, tdsMax: 1.35, eyMin: 18, eyMax: 22, tdsLo: 0.8, tdsHi: 1.6, eyLo: 14, eyHi: 26 };
+  if (target === "ecbc") {
+    return { tdsMin: 1.2, tdsMax: 1.45, eyMin: 18, eyMax: 22, tdsLo: 0.8, tdsHi: 2, eyLo: 14, eyHi: 26 };
+  }
+  return { tdsMin: 1.15, tdsMax: 1.35, eyMin: 18, eyMax: 22, tdsLo: 0.8, tdsHi: 2, eyLo: 14, eyHi: 26 };
+}
+
+export function loadExtractTarget(): ExtractTarget {
+  try {
+    const raw = typeof localStorage === "undefined" ? null : localStorage.getItem(TARGET_KEY);
+    return raw === "ecbc" ? "ecbc" : "sca";
+  } catch {
+    return "sca";
+  }
+}
+
+export function saveExtractTarget(target: ExtractTarget): void {
+  try {
+    localStorage.setItem(TARGET_KEY, target);
+  } catch {
+    /* quota / private mode */
+  }
 }
 
 /** Advice stops at the Lockhart plot. A 100% TDS cup is not a grind problem. */
@@ -224,11 +302,27 @@ export function tdsFromInput(unit: ExtractUnit, value: number): number {
   return unit === "brix" ? brixToTds(value) : value;
 }
 
-/** Drip beds keep ~2 g water / g coffee. Espresso / moka beverage is the shot. */
-export function defaultYieldG(method: BrewMethod, coffeeG: number, waterG: number): number {
-  if (method === "espresso" || method === "moka") return waterG;
-  const retained = 2 * coffeeG;
-  return Math.max(waterG * 0.55, waterG - retained);
+/**
+ * Mass the extraction is computed on. Immersion: all the water. Percolation: the
+ * drained cup (bed keeps ~2 g/g). Shot: what was weighed. Bypass is added after.
+ */
+export function defaultYieldG(
+  method: BrewMethod,
+  coffeeG: number,
+  waterG: number,
+  bypassG = 0,
+  technique?: string,
+): number {
+  const basis = extractBasis(method, technique);
+  if (basis === "percolation") {
+    return Math.max(waterG * 0.55, waterG - RETAINED_G_PER_G * coffeeG) + bypassG;
+  }
+  return waterG + bypassG;
+}
+
+/** Immersion extraction ignores the weighed cup — the retained liquid is as strong as what you drink. */
+export function cupWeightMatters(method: BrewMethod, technique?: string): boolean {
+  return extractBasis(method, technique) !== "immersion";
 }
 
 export function extractionYield(tds: number, coffeeG: number, yieldG: number): number | undefined {
@@ -237,7 +331,7 @@ export function extractionYield(tds: number, coffeeG: number, yieldG: number): n
 }
 
 export function bandOf(value: number, min: number, max: number): EyBand | TdsBand {
-  if (value < min) return value === min ? "ok" : "under";
+  if (value < min) return "under";
   if (value > max) return "over";
   return "ok";
 }
@@ -267,13 +361,18 @@ export function formatBrewRatio(ratioN: number): string {
 }
 
 export function shiftBrew(
-  recipe: Pick<ExtractRecipe, "method" | "coffeeG" | "waterG">,
+  recipe: Pick<ExtractRecipe, "method" | "coffeeG" | "waterG" | "bypassG" | "technique">,
   dir: -1 | 1,
 ): { water: number; cup: number; ratio: string } {
   const raw = recipe.waterG * (1 + dir * NEXT_CUP_RATIO);
   const water = Math.max(recipe.coffeeG * 1.5, Math.round(raw / 5) * 5);
-  const cup = Math.round(defaultYieldG(recipe.method, recipe.coffeeG, water));
-  return { water, cup, ratio: formatBrewRatio(water / recipe.coffeeG) };
+  const bypass = recipe.bypassG ?? 0;
+  const cup = Math.round(
+    cupWeightMatters(recipe.method, recipe.technique)
+      ? defaultYieldG(recipe.method, recipe.coffeeG, water, bypass, recipe.technique)
+      : water + bypass - RETAINED_G_PER_G * recipe.coffeeG,
+  );
+  return { water, cup, ratio: formatBrewRatio((water + bypass) / recipe.coffeeG) };
 }
 
 export function readExtract(
@@ -281,17 +380,22 @@ export function readExtract(
   value: number,
   yieldG: number | undefined,
   recipe: ExtractRecipe,
+  target: ExtractTarget = "sca",
 ): ExtractReading | undefined {
   if (!Number.isFinite(value) || value <= 0) return undefined;
   const tds = tdsFromInput(unit, value);
   if (!Number.isFinite(tds) || tds <= 0) return undefined;
-  const assumed = yieldG == null || !Number.isFinite(yieldG);
-  const cup = assumed ? defaultYieldG(recipe.method, recipe.coffeeG, recipe.waterG) : yieldG;
+  const weighs = cupWeightMatters(recipe.method, recipe.technique);
+  const assumed = weighs && (yieldG == null || !Number.isFinite(yieldG));
+  const cup =
+    !weighs || assumed
+      ? defaultYieldG(recipe.method, recipe.coffeeG, recipe.waterG, recipe.bypassG ?? 0, recipe.technique)
+      : (yieldG as number);
   const ey = extractionYield(tds, recipe.coffeeG, cup);
   if (ey == null || !Number.isFinite(ey)) return undefined;
 
-  const scale = scaleFor(recipe.method);
-  const window = extractWindow(scale);
+  const scale = scaleFor(recipe.method, recipe.technique);
+  const window = extractWindow(scale, target, recipe.technique);
   const eyBand = bandOf(ey, window.eyMin, window.eyMax) as EyBand;
   const tdsBand = tdsBandOf(tds, window);
   const inRange = inAdviceRange(tds, ey, window);
@@ -320,7 +424,7 @@ function keepVars(
     grind,
     time,
     cup: Math.round(yieldG),
-    ratio: formatBrewRatio(recipe.waterG / recipe.coffeeG),
+    ratio: formatBrewRatio((recipe.waterG + (recipe.bypassG ?? 0)) / recipe.coffeeG),
     water: Math.round(recipe.waterG),
   };
 }
@@ -337,7 +441,10 @@ function tipsFor(
   const timeStep = espresso ? 4 : 20;
   const nextLonger = formatBrewClock(recipe.timeS + timeStep);
   const nextShorter = formatBrewClock(Math.max(20, recipe.timeS - timeStep));
-  const canHeat = !recipe.cappedByBoil && (recipe.boilC == null || recipe.kettleC < recipe.boilC - 1.2);
+  const boilerHeats = recipe.method === "espresso";
+  const canHeat = boilerHeats
+    ? recipe.kettleC < 96
+    : !recipe.cappedByBoil && (recipe.boilC == null || recipe.kettleC < recipe.boilC - 1.2);
 
   if (reading.eyBand === "under") {
     tips.push({

@@ -4,12 +4,14 @@ import {
   brixToTds,
   clipRatioLine,
   defaultYieldG,
+  extractBasis,
   extractWindow,
   extractionYield,
+  formatBrewRatio,
   nextCupPoint,
   nextGrind,
+  plotRatio,
   readExtract,
-  formatBrewRatio,
   shiftBrew,
   snapEyToRatio,
   tdsFromInput,
@@ -134,5 +136,59 @@ describe("extract", () => {
     expect(shot?.scale).toBe("espresso");
     expect(shot?.verdict).toBe("ok");
     expect(shot?.ey).toBeCloseTo(19);
+  });
+});
+
+describe("extraction basis per brew", () => {
+  it("uses total water for immersion, the drained cup for percolation, and the shot for espresso", () => {
+    expect(defaultYieldG("frenchpress", 30, 500)).toBe(500);
+    expect(defaultYieldG("cupping", 8.25, 150)).toBe(150);
+    expect(defaultYieldG("v60", 15, 250)).toBe(220);
+    expect(defaultYieldG("espresso", 18, 40)).toBe(40);
+    expect(defaultYieldG("aeropress", 15, 90, 75)).toBe(165);
+    expect(defaultYieldG("v60", 15, 150, 100, "iced")).toBe(220);
+  });
+
+  it("reads a 21% French press as 21%, not ~18.5%", () => {
+    const r = readExtract("tds", 1.26, undefined, {
+      method: "frenchpress",
+      coffeeG: 30,
+      waterG: 500,
+      grind: "medium",
+      timeS: 540,
+      kettleC: 96,
+    });
+    expect(r?.ey).toBeCloseTo(21, 1);
+    expect(r?.assumedYield).toBe(false);
+    expect(r?.tips.some((t) => t.id === "extract.tip.weighCup")).toBe(false);
+  });
+
+  it("puts the default reading on the highlighted poured-ratio line", () => {
+    const recipe = { method: "v60" as const, coffeeG: 15, waterG: 240, grind: "medium" as const, timeS: 165, kettleC: 96 };
+    const r = readExtract("tds", 1.3, undefined, recipe);
+    expect(r).toBeDefined();
+    expect(r!.ey / r!.tds).toBeCloseTo(plotRatio(extractBasis("v60"), 240 / 15), 5);
+  });
+
+  it("lets Rao aim past 22% and switches the strength box to ECBC", () => {
+    const rao = extractWindow("filter", "sca", "rao");
+    expect(rao.eyMax).toBe(24.5);
+    const ecbc = extractWindow("filter", "ecbc");
+    expect(ecbc.tdsMax).toBe(1.45);
+    expect(extractWindow("filter").tdsHi).toBeGreaterThanOrEqual(1.8);
+  });
+
+  it("offers a hotter shot even when the kettle would boil low", () => {
+    const r = readExtract("tds", 7.5, 40, {
+      method: "espresso",
+      coffeeG: 18,
+      waterG: 40,
+      grind: "fine",
+      timeS: 28,
+      kettleC: 92,
+      boilC: 91.3,
+      cappedByBoil: false,
+    });
+    expect(r?.tips.some((t) => t.id === "extract.tip.hotter")).toBe(true);
   });
 });

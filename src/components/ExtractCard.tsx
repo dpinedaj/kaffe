@@ -1,11 +1,17 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n/LocaleContext";
 import type { MessageKey } from "../i18n/en";
 import { grindLabel } from "../i18n/labels";
 import type { Grind } from "../lib/brew";
 import {
+  EXTRACT_TARGETS,
   clipRatioLine,
+  cupWeightMatters,
   defaultYieldG,
+  extractBasis,
+  loadExtractTarget,
+  plotRatio,
+  saveExtractTarget,
   formatBrewRatio,
   loadExtractHistory,
   nextCupPoint,
@@ -17,6 +23,7 @@ import {
   tdsTicks,
   type ExtractRecipe,
   type ExtractReading,
+  type ExtractTarget,
   type ExtractUnit,
 } from "../lib/extract";
 import { Card } from "./ui";
@@ -28,11 +35,19 @@ export default function ExtractCard({ recipe }: { recipe: ExtractRecipe }) {
   const [yieldG, setYieldG] = useState<number | undefined>();
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState(() => loadExtractHistory());
+  const [target, setTarget] = useState<ExtractTarget>(() => loadExtractTarget());
+  const weighs = cupWeightMatters(recipe.method, recipe.technique);
+  const cupRatio = (recipe.waterG + (recipe.bypassG ?? 0)) / recipe.coffeeG;
 
   const reading = useMemo(
-    () => (value != null ? readExtract(unit, value, yieldG, recipe) : undefined),
-    [unit, value, yieldG, recipe],
+    () => (value != null ? readExtract(unit, value, yieldG, recipe, target) : undefined),
+    [unit, value, yieldG, recipe, target],
   );
+
+  function pickTarget(next: ExtractTarget) {
+    setTarget(next);
+    saveExtractTarget(next);
+  }
 
   function openChart() {
     if (reading?.inRange) {
@@ -105,6 +120,7 @@ export default function ExtractCard({ recipe }: { recipe: ExtractRecipe }) {
                 <span className="shrink-0 text-[12px] text-muted">{unit === "tds" ? "%" : "°Bx"}</span>
               </span>
             </label>
+            {weighs && (
             <label className="flex flex-col gap-1 rounded-xl bg-card2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-2 sm:bg-transparent sm:p-0">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-muted sm:text-[13px] sm:normal-case sm:tracking-normal">
                 {t("extract.yield")}
@@ -115,7 +131,7 @@ export default function ExtractCard({ recipe }: { recipe: ExtractRecipe }) {
                   inputMode="decimal"
                   min={0}
                   step={0.5}
-                  placeholder={String(Math.round(defaultYieldG(recipe.method, recipe.coffeeG, recipe.waterG)))}
+                  placeholder={String(Math.round(defaultYieldG(recipe.method, recipe.coffeeG, recipe.waterG, recipe.bypassG ?? 0, recipe.technique)))}
                   value={yieldG ?? ""}
                   onChange={(e) => setYieldG(e.target.value === "" ? undefined : Number(e.target.value))}
                   className="min-w-0 w-full bg-transparent text-[20px] font-semibold leading-none text-white outline-none placeholder:text-muted sm:w-16 sm:text-right sm:text-[17px]"
@@ -123,6 +139,7 @@ export default function ExtractCard({ recipe }: { recipe: ExtractRecipe }) {
                 <span className="shrink-0 text-[12px] text-muted">g</span>
               </span>
             </label>
+            )}
           </div>
         </div>
 
@@ -135,7 +152,7 @@ export default function ExtractCard({ recipe }: { recipe: ExtractRecipe }) {
                 </div>
                 <p className="mt-0.5 text-[13px] text-label">
                   {reading.ey.toFixed(1)}% PE · {reading.tds.toFixed(2)}% TDS · {Math.round(reading.yieldG)} g ·{" "}
-                  {formatBrewRatio(recipe.waterG / recipe.coffeeG)}
+                  {formatBrewRatio(cupRatio)}
                   {reading.inRange && reading.tdsBand !== "ok"
                     ? ` · ${t(`extract.strength.${reading.tdsBand}` as MessageKey)}`
                     : ""}
@@ -164,9 +181,10 @@ export default function ExtractCard({ recipe }: { recipe: ExtractRecipe }) {
               </p>
             ))}
           </div>
-        ) : (
+        ) : weighs ? (
           <p className="mt-3 text-[12px] leading-relaxed text-muted">{t("extract.help")}</p>
-        )}
+        ) : null}
+        {!weighs && <p className="mt-2 text-[12px] leading-relaxed text-muted">{t("extract.immersionNote")}</p>}
       </Card>
       <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{t("extract.note")}</p>
 
@@ -174,6 +192,8 @@ export default function ExtractCard({ recipe }: { recipe: ExtractRecipe }) {
         <ExtractChart
           recipe={recipe}
           reading={reading}
+          target={target}
+          onTarget={pickTarget}
           history={history.filter(
             (h) =>
               h.method === recipe.method &&
@@ -189,11 +209,15 @@ export default function ExtractCard({ recipe }: { recipe: ExtractRecipe }) {
 function ExtractChart({
   recipe,
   reading,
+  target,
+  onTarget,
   history,
   onClose,
 }: {
   recipe: ExtractRecipe;
   reading: ExtractReading | undefined;
+  target: ExtractTarget;
+  onTarget: (next: ExtractTarget) => void;
   history: { tds: number; ey: number }[];
   onClose: () => void;
 }) {
@@ -203,6 +227,14 @@ function ExtractChart({
   const [previewEy, setPreviewEy] = useState<number | null>(null);
   const [compare, setCompare] = useState<{ tds: number; ey: number } | null>(null);
   const [grabbing, setGrabbing] = useState(false);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   if (!reading?.window) return null;
   const plot = reading.window;
@@ -222,13 +254,14 @@ function ExtractChart({
     w: x(plot.eyMax) - x(plot.eyMin),
     h: y(plot.tdsMin) - y(plot.tdsMax),
   };
-  const pourRatio = recipe.waterG / recipe.coffeeG;
+  const pourRatio = (recipe.waterG + (recipe.bypassG ?? 0)) / recipe.coffeeG;
+  const basis = extractBasis(recipe.method, recipe.technique);
   const lineRatio = reading.ey / reading.tds;
   const ratioLabel = formatBrewRatio(pourRatio);
   const beverageLine = clipRatioLine(lineRatio, plot);
   const preview = previewEy == null ? { ey: reading.ey, tds: reading.tds } : snapEyToRatio(previewEy, lineRatio, plot);
   const drifted = Math.abs(preview.ey - reading.ey) > 0.12;
-  const live = drifted ? readExtract("tds", preview.tds, reading.yieldG, recipe) ?? reading : reading;
+  const live = drifted ? readExtract("tds", preview.tds, reading.yieldG, recipe, target) ?? reading : reading;
   const ghost = nextCupPoint(reading, lineRatio);
   const px = clampX(preview.ey);
   const py = clampY(preview.tds);
@@ -314,6 +347,27 @@ function ExtractChart({
           <div>
             <h3 className="text-[18px] font-semibold text-white">{t("extract.chartTitle")}</h3>
             <p className="mt-0.5 text-[12px] leading-relaxed text-muted">{t("extract.chartHelp")}</p>
+            {reading.scale === "filter" && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="flex rounded-lg bg-card2 p-0.5">
+                  {EXTRACT_TARGETS.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`rounded-md px-2.5 py-1 text-[12px] font-semibold ${
+                        target === id ? "bg-blue text-white" : "text-muted"
+                      }`}
+                      onClick={() => onTarget(id)}
+                    >
+                      {t(`extract.target.${id}` as MessageKey)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {reading.scale === "filter" && (
+              <p className="mt-1 text-[11px] leading-relaxed text-muted">{t("extract.targetHelp")}</p>
+            )}
           </div>
           <button type="button" className="text-[15px] font-medium text-blue" onClick={onClose}>
             {t("common.close")}
@@ -372,7 +426,7 @@ function ExtractChart({
 
             <g clipPath="url(#extract-plot)">
               {ratioIsolines(reading.scale).map((r) => {
-                const line = clipRatioLine(r, plot);
+                const line = clipRatioLine(plotRatio(basis, r), plot);
                 if (!line) return null;
                 const poured = Math.abs(r - pourRatio) < 0.35;
                 return (

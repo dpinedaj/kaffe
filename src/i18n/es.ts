@@ -107,9 +107,26 @@ export const es: Record<MessageKey, string> = {
 
   "variety.unknown": "Desconocido / mezcla",
   "variety.heirloom": "Landrace etíope",
-  "variety.yellow-bourbon": "Borbon Amarillo",
-  "variety.pink-bourbon": "Borbon Rosado",
+  "variety.yellow-bourbon": "Borbón Amarillo",
+  "variety.pink-bourbon": "Borbón Rosado",
   "variety.colombia-var": "Colombia (variedad)",
+  "variety.chiroso": "Chiroso",
+  "variety.ombligon": "Ombligón",
+  "variety.red-bourbon": "Borbón Rojo",
+  "variety.orange-bourbon": "Borbón Naranja",
+  "variety.yellow-catuai": "Catuai Amarillo",
+  "variety.villa-sarchi": "Villa Sarchí",
+  "variety.centroamericano": "Centroamericano",
+  "variety.catucai": "Catucaí",
+  "variety.sudan-rume": "Sudan Rume",
+  "variety.blue-mountain": "Blue Mountain",
+  "variety.jarc-74110": "74110",
+  "variety.jarc-74112": "74112",
+  "variety.jarc-74158": "74158",
+  "variety.bourbon-aji": "Borbón Ají",
+  "variety.striped-bourbon": "Borbón Rayado",
+  "variety.yellow-caturra": "Caturra Amarillo",
+  "variety.red-catuai": "Catuai Rojo",
 
   "pace.nordic": "Nordic · ~6–7 min",
   "pace.slow": "Lento · ~11 min",
@@ -202,9 +219,9 @@ export const es: Record<MessageKey, string> = {
   "studio.fan": "Fan",
   "studio.preheat": "Preheat",
   "studio.density": "Densidad",
-  "studio.zone1": "Zona 1 · drying",
+  "studio.zone1": "Zona 1 · inicio",
   "studio.zone2": "Zona 2 · hacia el crack",
-  "studio.zone3": "Zona 3 · after crack",
+  "studio.zone3": "Zona 3 · final",
   "studio.breakdown": "Desglose de ajustes",
   "studio.bdOrigin": "Base del origen",
   "studio.bdVariety": "Variedad ({name})",
@@ -227,14 +244,29 @@ export const es: Record<MessageKey, string> = {
   "boost.title": "Zonas de boost",
   "boost.recommend": "Recomendar según grano / sabor / RoR",
   "boost.help":
-    "Un boost es °C/min sumados al error de RoR del Nano — energía extra en un dip endotérmico, o un freno cuando el grano se vuelve exotérmico. Las zonas de drying / Maillard / after-crack sí se encienden si el grano las necesita. RTD sigue sumando un escalón de RoR en Maillard y energía into crack, y omite el freno negativo after-crack. Aún puedes añadir, quitar o editar cualquier ventana a mano.",
+    "Un boost es °C/min sumados al error de RoR del Nano — energía extra en un dip endotérmico, o un freno en una llegada caliente. Las zonas de drying / Maillard / freno de flick solo se encienden si el grano las necesita; un freno siempre termina antes del first crack (Kaffelogic). RTD suma en cambio un escalón de RoR en Maillard y energía hacia el crack. Añade, quita o edita cualquier ventana a mano.",
   "boost.zone1": "Zona 1 · inicio",
   "boost.zone2": "Zona 2 · hacia el crack",
-  "boost.zone3": "Zona 3 · after crack",
+  "boost.zone3": "Zona 3 · final",
   "boost.role.drying": "Stall de drying",
   "boost.role.maillard": "Maillard / cambio de color",
   "boost.role.into-fc": "Hacia first crack",
-  "boost.role.after-fc": "Después de first crack",
+  "boost.role.after-fc": "Freno de flick",
+  "zoneWhy.dryWet": "Verde húmedo ({m}%). Más RoR mientras sale el agua para que el drying no se estanque.",
+  "zoneWhy.dryDense": "Lote natural/anaerobic denso. Más RoR en el frente húmedo.",
+  "zoneWhy.mailBody": "Meta de cuerpo / dulzor profundo. Sostén el RoR en el cambio de color para que los azúcares se doren sin estancarse.",
+  "zoneWhy.mailHoney": "Proceso honey. Bajón en el cambio de color — un +boost chico mantiene el Maillard.",
+  "zoneWhy.brake": "Llegada caliente al crack (RoR de diseño {ror} °C/min). Boost negativo que termina justo antes del first crack para que no haga flick — Kaffelogic: termina los boosts negativos antes del crack.",
+  "zoneWhy.rtdDryWet": "Verde húmedo ({m}%). RTD seca primero para que el escalón de CO₂ tenga un frente estable.",
+  "zoneWhy.rtdDryDense": "Lote natural/anaerobic denso. Más RoR en el frente húmedo antes del escalón RTD.",
+  "zoneWhy.rtdMail": "Escalón de RoR RTD después de drying/Maillard (KL RTD 1500–2000). Más °C/min aquí saca CO₂ para que la taza esté lista en 1–3 días, no 3–5.",
+  "zoneWhy.rtdIntoTight": "Energía RTD a través del crack, cortada en el first crack para que el drop del nivel conserve una banda de 4 °C.",
+  "zoneWhy.rtdInto": "RTD “T through crack”: energía hasta el first crack saca el último CO₂ y aplana el dip/flick. Los perfiles Rest hacen mucho menos esto.",
+  "boost.hint.drying": "Pérdida de agua endotérmica. Más RoR para que el frente no se estanque antes del amarillo.",
+  "boost.hint.maillard": "Bajón del cambio de color. Sostén el RoR para que los azúcares se doren sin hornearse.",
+  "boost.hint.into-fc": "Opcional. Rao: entra al crack ya desacelerando. Kaffe no lo agrega solo.",
+  "boost.hint.after-fc": "Boost negativo que termina antes del first crack (guía Kaffelogic) para que la llegada no haga flick. Solo si el tueste se desboca.",
+  "boost.add": "+ Añadir",
 
   "curve.addPoint": "Añadir punto",
   "curve.deletePoint": "Borrar punto",
@@ -253,6 +285,14 @@ export const es: Record<MessageKey, string> = {
   "library.brewRecipe": "Receta Brew",
   "library.renamePrompt": "Renombrar perfil",
   "library.exportJson": "Exportar JSON de la biblioteca",
+  "library.more": "Más",
+  "library.less": "Menos",
+  "library.deleteConfirm": "¿Borrar {name} de este dispositivo?",
+  "library.roasted": "Tostado",
+  "library.daysAgo": "día {days}",
+  "library.notesAdd": "+ Notas",
+  "library.notesEdit": "Editar notas",
+  "library.notesPh": "Taza, crack, qué cambiar en el próximo tueste…",
 
   "overlay.title": "Ver el tueste contra su diseño",
   "overlay.blurb":
@@ -271,6 +311,22 @@ export const es: Record<MessageKey, string> = {
   "overlay.solidDashed": "(sólida real / punteada diseño)",
   "overlay.design": "(diseño)",
   "overlay.dottedFan": " · fan punteado",
+  "overlay.phasesOf": "Fases · {name}",
+  "overlay.dryEnd": "Fin de drying",
+  "overlay.roastEnd": "Fin del tueste",
+  "overlay.crackAt": "First crack registrado a {c} °C en la sonda.",
+  "overlay.useCrack": "Usar en Generar",
+  "overlay.deviation": "Desvío ±3 °C",
+  "overlay.maxAbove": "Máx. arriba",
+  "overlay.maxBelow": "Máx. abajo",
+  "overlay.converged": "Dentro de banda desde",
+  "overlay.never": "nunca dentro de banda",
+  "overlay.atEnd": "Al final",
+  "overlay.item": "Ítem",
+  "overlay.baseline": "base",
+  "overlay.fanAxis": "Fan",
+  "overlay.rorLog": " · RoR fino (punteado = diseño) · banda ±3 °C",
+  "overlay.rorDesign": " · RoR punteado",
   "overlay.editDesign": "Editar diseño",
   "overlay.editHelp": "Añade o borra puntos en un .kpro y luego Suavizar para que las esquinas no queden afiladas.",
   "overlay.savedNotice": "Guardado en la biblioteca. Ábrelo en Generar para editar el grano o usarlo como base.",
@@ -346,6 +402,9 @@ export const es: Record<MessageKey, string> = {
   "grinders.searchPh": "C3S, Encore, 1Zpresso…",
   "grinders.empty": "Ningún molinillo coincide.",
   "grinders.n": "{n} molinillos",
+  "grinders.nEspresso": "{n} molinillos aptos para espresso. Los de solo filtro se ocultan en espresso.",
+  "grinders.emptyEspresso": "Ningún molinillo apto para espresso coincide. Los de solo filtro se ocultan en espresso.",
+  "grinders.notEspresso": "{name} es un molinillo de filtro, así que la tarjeta de espresso deja la palabra de molienda. Elige uno apto para espresso para ver clicks.",
   "grinders.help":
     "Clicks de partida de las cartas de micras de Honest Coffee Guide. Busca marca o modelo. Cero es burrs tocando. En pour-over, Switch, Clever, espresso y moka, más dosis mueve un click más grueso para que el drenaje no se atasque. Afina — no es un candado.",
   "brew.warnAltitude":
@@ -376,7 +435,21 @@ export const es: Record<MessageKey, string> = {
   "extract.yield": "Taza",
   "extract.help": "Escribe la lectura del R2 / VST. Deja la taza vacía para estimar la bebida con dosis y agua.",
   "extract.note":
-    "PE = TDS × taza ÷ dosis. Brix usa el factor 0,85 del café; pasa a TDS si el medidor ya convirtió. La caja dorada es estilo SCA, no un candado.",
+    "PE = TDS × taza ÷ dosis. Mide a temperatura ambiente, pon el medidor en cero con tu agua de brew y filtra las muestras de espresso. Brix × 0,85 es una aproximación; pasa a TDS si el medidor ya convierte.",
+  "warn.filterRoastEspresso": "Este tueste se diseñó para filtro. Una curva Light de filtro como espresso suele saber ácida — déjala reposar más de dos semanas, ve a 1:2,5 o más, o tuesta un perfil Espresso / Omni para shots.",
+  "warn.hardWater": "El agua dura y alcalina amortigua los ácidos en los que se basa esta taza. Espérala más plana; una receta de agua (SCA ~40 mg/L de alcalinidad) devuelve la fruta.",
+  "why.water.recipe": "El agua es una receta (tipo SCA, ~40 mg/L de alcalinidad). La acidez se lee como se busca.",
+  "why.water.soft": "Agua blanda, poca alcalinidad. La acidez puede sentirse más filosa — bien para Light; agrega un poco de buffer si sabe delgada o agria.",
+  "brew.water": "Agua",
+  "water.unknown": "No sé",
+  "water.recipe": "Receta / tipo SCA",
+  "water.soft": "Blanda / poca alcalinidad",
+  "water.hard": "Dura de la llave",
+  "extract.immersionNote": "Inmersión: la extracción usa toda el agua — el líquido que queda en el café molido es tan fuerte como la taza (Liang 2021).",
+  "extract.target": "Objetivo",
+  "extract.target.sca": "SCA",
+  "extract.target.ecbc": "Europa (ECBC)",
+  "extract.targetHelp": "SCA Golden Cup 1,15–1,35% TDS · ECBC europeo 1,20–1,45%. Ambos 18–22% PE; algunos scripts (Rao, turbo) buscan más a propósito.",
   "extract.chart": "Carta",
   "extract.chartTitle": "Control de brew",
   "extract.chartHelp":
@@ -630,20 +703,241 @@ export const es: Record<MessageKey, string> = {
     "Línea Typica limpia a té (Indonesia / Camerún / Centroamérica). No la sobre-desarrolles.",
   "varietyCup.mundo-novo": "Chocolate, nuez, poco brillo",
   "varietyNote.mundo-novo": "Typica × Bourbon de Brasil. Chocolate y nuez — dale tiempo a Maillard; amiga del espresso.",
+  "varietyCup.chiroso": "Jazmín, durazno, tropical, bergamota",
+  "varietyNote.chiroso":
+    "Landrace de Antioquia / Caicedo (aire etíope). Florales volátiles y acidez tropical — tuesta como Gesha o Borbón Rosado: energía al frente, development corto, Light.",
+  "varietyCup.ombligon": "Papaya, floral, candy tropical",
+  "varietyNote.ombligon":
+    "Grano ombligo de Colombia. A menudo anaerobic / honey. Misma familia Gesha: atrapa la semilla densa y salte para que sobrevivan papaya y florales.",
+  "varietyCup.papayo": "Papaya, jazmín, candy",
+  "varietyNote.papayo": "Especialidad de Colombia (cereza forma papaya). Tropical-floral; Maillard compacto, development corto.",
+  "varietyCup.sudan-rume": "Jazmín, cítrico, té, florales silvestres",
+  "varietyNote.sudan-rume":
+    "Landrace etíope-sudanés, padre de muchos F1. Florales tipo Gesha y brillo fosfórico — solo Light.",
+  "varietyCup.laurina": "Té, jazmín, limón, poco cuerpo",
+  "varietyNote.laurina":
+    "Bourbon Pointu. Semilla chica, menos cafeína, taza delicada. No la cargues como Gesha — se quema más fácil.",
+  "varietyCup.red-bourbon": "Fruta roja, azúcar morena, cacao",
+  "varietyNote.red-bourbon": "Borbón clásico de cereza roja (Ruanda, El Salvador, Colombia). El mismo mid dulce que Bourbon.",
+  "varietyCup.orange-bourbon": "Naranja, miel, caramelo",
+  "varietyNote.orange-bourbon":
+    "Mutación de color del Bourbon. Cítrico-miel como Borbón Amarillo — más mid, no hornees el final.",
+  "varietyCup.pacas": "Caramelo, manzana, dulzor limpio",
+  "varietyNote.pacas":
+    "Enano Bourbon de El Salvador. Semilla más chica que Bourbon — un poco más rápido en secado, mantenlo dulce.",
+  "varietyCup.villa-sarchi": "Cítrico, miel, limpio",
+  "varietyNote.villa-sarchi":
+    "Enano Bourbon de Costa Rica. Semilla compacta tipo Caturra; brillante, limpio, rápido al frente.",
+  "varietyCup.tekisic": "Azúcar morena, cítrico, seda",
+  "varietyNote.tekisic":
+    "Bourbon mejorado de El Salvador. Dulce y limpio; un poco más de mid que Typica, menos que un Bourbon de Brasil.",
+  "varietyCup.sl14": "Toronja, grosella, té",
+  "varietyNote.sl14":
+    "Selección Typica de Scott Labs. Denso como SL28, un poco más limpio — frente caliente, development contenido.",
+  "varietyCup.batian": "Cítrico, azúcar morena, Kenia más lleno",
+  "varietyNote.batian":
+    "Resistente a la roya de Kenia (SL28/SL34 + Rume + Catimor). Más cuerpo que SL28; guarda acidez, un poco más de mid.",
+  "varietyCup.k7": "Cítrico, té, berry suave",
+  "varietyNote.k7": "Línea Typica de Kenia. Denso, más limpio que SL28 — energía al frente, no estires el development.",
+  "varietyCup.catimor": "Chocolate, especia, más cuerpo",
+  "varietyNote.catimor": "Caturra × Híbrido de Timor. Resistente a la roya, más cuerpo que brillo — misma familia que Castillo.",
+  "varietyCup.sarchimor": "Cacao, caramelo, poco brillo",
+  "varietyNote.sarchimor":
+    "Villa Sarchi × Timor. Productivo y resistente; dale tiempo a Maillard para que sea chocolate, no pasto.",
+  "varietyCup.marsellesa": "Limpio, cítrico-dulce, cuerpo suave",
+  "varietyNote.marsellesa": "Selección Sarchimor (ECOM / Centroamérica). Más limpio que un Catimor de finca; deltas chicos tipo Caturra.",
+  "varietyCup.parainema": "Caramelo, nuez, cuerpo moderado",
+  "varietyNote.parainema":
+    "Sarchimor de Honduras. Caballo de trabajo — más mid y development que Caturra, menos brillo.",
+  "varietyCup.centroamericano": "Floral, cítrico, tropical, té",
+  "varietyNote.centroamericano":
+    "F1 (Sarchimor × Rume). Puede copar cerca de Gesha en altura. Energía al frente, development corto.",
+  "varietyCup.starmaya": "Floral, cítrico, dulzor limpio",
+  "varietyNote.starmaya": "F1 (Cirad). Floral-limpio bien cultivado; development más corto que un Castillo.",
+  "varietyCup.yellow-catuai": "Miel, cítrico, nuez",
+  "varietyNote.yellow-catuai":
+    "Catuai de fruto amarillo. Misma base Catuai con un poco más de mid para miel-cítrico.",
+  "varietyCup.acaia": "Chocolate, nuez, poco brillo",
+  "varietyNote.acaia": "Selección Mundo Novo de Brasil. Chocolate-nuez — dale tiempo a Maillard; amiga del espresso.",
+  "varietyCup.icatu": "Cacao, especia, mucho cuerpo",
+  "varietyNote.icatu":
+    "Brasil (retrocruce Arábica × Robusta). Más cuerpo que Catuai; misma familia de mid que Mundo Novo.",
+  "varietyCup.arara": "Fruta amarilla, caramelo, cuerpo",
+  "varietyNote.arara": "Obatã × Icatu de Brasil. Cereza amarilla, dulce y espeso — un poco más de mid que Catuai.",
+  "varietyCup.catucai": "Caramelo, nuez, cuerpo parejo",
+  "varietyNote.catucai": "Icatu × Catuai. Caballo de trabajo de Brasil; llena la taza con mid y un poco de development.",
+  "varietyCup.maracaturra": "Floral, cítrico, cuerpo ancho",
+  "varietyNote.maracaturra":
+    "Maragogipe × Caturra. Semilla grande — más preheat y secado para que el núcleo alcance, luego un final normal.",
+  "varietyCup.mokka": "Especia, fruta seca, cacao",
+  "varietyNote.mokka":
+    "Tipo Yemen / Hawaii, semilla chica. Denso pero diminuto — carga suficiente para atraparlo, no lo cocines como Pacamara.",
+  "varietyCup.jarc-74110": "Jazmín, durazno, bergamota",
+  "varietyNote.jarc-74110":
+    "Selección JARC etíope (Gera). Trátalo como landrace: denso para energía, development corto para florales y berry.",
+  "varietyCup.jarc-74112": "Floral, limón, té",
+  "varietyNote.jarc-74112": "Selección JARC etíope. El mismo calor que 74110 — Light, Maillard compacto, salte después del crack.",
+  "varietyCup.jarc-74158": "Bergamota, floral, cítrico jugoso",
+  "varietyNote.jarc-74158":
+    "Selección JARC etíope, común en bolsas de Yirgacheffe. Florales volátiles — tuesta con la familia landrace / Gesha.",
+  "varietyCup.jackson": "Azúcar morena, fruta roja, té",
+  "varietyNote.jackson": "Línea Bourbon (Ruanda / Burundi). Dulce y limpio; un poco más de mid que Typica.",
+  "varietyCup.kent": "Té, especia, dulzor limpio",
+  "varietyNote.kent": "Selección Typica de India / Kenia. Taza limpia; development modesto.",
+  "varietyCup.blue-mountain": "Limpio, dulce, nuez, poca acidez",
+  "varietyNote.blue-mountain":
+    "Typica de Jamaica, a menudo semilla grande. Más preheat y secado para el núcleo; no oscurezcas — la taza es suave y limpia.",
+  "varietyCup.jarc-74165": "Jazmín, fruta de hueso, té",
+  "varietyNote.jarc-74165":
+    "Selección JARC etíope (Jimma). El mismo calor landrace que 74110 — Light, Maillard compacto, development corto.",
+  "varietyCup.jarc-74140": "Limón, floral, té negro",
+  "varietyNote.jarc-74140":
+    "Selección JARC etíope, común en lavados de Guji / Sidama. Calor landrace: energía al frente, salte después del crack.",
+  "varietyCup.jarc-75227": "Berry, floral, dulzor redondo",
+  "varietyNote.jarc-75227":
+    "Selección JARC etíope, un poco más redonda que 74110. Calor landrace — development corto para guardar el berry.",
+  "varietyCup.kurume": "Arándano, jazmín, limón",
+  "varietyNote.kurume":
+    "Landrace local etíope (Sidama / Yirgacheffe), semilla chica. Florales landrace — un poco menos de carga que 74110 para que no se queme.",
+  "varietyCup.wolisho": "Fruta de hueso, floral, miel",
+  "varietyNote.wolisho":
+    "Landrace local etíope, semilla más grande que Kurume. Calor landrace: energía al frente, development corto.",
+  "varietyCup.dega": "Floral, miel, cítrico",
+  "varietyNote.dega":
+    "Landrace local etíope (Sidama / Guji). Floral-dulce; calor landrace con un poco más de mid que Kurume.",
+  "varietyCup.abyssinia": "Floral, especia, fruta tropical",
+  "varietyNote.abyssinia":
+    "Línea etíope sembrada en Java / Sumatra. Florales tipo landrace, a menudo wet-hulled — frente firme y development corto.",
+  "varietyCup.mejorado": "Jazmín, limón, fruta de hueso",
+  "varietyNote.mejorado":
+    "“Typica mejorado” de Ecuador — genéticamente un landrace etíope, no Typica. Familia Gesha: energía al frente, development corto.",
+  "varietyCup.bourbon-aji": "Fruta roja, floral, aroma a ají dulce",
+  "varietyNote.bourbon-aji":
+    "Especialidad de Colombia (Huila), tipo etíope a pesar del nombre. Familia Sidra: Maillard compacto, development corto para guardar la fruta.",
+  "varietyCup.maragesha": "Jazmín, fruta tropical, cuerpo ancho",
+  "varietyNote.maragesha":
+    "Maragogipe × Gesha. Semilla grande con florales Gesha — más preheat y secado para el núcleo, luego development corto tipo Gesha.",
+  "varietyCup.casiopea": "Floral, cítrico, fruta de hueso",
+  "varietyNote.casiopea":
+    "F1 (Caturra × landrace etíope). Floral como su padre etíope — energía al frente, development corto.",
+  "varietyCup.striped-bourbon": "Fruta roja, tamarindo, azúcar de caña",
+  "varietyNote.striped-bourbon":
+    "“Borbón Rayado” de Colombia (cereza rayada). Más frutal que Borbón Rojo — dulzor Bourbon con un final un poco más corto.",
+  "varietyCup.semperflorens": "Azúcar morena, fruta de hueso, redondo",
+  "varietyNote.semperflorens":
+    "Mutación de Bourbon que florece todo el año (El Salvador). Dulzor familia Bourbon; un poco más de mid.",
+  "varietyCup.mibirizi": "Fruta roja, azúcar de caña, té",
+  "varietyNote.mibirizi":
+    "Selección antigua de línea Bourbon (Ruanda / Burundi). El mismo mid dulce que Bourbon.",
+  "varietyCup.venecia": "Cítrico, miel, sedoso",
+  "varietyNote.venecia":
+    "Selección tipo Bourbon de Costa Rica (ICAFE). Dulzor Bourbon con final más brillante — deltas chicos, un poco más de mid.",
+  "varietyCup.yellow-caturra": "Limón, miel, limpio",
+  "varietyNote.yellow-caturra":
+    "Caturra de fruto amarillo. La misma semilla compacta que Caturra con un poco más de mid para la miel.",
+  "varietyCup.villalobos": "Cítrico, limpio, cuerpo ligero",
+  "varietyNote.villalobos":
+    "Mutación enana de Typica de Costa Rica. Semilla compacta — ritmo tipo Caturra, brillante y limpio.",
+  "varietyCup.san-ramon": "Suave, dulce, limpio",
+  "varietyNote.san-ramon":
+    "Typica enano (Costa Rica / Hawái). Semilla chica — un poco más rápido en secado; taza Typica limpia.",
+  "varietyCup.pache": "Cítrico suave, cacao, limpio",
+  "varietyNote.pache":
+    "Typica enano de Guatemala (Pache Común / Colis). Calor Typica — development modesto.",
+  "varietyCup.mundo-maya": "Limpio, cítrico-dulce, redondo",
+  "varietyNote.mundo-maya":
+    "Híbrido F1 (Ecom / Cirad). Limpio y parejo — deltas chicos tipo Caturra.",
+  "varietyCup.red-catuai": "Dulce a nuez, manzana roja, cuerpo parejo",
+  "varietyNote.red-catuai":
+    "El Catuai común de fruto rojo. La misma base balanceada que Catuai.",
+  "varietyCup.topazio": "Fruta amarilla, caramelo, nuez",
+  "varietyNote.topazio":
+    "Mundo Novo × Catuai Amarillo de Brasil. Base Catuai con un poco más de mid para el dulzor de fruta amarilla.",
+  "varietyCup.paraiso": "Fruta amarilla, miel, redondo",
+  "varietyNote.paraiso":
+    "Catuai Amarillo × Timor de Brasil (EPAMIG). Más dulce que un Catimor de finca; un poco más de mid que Catuai.",
+  "varietyCup.garnica": "Nuez, caramelo, cítrico suave",
+  "varietyNote.garnica":
+    "Mundo Novo × Caturra Amarillo de México. Caballo de trabajo tipo Catuai — base balanceada, un poco más de mid.",
+  "varietyCup.obata": "Cacao, caramelo, cuerpo lleno",
+  "varietyNote.obata":
+    "Sarchimor de Brasil (IAC). Resistente a la roya — dale tiempo a Maillard para que sea chocolate, no pasto.",
+  "varietyCup.tupi": "Chocolate, nuez, poco brillo",
+  "varietyNote.tupi":
+    "Sarchimor de Brasil (Villa Sarchi × Timor). Familia de cuerpo: mid más largo y un poco más de development.",
+  "varietyCup.iapar-59": "Caramelo, cacao, cuerpo parejo",
+  "varietyNote.iapar-59":
+    "Sarchimor de Brasil (Paraná). El mismo calor que Obatã — familia de cuerpo.",
+  "varietyCup.catigua": "Chocolate, caramelo, cuerpo dulce",
+  "varietyNote.catigua":
+    "Catuai × Timor de Brasil (EPAMIG). Resistente a la roya; familia de cuerpo — dale tiempo a Maillard.",
+  "varietyCup.anacafe-14": "Fruta roja, caramelo, cuerpo lleno",
+  "varietyNote.anacafe-14":
+    "Catimor × Pacamara de Guatemala. Más grande que Catuai con mid de familia de cuerpo — un poco más de preheat y secado, final normal.",
+  "varietyCup.lempira": "Cacao, especia, mucho cuerpo",
+  "varietyNote.lempira":
+    "Catimor de Honduras (IHCAFE). Misma familia que Castillo — mid más largo, más development.",
+  "varietyCup.ihcafe-90": "Chocolate, nuez, más cuerpo",
+  "varietyNote.ihcafe-90":
+    "Selección Catimor de Honduras. Familia de cuerpo: dale tiempo a Maillard, un poco más de development.",
+  "varietyCup.costa-rica-95": "Cacao, cítrico, cuerpo lleno",
+  "varietyNote.costa-rica-95":
+    "Catimor de Costa Rica (ICAFE). Resistente a la roya, más cuerpo que brillo — calor tipo Castillo.",
+  "varietyCup.catisic": "Azúcar morena, cacao, cuerpo",
+  "varietyNote.catisic":
+    "Selección Catimor de El Salvador. Más dulce que un Catimor común; familia de cuerpo con mid tipo Bourbon.",
+  "varietyCup.oro-azteca": "Chocolate, nuez, más cuerpo",
+  "varietyNote.oro-azteca":
+    "Catimor de México (INIFAP). Calor tipo Castillo — mid más largo y un poco más de development.",
+  "varietyCup.cenicafe-1": "Caramelo, cítrico, cuerpo redondo",
+  "varietyNote.cenicafe-1":
+    "Sucesora de Castillo de la FNC. Misma familia de calor — mid más largo y un poco más de development.",
+  "varietyCup.tim-tim": "Cacao terroso, especia, mucho cuerpo",
+  "varietyNote.tim-tim":
+    "Línea Híbrido de Timor común en Sumatra / Aceh. Familia de cuerpo — dale tiempo a Maillard; suele ser wet-hulled.",
+  "varietyCup.ateng": "Cacao, cedro, mucho cuerpo",
+  "varietyNote.ateng":
+    "Catimor de Sumatra (Aceh / Sumatra Norte). Calor tipo Castillo; los wet-hulled piden un frente parejo.",
+  "varietyCup.gayo-1": "Chocolate, especia, cuerpo redondo",
+  "varietyNote.gayo-1":
+    "Selección Gayo de Aceh (línea Timor). Familia de cuerpo — mid más largo, un poco más de development.",
+  "varietyCup.sigarar-utang": "Azúcar morena, especia, fruta, cuerpo",
+  "varietyNote.sigarar-utang":
+    "Línea Timor de Sumatra Norte (Lintong). Más dulce que Ateng; familia de cuerpo con final un poco más corto.",
+  "varietyCup.s795": "Chocolate, especia, acidez suave",
+  "varietyNote.s795":
+    "Kent × S288 de India (Balehonnur), también en Indonesia. Tolerante a la roya; familia de cuerpo — dale tiempo a Maillard.",
+  "varietyCup.chandragiri": "Cacao, nuez, cuerpo lleno",
+  "varietyNote.chandragiri":
+    "Sarchimor de India de semilla grande. Más preheat y secado para el núcleo, luego mid de familia de cuerpo.",
+  "varietyCup.udaini": "Fruta seca, especia, cacao",
+  "varietyNote.udaini":
+    "Landrace de Yemen. Semilla chica y densa — carga suficiente para atraparla, no la cocines como Pacamara.",
+  "varietyCup.tuffahi": "Manzana, fruta seca, especia",
+  "varietyNote.tuffahi":
+    "Landrace de Yemen por su cereza tipo manzana. Calor Mokka: carga firme, development modesto para guardar la fruta.",
+  "varietyCup.dawairi": "Pasa, cacao, especia",
+  "varietyNote.dawairi":
+    "Landrace de Yemen (hoja redonda). Familia Mokka — semilla chica y densa, no la sobre-cocines.",
+  "varietyCup.jaadi": "Cereza seca, vino, especia",
+  "varietyNote.jaadi":
+    "Landrace de Yemen (Haraz / Bani Matar). Familia Mokka; guarda algo de fruta vinosa.",
 
   "methodBlurb.v60":
-    "Hoffmann, 4:6, Peng, Rao spin, Hedrick double bloom, Japanese iced. Se sugiere según tueste y sabor.",
+    "Hoffmann, 4:6, Peng, Winton, Rao spin, Hedrick double bloom, Hoffmann 1 taza, Japanese iced. Se sugiere según tueste y sabor.",
   "methodBlurb.kalita":
     "Vertido a pulsos de fondo plano. Cama más perdonadora que un V60; común en cafés y rutinas viejas de WBrC.",
   "methodBlurb.origami": "Cono facetado. Medina WBrC 2023: cinco pulsos iguales de 50 g a 91 °C, 1:16.",
   "methodBlurb.chemex":
-    "Papel grueso bonded. Adaptación Hoffmann del V60 a 30 g : 500 g, ~4:10. Más limpia y lenta que un V60.",
+    "Papel grueso bonded. Adaptación Hoffmann del V60 (30 g : 500 g) o Stumptown 42 g : 700 g. Más limpia y lenta que un V60.",
+  "methodBlurb.siphon": "Cafetera de vacío: el agua sube, se infusiona con el café y luego baja por el filtro. Sprudge 1:16 a ~93 °C o Blue Bottle 24 g / 300 g a 90 °C.",
+  "methodBlurb.batch": "Goteo automático (tipo Moccamaster). Golden Cup SCA 55 g/L, 92–96 °C, 4–8 min de contacto. Ajustes de café de Rao y Wendelboe.",
   "methodBlurb.switch":
-    "Válvula cerrada = immersion, abierta = V60. Patrones de campeonato y de tienda; sugerimos uno según tueste y sabor.",
+    "Válvula cerrada = immersion, abierta = V60. Patrones de campeonato (Jaafar WBrC 2026, Bull, Wibawa) y de tienda; sugerimos uno según tueste y sabor.",
   "methodBlurb.clever":
     "Immersion en el cono, drena sobre la taza. La misma idea que el Switch, sin válvula que tocar.",
   "methodBlurb.aeropress":
-    "Scripts WAC: invertido caliente (fruta), 84 °C + bypass 50 °C (dulce), invertido 80 °C (balance). Se sugiere según tueste y sabor.",
+    "Scripts WAC: invertido caliente (fruta), 84 °C + bypass 50 °C (dulce), invertido 80 °C (balance), Little 2022 removido + bypass caliente. Se sugiere según tueste y sabor.",
   "methodBlurb.frenchpress":
     "Hoffmann Ultimate: 30 g : 500 g, rompe la costra a 4:00, asienta, hunde solo hasta la superficie.",
   "methodBlurb.orea": "Plana, drena rápido. Wölfl WBrC 2024: 17 g / 270 g, 93 °C, cuatro vertidos, ~2:20.",

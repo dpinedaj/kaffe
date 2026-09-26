@@ -1,4 +1,5 @@
 import {
+  Area,
   CartesianGrid,
   ComposedChart,
   Line,
@@ -10,9 +11,11 @@ import {
   YAxis,
 } from "recharts";
 import { clockTick, FAN_RPM_MAX, FAN_RPM_MIN, FAN_TICKS, ROR_TICKS, TEMP_TICKS, timeTicks } from "../lib/chart";
-import { expandCurve, sampleAtTime } from "../lib/curve";
+import { expandCurve, rorSeries, sampleAtTime } from "../lib/curve";
 import { KLOG_COL } from "../lib/klog";
-import { type OverlayTrack, trackZones } from "../lib/overlay";
+import { DEVIATION_BAND, type OverlayTrack, trackZones } from "../lib/overlay";
+
+export type OverlayRightAxis = "ror" | "fan";
 
 export function PreviewChart({
   roast,
@@ -125,11 +128,13 @@ export function PreviewChart({
   );
 }
 
-export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
+export function OverlayChart({ tracks, right = "ror" }: { tracks: OverlayTrack[]; right?: OverlayRightAxis }) {
   const step = 2;
   let maxT = 60;
-  const series: Record<string, number | null>[] = [];
+  const series: Record<string, number | number[] | null>[] = [];
   const fanPolys = tracks.map((track) => expandCurve(track.profile.fan));
+  const designRor = tracks.map((track) => (track.log ? [] : rorSeries(expandCurve(track.profile.roast))));
+  const showRor = right === "ror";
 
   for (const track of tracks) {
     if (track.log) {
@@ -145,7 +150,7 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
   }
 
   for (let t = 0; t <= maxT; t += step) {
-    const row: Record<string, number | null> = { t };
+    const row: Record<string, number | number[] | null> = { t };
     tracks.forEach((track, i) => {
       row[`${track.id}-fan-design`] = sampleAtTime(fanPolys[i], t);
       if (track.log) {
@@ -153,7 +158,12 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
         if (sample && sample[KLOG_COL.time] <= track.log.roastEnd) {
           row[`${track.id}-actual`] = sample[KLOG_COL.meanTemp];
           row[`${track.id}-design`] = sample[KLOG_COL.profile];
+          row[`${track.id}-band`] = [
+            sample[KLOG_COL.profile] - DEVIATION_BAND,
+            sample[KLOG_COL.profile] + DEVIATION_BAND,
+          ];
           row[`${track.id}-ror`] = sample[KLOG_COL.actualROR];
+          row[`${track.id}-ror-design`] = sample[KLOG_COL.profileROR];
           const rpm = sample[KLOG_COL.actualFanRPM];
           row[`${track.id}-fan-actual`] = rpm > 1000 ? rpm : null;
         }
@@ -161,6 +171,7 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
         const poly = expandCurve(track.profile.roast);
         const hit = poly.find((p) => Math.abs(p.t - t) < step);
         row[`${track.id}-design`] = hit?.v ?? null;
+        row[`${track.id}-ror-design`] = t > 20 ? sampleAtTime(designRor[i], t) : null;
       }
     });
     series.push(row);
@@ -204,8 +215,21 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
             stroke="#8e8e93"
             tick={{ fontSize: 10 }}
             width={44}
+            hide={showRor}
             tickFormatter={(v) => String(v)}
             label={{ value: "RPM", angle: 90, position: "insideRight", fill: "#8e8e93", fontSize: 11 }}
+          />
+          <YAxis
+            yAxisId="ror"
+            orientation="right"
+            domain={[-5, 40]}
+            ticks={ROR_TICKS}
+            interval={0}
+            stroke="#8e8e93"
+            tick={{ fontSize: 10 }}
+            width={32}
+            hide={!showRor}
+            label={{ value: "RoR", angle: 90, position: "insideRight", fill: "#8e8e93", fontSize: 11 }}
           />
           <Tooltip
             contentStyle={{ background: "#1c1c1e", border: "1px solid #38383a", borderRadius: 12 }}
@@ -213,6 +237,7 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
             formatter={(value, name) => {
               const n = typeof value === "number" ? value : Number(value);
               if (!Number.isFinite(n)) return ["—", String(name)];
+              if (Array.isArray(value)) return ["—", String(name)];
               if (String(name).toLowerCase().includes("fan")) return [`${Math.round(n)} RPM`, String(name)];
               return [n.toFixed(1), String(name)];
             }}
@@ -229,6 +254,23 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
               />
             ));
           })}
+          {tracks
+            .filter((t) => t.log)
+            .map((track) => (
+              <Area
+                key={`${track.id}-band`}
+                yAxisId="temp"
+                type="monotone"
+                dataKey={`${track.id}-band`}
+                name={`${track.name} ±${DEVIATION_BAND} °C`}
+                stroke="none"
+                fill={track.color}
+                fillOpacity={0.1}
+                connectNulls
+                isAnimationActive={false}
+                legendType="none"
+              />
+            ))}
           {tracks.map((track) => (
             <Line
               key={`${track.id}-d`}
@@ -243,7 +285,40 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
               connectNulls
             />
           ))}
-          {tracks.map((track) => (
+          {showRor &&
+            tracks.map((track) => (
+              <Line
+                key={`${track.id}-rd`}
+                yAxisId="ror"
+                type="monotone"
+                dataKey={`${track.id}-ror-design`}
+                name={`${track.name} RoR design`}
+                stroke={track.color}
+                strokeOpacity={0.7}
+                strokeDasharray="2 3"
+                strokeWidth={1.2}
+                dot={false}
+                connectNulls
+              />
+            ))}
+          {showRor &&
+            tracks
+              .filter((t) => t.log)
+              .map((track) => (
+                <Line
+                  key={`${track.id}-ra`}
+                  yAxisId="ror"
+                  type="monotone"
+                  dataKey={`${track.id}-ror`}
+                  name={`${track.name} RoR`}
+                  stroke={track.color}
+                  strokeOpacity={0.85}
+                  strokeWidth={1.3}
+                  dot={false}
+                  connectNulls
+                />
+              ))}
+          {!showRor && tracks.map((track) => (
             <Line
               key={`${track.id}-fd`}
               yAxisId="fan"
@@ -272,7 +347,7 @@ export function OverlayChart({ tracks }: { tracks: OverlayTrack[] }) {
                 connectNulls
               />
             ))}
-          {tracks
+          {!showRor && tracks
             .filter((t) => t.log)
             .map((track) => (
               <Line
