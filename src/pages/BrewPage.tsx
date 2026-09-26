@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BrewIcon } from "../components/BrewIcon";
 import BrewRecipeSheet from "../components/BrewRecipeSheet";
 import ExtractCard from "../components/ExtractCard";
+import { BrewTimer } from "../components/BrewTimer";
+import { TasteCard } from "../components/TasteCard";
 import { Card, DraftNumber, Field, Pill, Row, Select } from "../components/ui";
 import {
   BREW_METHODS,
@@ -13,6 +15,8 @@ import {
   loadBrewBag,
   loadKitchenAltitudeM,
   loadKitchenWater,
+  doseForCup,
+  drinkG,
   recommendBrew,
   saveKitchenWater,
   WATERS,
@@ -109,10 +113,13 @@ export default function BrewPage({
   const [method, setMethod] = useState<BrewMethod>(() => defaultMethod(snap?.brew ?? "filter"));
   const [days, setDays] = useState(() => daysSinceRoast(snap?.roastedOn) ?? defaultDays(snap?.drinkPlan ?? "rest"));
   const [looseStyle, setLooseStyle] = useState<RoastStyleId>(snap?.roastStyle ?? "light");
-  const [dose, setDose] = useState<number | undefined>();
+  const [doseTyped, setDoseTyped] = useState<number | undefined>();
+  const [cupTarget, setCupTarget] = useState<number | undefined>();
   const [ratio, setRatio] = useState<number | undefined>();
   const [technique, setTechnique] = useState<string | undefined>();
   const [roastTab, setRoastTab] = useState<"profile" | "bag">("profile");
+  const [timerOpen, setTimerOpen] = useState(false);
+  const tasteRef = useRef<HTMLElement>(null);
   const [bag, setBag] = useState<BrewBag>(() => loadBrewBag());
 
   const attachKey = attachKeyOf(attach);
@@ -127,9 +134,29 @@ export default function BrewPage({
     setMineId(undefined);
   }, [attachKey, attach, studioSnap, library]);
 
+  function setDose(next: number | undefined) {
+    setDoseTyped(next);
+    setCupTarget(undefined);
+  }
+
   const usingBag = roastTab === "bag";
   const style = usingBag ? bag.roastStyle : (snap?.roastStyle ?? looseStyle);
   const bagFields = bagBrewFields(bag);
+  const cardRatio = useMemo(
+    () =>
+      recommendBrew({
+        method,
+        roastStyle: usingBag ? bag.roastStyle : (snap?.roastStyle ?? looseStyle),
+        drinkPlan: usingBag ? "rest" : (snap?.drinkPlan ?? "rest"),
+        daysSinceRoast: days,
+        kitchenAltitudeM: kitchenM,
+        process: usingBag ? bag.process : snap?.process,
+        flavors: usingBag ? bagFields.flavors : snap?.flavors,
+        technique,
+      }).ratioN,
+    [method, usingBag, bag, snap, looseStyle, days, kitchenM, technique],
+  );
+  const dose = cupTarget != null ? doseForCup(method, cupTarget, ratio ?? cardRatio) : doseTyped;
   const brewInput = {
     method,
     roastStyle: style,
@@ -149,7 +176,7 @@ export default function BrewPage({
   } as const;
   const recipe = useMemo(
     () => recommendBrew({ ...brewInput, technique }),
-    [method, style, snap, days, kitchenM, dose, ratio, technique, usingBag, bag, locale, water],
+    [method, style, snap, days, kitchenM, dose, ratio, technique, usingBag, bag, locale, water, cupTarget],
   );
   const restShown = restLabelFor(
     locale,
@@ -159,6 +186,8 @@ export default function BrewPage({
     method,
   );
   const mine = mineItems.find((r) => r.id === mineId && r.method === method);
+  const lotKey = usingBag ? `bag:${bag.originId ?? "-"}:${bag.varietyId ?? "-"}:${bag.roastStyle}` : attachKeyOf(attach);
+  const lotLabel = usingBag ? bagFields.varietyName ?? t("brew.thisBag") : snap?.label;
   const shown = mine ? viewUserRecipe(mine, kitchenM, locale) : recipe;
   const otherWarnings = shown.warnings.filter(
     (w) =>
@@ -824,7 +853,7 @@ export default function BrewPage({
               className="w-20 bg-transparent text-right text-[15px] text-white outline-none disabled:text-muted"
             />
           </Row>
-          <Row label={t("brew.ratio")} last>
+          <Row label={t("brew.ratio")}>
             <DraftNumber
               key={`${method}-ratio`}
               value={mine ? shown.ratioN : (ratio ?? recipe.ratioN)}
@@ -835,9 +864,27 @@ export default function BrewPage({
               className="w-20 bg-transparent text-right text-[15px] text-white outline-none disabled:text-muted"
             />
           </Row>
+          <Row label={t("brew.inCup")} last>
+            <span className="flex items-baseline gap-1">
+              <DraftNumber
+                key={`${method}-cup`}
+                value={cupTarget ?? Math.round(drinkG(method, shown.coffeeG, shown.ratioN))}
+                disabled={Boolean(mine)}
+                step={5}
+                onChange={(n) => setCupTarget(Math.max(10, Math.min(1500, n)))}
+                onEmpty={() => setCupTarget(undefined)}
+                className="w-20 bg-transparent text-right text-[15px] text-white outline-none disabled:text-muted"
+              />
+              <span className="text-[12px] text-muted">g</span>
+            </span>
+          </Row>
         </Card>
         <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
-          {mine ? t("brew.cupMine") : t("brew.cupHelp")}
+          {mine
+            ? t("brew.cupMine")
+            : cupTarget != null
+              ? t("brew.cupScaled", { cup: cupTarget, coffee: shown.coffeeG, ratio: shown.ratio })
+              : t("brew.cupHelp")}
         </p>
       </section>
 
@@ -881,11 +928,18 @@ export default function BrewPage({
       </section>
 
       <section>
-        <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.steps")}</h3>
-          {shown.origin && (
-            <span className="min-w-0 truncate text-right text-[12px] text-muted">{shown.origin}</span>
-          )}
+        <div className="mb-2 flex items-center justify-between gap-3 px-1">
+          <div className="flex min-w-0 items-baseline gap-3">
+            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.steps")}</h3>
+            {shown.origin && <span className="min-w-0 truncate text-[12px] text-muted">{shown.origin}</span>}
+          </div>
+          <button
+            type="button"
+            className="shrink-0 rounded-full bg-blue px-4 py-1.5 text-[13px] font-semibold text-white"
+            onClick={() => setTimerOpen(true)}
+          >
+            ▶ {t("timer.start")}
+          </button>
         </div>
         <Card className="divide-y divide-line">
           {shown.steps.map((step) => (
@@ -914,6 +968,32 @@ export default function BrewPage({
           cappedByBoil: shown.cappedByBoil,
         }}
       />
+
+      <TasteCard
+        ref={tasteRef}
+        lot={lotKey}
+        lotLabel={lotLabel}
+        method={method}
+        technique={shown.technique}
+        grind={shown.grind}
+        ratioN={shown.ratioN}
+      />
+
+      {timerOpen && (
+        <BrewTimer
+          title={`${methodInfo?.name ?? method}${
+            shown.technique ? ` · ${techniques.find((x) => x.id === shown.technique)?.name ?? ""}` : ""
+          }`}
+          subtitle={`${shown.coffeeG} g · ${shown.waterG + (shown.bypassG ?? 0)} g · ${shown.kettleC.toFixed(0)} °C · ${grindShown}`}
+          steps={shown.steps}
+          totalS={shown.timeS}
+          onClose={() => setTimerOpen(false)}
+          onDone={() => {
+            setTimerOpen(false);
+            window.setTimeout(() => tasteRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+          }}
+        />
+      )}
 
       {otherWarnings.length > 0 && (
         <Card className="space-y-2 p-4">

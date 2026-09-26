@@ -7,6 +7,7 @@ import type { BrewAttach } from "./lib/brew";
 import { defaultIntent, generateProfile, type RoastIntent } from "./lib/generate";
 import type { OverlayTrack } from "./lib/overlay";
 import { LocaleSwitch, useI18n } from "./i18n/LocaleContext";
+import { InstallButton } from "./components/InstallButton";
 import {
   intentFromSaved,
   loadLibrary,
@@ -48,7 +49,7 @@ export default function App() {
     <div className="flex min-h-dvh flex-col bg-ink">
       <header className="sticky top-0 z-20 flex w-full items-center border-b border-line bg-ink/90 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-card2 text-[15px] font-bold">K</span>
+          <img src="./icons/icon.svg" alt="" className="h-8 w-8 rounded-xl" />
           <div className="min-w-0">
             <div className="text-[17px] font-semibold leading-none">Kaffe</div>
             <div className="hidden truncate text-[11px] text-muted sm:block">{t("brand.tagline")}</div>
@@ -72,6 +73,7 @@ export default function App() {
           {import.meta.env.DEV && (
             <span className="hidden rounded-lg bg-card2 px-2 py-1 text-[11px] text-orange md:inline">Local AI</span>
           )}
+          <InstallButton />
           <LocaleSwitch />
         </div>
       </header>

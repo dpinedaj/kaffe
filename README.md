@@ -2,9 +2,16 @@
 
 Local-first studio for [Kaffelogic Nano 7](https://www.kaffelogic.com/) profiles. Generate `.kpro` files from bean parameters and flavor goals, then overlay `.kpro` / `.klog` files in the browser. Nothing is uploaded.
 
-Inspired by [KL Profile](https://apps.apple.com/us/app/kl-profile/id6799672617). Overlay comparison follows the [roast-overlay](https://ryoroasts.github.io/roast-overlay/) model (MIT).
-
 **Roast science** (equations, boosts, RTD/Rest, flavors, citations) lives in **[docs/ROAST-MODEL.md](docs/ROAST-MODEL.md)**. **Brew science** (SCA / UC Davis, altitude, WBrC / WAC / WBC, Hoffmann skeletons) lives in **[docs/BREW.md](docs/BREW.md)**. A short roast version is below.
+
+## Install
+
+Kaffe is an installable web app (PWA): it works offline and keeps everything on your device.
+
+- **Chrome / Edge / Android** — open the site and tap **Install** in the top bar (or “Install app” in the browser menu).
+- **iPhone / iPad** — Safari → Share → **Add to Home Screen**.
+
+Updates arrive on their own: when a new version is deployed, the top bar shows **Update ready**.
 
 ## Run locally
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.0 — 2026-09-26
+
+Brew from the phone at the counter: a step timer, two-tap tasting, cup-first sizing, and Kaffe installs as an offline app.
+
+### Brew at the counter
+- **Brew timer**: tap Start on any card for a full-screen clock over the whole recipe as step cards — tap to expand any step (or Expand all) to read ahead, done steps tick off, the current one opens and follows you, upcoming ones count down, and **Jump here** moves the clock if you fell behind. Chimes and vibrates on each step and keeps the screen awake
+- **Taste**: two taps after a cup — sour / balanced / bitter and weak / right / strong (Barista Hustle Coffee Compass) — plus stars and a note. Kaffe says what to change next; the last cups show per lot and in the Library card
+- **In the cup (g)**: type the cup you want and the dose follows the ratio, net of the ~2 g/g the grounds keep
+
+### App
+- Installable **PWA**: works offline (whole app precached), updates itself, **Install** button in the top bar (with iPhone instructions), and an **Update ready** pill when a new version lands
+- New bean app icon (header, home screen, maskable)
+- README no longer references other apps
+
 ## 1.2.0 — 2026-09-26
 
 About 100 cultivars in Generate and This bag, up from 20. Each new one roasts, brews, and suggests flavors like the family it belongs to.
