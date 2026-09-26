@@ -12,7 +12,10 @@ import {
   leanFlavorsForVariety,
   loadBrewBag,
   loadKitchenAltitudeM,
+  loadKitchenWater,
   recommendBrew,
+  saveKitchenWater,
+  WATERS,
   saveBrewBag,
   saveKitchenAltitudeM,
   snapshotFromIntent,
@@ -22,6 +25,7 @@ import {
   type BrewBag,
   type BrewMethod,
   type BrewRoastSnapshot,
+  type WaterId,
 } from "../lib/brew";
 import {
   blankRecipe,
@@ -56,7 +60,7 @@ import {
   ORIGINS,
   PROCESSES,
   STYLES,
-  VARIETIES,
+  varietiesForSelect,
   originById,
   type FlavorId,
   type RoastStyleId,
@@ -65,11 +69,12 @@ import { GrinderPicker } from "../components/GrinderPicker";
 import {
   grindNoteWithSetting,
   grinderById,
+  grinderFitsMethod,
   loadKitchenGrinder,
   resolveGrindSetting,
   saveKitchenGrinder,
 } from "../lib/grinders";
-import type { SavedProfile } from "../lib/storage";
+import { daysSinceRoast, type SavedProfile } from "../lib/storage";
 
 export default function BrewPage({
   attach,
@@ -100,8 +105,9 @@ export default function BrewPage({
 
   const [kitchenM, setKitchenM] = useState<number | undefined>(() => loadKitchenAltitudeM());
   const [grinderId, setGrinderId] = useState<string | undefined>(() => loadKitchenGrinder());
+  const [water, setWater] = useState<WaterId>(() => loadKitchenWater());
   const [method, setMethod] = useState<BrewMethod>(() => defaultMethod(snap?.brew ?? "filter"));
-  const [days, setDays] = useState(() => defaultDays(snap?.drinkPlan ?? "rest"));
+  const [days, setDays] = useState(() => daysSinceRoast(snap?.roastedOn) ?? defaultDays(snap?.drinkPlan ?? "rest"));
   const [looseStyle, setLooseStyle] = useState<RoastStyleId>(snap?.roastStyle ?? "light");
   const [dose, setDose] = useState<number | undefined>();
   const [ratio, setRatio] = useState<number | undefined>();
@@ -113,7 +119,7 @@ export default function BrewPage({
   useEffect(() => {
     const next = resolveSnap(attach, studioSnap, library);
     setMethod(defaultMethod(next?.brew ?? "filter"));
-    setDays(defaultDays(next?.drinkPlan ?? "rest"));
+    setDays(daysSinceRoast(next?.roastedOn) ?? defaultDays(next?.drinkPlan ?? "rest"));
     setLooseStyle(next?.roastStyle ?? "light");
     setDose(undefined);
     setRatio(undefined);
@@ -138,16 +144,19 @@ export default function BrewPage({
     coffeeG: dose,
     ratio,
     locale,
+    roastBrew: usingBag ? undefined : snap?.brew,
+    water,
   } as const;
   const recipe = useMemo(
     () => recommendBrew({ ...brewInput, technique }),
-    [method, style, snap, days, kitchenM, dose, ratio, technique, usingBag, bag, locale],
+    [method, style, snap, days, kitchenM, dose, ratio, technique, usingBag, bag, locale, water],
   );
   const restShown = restLabelFor(
     locale,
     usingBag ? "rest" : (snap?.drinkPlan ?? "rest"),
     days,
     style,
+    method,
   );
   const mine = mineItems.find((r) => r.id === mineId && r.method === method);
   const shown = mine ? viewUserRecipe(mine, kitchenM, locale) : recipe;
@@ -185,6 +194,7 @@ export default function BrewPage({
   const grindSetting = resolveGrindSetting(grinderId, method, shown.grind, {
     coffeeG: shown.coffeeG,
     cardDoseG: shown.cardDoseG,
+    nudgeT: shown.grindNudgeT,
   });
   const grindShown = grindNoteWithSetting(shown.grindNote, grindSetting);
   const kitchenGrinder = grinderById(grinderId);
@@ -479,7 +489,7 @@ export default function BrewPage({
               </Row>
               <Row label={t("studio.variety")}>
                 <Select value={bag.varietyId ?? "unknown"} onChange={setBagVariety}>
-                  {VARIETIES.map((v) => (
+                  {varietiesForSelect((v) => varietyLabel(v.id, t, v.name), locale).map((v) => (
                     <option key={v.id} value={v.id}>
                       {varietyLabel(v.id, t, v.name)}
                     </option>
@@ -758,13 +768,33 @@ export default function BrewPage({
               </button>
             </Row>
           )}
+          <Row label={t("brew.water")}>
+            <Select
+              value={water}
+              onChange={(v) => {
+                const next = v as WaterId;
+                setWater(next);
+                saveKitchenWater(next);
+              }}
+            >
+              {WATERS.map((w) => (
+                <option key={w} value={w}>
+                  {t(`water.${w}` as MessageKey)}
+                </option>
+              ))}
+            </Select>
+          </Row>
           <Row label={t("grinders.label")} last>
-            <GrinderPicker value={grinderId} onChange={patchGrinder} />
+            <GrinderPicker value={grinderId} onChange={patchGrinder} method={method} />
           </Row>
         </Card>
         <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{t("brew.kitchenHelp")}</p>
-        <p className="mt-1 px-1 text-[12px] leading-relaxed text-muted">{t("grinders.help")}</p>
         {kitchenGrinder?.note && <p className="mt-1 px-1 text-[12px] leading-relaxed text-muted">{kitchenGrinder.note}</p>}
+        {kitchenGrinder && !grinderFitsMethod(kitchenGrinder, method) && (
+          <p className="mt-1 px-1 text-[12px] leading-relaxed text-orange">
+            {t("grinders.notEspresso", { name: `${kitchenGrinder.brand} ${kitchenGrinder.name}` })}
+          </p>
+        )}
         {shown.boilC == null && method !== "espresso" && method !== "coldbrew" && (
           <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">{t("brew.warnAltitude")}</p>
         )}
@@ -875,6 +905,8 @@ export default function BrewPage({
           method,
           coffeeG: shown.coffeeG,
           waterG: shown.waterG,
+          bypassG: shown.bypassG,
+          technique: shown.technique,
           grind: shown.grind,
           timeS: shown.timeS,
           kettleC: shown.kettleC,
@@ -930,7 +962,7 @@ function resolveSnap(
   if (attach.kind === "kpro") return attach.snapshot;
   const item = library.find((p) => p.id === attach.id);
   if (!item) return null;
-  return snapshotFromIntent(item.intent, item.curveName);
+  return { ...snapshotFromIntent(item.intent, item.curveName), roastedOn: item.roastedOn };
 }
 
 function parseAttach(value: string, current: BrewAttach): BrewAttach {

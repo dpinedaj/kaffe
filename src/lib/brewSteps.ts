@@ -64,6 +64,15 @@ function switchSteps(ctx: BrewStepCtx, bloom: number, temp: string, t: string, s
       { at: "2:00", title: tx(ctx, "step.switch.bull.drain.title"), detail: tx(ctx, "step.switch.bull.drain.detail", { t, stall }) },
     ];
   }
+  if (mode === "jaafar") {
+    const half = Math.round(w / 2);
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.switch.jaafar.prep.title"), detail: tx(ctx, "step.switch.jaafar.prep.detail") },
+      { at: "0:00", title: tx(ctx, "step.switch.jaafar.open.title"), detail: tx(ctx, "step.switch.jaafar.open.detail", { half, temp }) },
+      { at: "1:00", title: tx(ctx, "step.switch.jaafar.close.title"), detail: tx(ctx, "step.switch.jaafar.close.detail", { w }) },
+      { at: "2:00", title: tx(ctx, "step.switch.jaafar.drain.title"), detail: tx(ctx, "step.switch.jaafar.drain.detail", { t, stall }) },
+    ];
+  }
   if (mode === "fukahori") {
     const bloomAmt = Math.max(bloom, Math.round(ctx.coffeeG * 3.5));
     return [
@@ -161,6 +170,29 @@ function v60Steps(ctx: BrewStepCtx, bloom: number, pour60: number, temp: string,
       { at: clock(b2), title: tx(ctx, "step.v60.hedrick.pour.title"), detail: tx(ctx, "step.v60.hedrick.pour.detail", { w, t }) },
     ];
   }
+  if (mode === "winton") {
+    const pour = Math.round(w / 5);
+    const cool = ctx.finishC ?? 88;
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.v60.winton.prep.title"), detail: tx(ctx, "step.v60.winton.prep.detail") },
+      { at: "0:00", title: tx(ctx, "step.v60.winton.bloom.title"), detail: tx(ctx, "step.v60.winton.bloom.detail", { pour, temp }) },
+      { at: "0:30", title: tx(ctx, "step.v60.winton.pours.title"), detail: tx(ctx, "step.v60.winton.pours.detail", { pour, cool, w }) },
+      { at: t, title: tx(ctx, "step.v60.winton.swirl.title"), detail: tx(ctx, "step.v60.winton.swirl.detail", { t, stall }) },
+    ];
+  }
+  if (mode === "hoffmann1") {
+    const pulse = Math.round(w / 5);
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.v60.hoffmann1.prep.title"), detail: tx(ctx, "step.v60.hoffmann1.prep.detail") },
+      { at: "0:00", title: tx(ctx, "step.v60.hoffmann1.bloom.title"), detail: tx(ctx, "step.v60.hoffmann1.bloom.detail", { pulse, temp }) },
+      {
+        at: "0:45",
+        title: tx(ctx, "step.v60.hoffmann1.pulses.title"),
+        detail: tx(ctx, "step.v60.hoffmann1.pulses.detail", { a: pulse * 2, b: pulse * 3, c: pulse * 4, w }),
+      },
+      { at: "2:00", title: tx(ctx, "step.v60.hoffmann1.swirl.title"), detail: tx(ctx, "step.v60.hoffmann1.swirl.detail", { t, stall }) },
+    ];
+  }
   if (mode === "iced") {
     const ice = ctx.bypassG ?? Math.round(w * 0.67);
     return [
@@ -230,6 +262,15 @@ function aeroSteps(ctx: BrewStepCtx, temp: string, t: string): BrewStep[] {
       { at: "2:05", title: tx(ctx, "step.aero.tay.bypass.title"), detail: tx(ctx, "step.aero.tay.bypass.detail", { room, hot }) },
     ];
   }
+  if (mode === "little") {
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.aero.little.prep.title"), detail: tx(ctx, "step.aero.little.prep.detail") },
+      { at: "0:00", title: tx(ctx, "step.aero.little.pour.title"), detail: tx(ctx, "step.aero.little.pour.detail", { w: ctx.waterG, temp }) },
+      { at: "1:20", title: tx(ctx, "step.aero.little.flip.title"), detail: tx(ctx, "step.aero.little.flip.detail") },
+      { at: "1:40", title: tx(ctx, "step.aero.little.press.title"), detail: tx(ctx, "step.aero.little.press.detail", { t }) },
+      { at: t, title: tx(ctx, "step.aero.little.bypass.title"), detail: tx(ctx, "step.aero.little.bypass.detail", { bypass, hot: ctx.finishC ?? 90 }) },
+    ];
+  }
   if (mode === "wendelien") {
     return [
       { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.aero.wendelien.prep.title"), detail: tx(ctx, "step.aero.wendelien.prep.detail") },
@@ -248,6 +289,16 @@ function aeroSteps(ctx: BrewStepCtx, temp: string, t: string): BrewStep[] {
 }
 
 function frenchSteps(ctx: BrewStepCtx, temp: string): BrewStep[] {
+  if (ctx.technique === "wendelboe") {
+    const half = Math.round(ctx.waterG / 2);
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.french.wendelboe.prep.title"), detail: tx(ctx, "step.french.wendelboe.prep.detail") },
+      { at: "0:00", title: tx(ctx, "step.french.wendelboe.half.title"), detail: tx(ctx, "step.french.wendelboe.half.detail", { half, temp }) },
+      { at: "0:30", title: tx(ctx, "step.french.wendelboe.top.title"), detail: tx(ctx, "step.french.wendelboe.top.detail", { w: ctx.waterG }) },
+      { at: "4:30", title: tx(ctx, "step.french.wendelboe.skim.title"), detail: tx(ctx, "step.french.wendelboe.skim.detail") },
+      { at: "5:00", title: tx(ctx, "step.french.wendelboe.press.title"), detail: tx(ctx, "step.french.wendelboe.press.detail") },
+    ];
+  }
   const classic = ctx.technique === "classic" || ctx.roastStyle === "dark";
   return [
     { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.french.prep.title"), detail: tx(ctx, "step.french.prep.detail") },
@@ -260,6 +311,27 @@ function frenchSteps(ctx: BrewStepCtx, temp: string): BrewStep[] {
 }
 
 function kalitaSteps(ctx: BrewStepCtx, bloom: number, temp: string, t: string, stall: string): BrewStep[] {
+  const w = ctx.waterG;
+  if (ctx.technique === "april") {
+    const half = Math.round(w / 2);
+    const ring = Math.round(half * 0.3);
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.kalita.april.prep.title"), detail: tx(ctx, "step.kalita.april.prep.detail") },
+      { at: "0:00", title: tx(ctx, "step.kalita.april.p1.title"), detail: tx(ctx, "step.kalita.april.p1.detail", { ring, half, temp }) },
+      { at: "0:35", title: tx(ctx, "step.kalita.april.p2.title"), detail: tx(ctx, "step.kalita.april.p2.detail", { ring, w }) },
+      { at: t, title: tx(ctx, "step.kalita.april.draw.title"), detail: tx(ctx, "step.kalita.april.draw.detail", { t, stall }) },
+    ];
+  }
+  if (ctx.technique === "wendelboe") {
+    const first = Math.max(bloom, Math.round(ctx.coffeeG * 2));
+    const mid = Math.round(w * 0.4);
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.kalita.wendelboe.prep.title"), detail: tx(ctx, "step.kalita.wendelboe.prep.detail") },
+      { at: "0:00", title: tx(ctx, "step.kalita.wendelboe.bloom.title"), detail: tx(ctx, "step.kalita.wendelboe.bloom.detail", { first, temp }) },
+      { at: "0:30", title: tx(ctx, "step.kalita.wendelboe.mid.title"), detail: tx(ctx, "step.kalita.wendelboe.mid.detail", { mid, w }) },
+      { at: t, title: tx(ctx, "step.kalita.wendelboe.draw.title"), detail: tx(ctx, "step.kalita.wendelboe.draw.detail", { t, stall }) },
+    ];
+  }
   if (ctx.technique === "mccarthy") {
     return [
       { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.kalita.mccarthy.prep.title"), detail: tx(ctx, "step.kalita.mccarthy.prep.detail") },
@@ -399,6 +471,13 @@ function espressoSteps(ctx: BrewStepCtx, temp: string): BrewStep[] {
       { at: "0:27", title: tx(ctx, "step.espresso.stock.cut.title"), detail: tx(ctx, "step.espresso.stock.cut.detail", { yieldG, time }) },
     ];
   }
+  if (mode === "allonge") {
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.espresso.setup.title"), detail: tx(ctx, "step.espresso.allonge.setup", { prep }) },
+      { at: "0:00", title: tx(ctx, "step.espresso.allonge.flow.title"), detail: tx(ctx, "step.espresso.allonge.flow.detail") },
+      { at: `${time} s`, title: tx(ctx, "step.espresso.allonge.stop.title"), detail: tx(ctx, "step.espresso.allonge.stop.detail", { yieldG, time }) },
+    ];
+  }
   if (mode === "filter") {
     return [
       { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.espresso.setup.title"), detail: tx(ctx, "step.espresso.filter.setup", { prep }) },
@@ -418,6 +497,14 @@ function espressoSteps(ctx: BrewStepCtx, temp: string): BrewStep[] {
 }
 
 function coldSteps(ctx: BrewStepCtx, t: string): BrewStep[] {
+  if (ctx.technique === "kyoto") {
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.cold.kyoto.prep.title"), detail: tx(ctx, "step.cold.kyoto.prep.detail", { coffee: ctx.coffeeG }) },
+      { at: "0:00", title: tx(ctx, "step.cold.kyoto.load.title"), detail: tx(ctx, "step.cold.kyoto.load.detail", { w: ctx.waterG, ice: Math.round(ctx.waterG * (2 / 3)) }) },
+      { at: "0:05", title: tx(ctx, "step.cold.kyoto.drip.title"), detail: tx(ctx, "step.cold.kyoto.drip.detail", { h: Math.round(ctx.timeS / 3600) }) },
+      { at: at(ctx, "step.at.filter"), title: tx(ctx, "step.cold.kyoto.serve.title"), detail: tx(ctx, "step.cold.kyoto.serve.detail") },
+    ];
+  }
   const concentrate = ctx.technique === "concentrate";
   return [
     { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.cold.prep.title"), detail: tx(ctx, "step.cold.prep.detail", { coffee: ctx.coffeeG }) },
@@ -428,6 +515,50 @@ function coldSteps(ctx: BrewStepCtx, t: string): BrewStep[] {
       title: tx(ctx, concentrate ? "step.cold.dilute.title" : "step.cold.decant.title"),
       detail: tx(ctx, concentrate ? "step.cold.dilute.detail" : "step.cold.decant.detail"),
     },
+  ];
+}
+
+function siphonSteps(ctx: BrewStepCtx, temp: string, t: string): BrewStep[] {
+  const w = ctx.waterG;
+  if (ctx.technique === "bluebottle") {
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.siphon.prep.title"), detail: tx(ctx, "step.siphon.prep.detail", { w }) },
+      { at: "0:00", title: tx(ctx, "step.siphon.bb.rise.title"), detail: tx(ctx, "step.siphon.bb.rise.detail", { temp }) },
+      { at: "0:40", title: tx(ctx, "step.siphon.bb.add.title"), detail: tx(ctx, "step.siphon.bb.add.detail", { coffee: ctx.coffeeG }) },
+      { at: "1:50", title: tx(ctx, "step.siphon.bb.off.title"), detail: tx(ctx, "step.siphon.bb.off.detail") },
+      { at: t, title: tx(ctx, "step.siphon.draw.title"), detail: tx(ctx, "step.siphon.draw.detail", { t }) },
+    ];
+  }
+  return [
+    { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.siphon.prep.title"), detail: tx(ctx, "step.siphon.prep.detail", { w }) },
+    { at: "0:00", title: tx(ctx, "step.siphon.sprudge.add.title"), detail: tx(ctx, "step.siphon.sprudge.add.detail", { coffee: ctx.coffeeG, temp }) },
+    { at: "0:30", title: tx(ctx, "step.siphon.sprudge.stir.title"), detail: tx(ctx, "step.siphon.sprudge.stir.detail") },
+    { at: "2:00", title: tx(ctx, "step.siphon.sprudge.off.title"), detail: tx(ctx, "step.siphon.sprudge.off.detail") },
+    { at: t, title: tx(ctx, "step.siphon.draw.title"), detail: tx(ctx, "step.siphon.draw.detail", { t }) },
+  ];
+}
+
+function batchSteps(ctx: BrewStepCtx, temp: string, t: string): BrewStep[] {
+  const w = ctx.waterG;
+  const gPerL = Math.round((ctx.coffeeG / w) * 1000);
+  if (ctx.technique === "rao") {
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.batch.rao.prep.title"), detail: tx(ctx, "step.batch.rao.prep.detail", { coffee: ctx.coffeeG, w }) },
+      { at: "0:00", title: tx(ctx, "step.batch.rao.start.title"), detail: tx(ctx, "step.batch.rao.start.detail", { temp }) },
+      { at: t, title: tx(ctx, "step.batch.stir.title"), detail: tx(ctx, "step.batch.stir.detail", { t }) },
+    ];
+  }
+  if (ctx.technique === "wendelboe") {
+    return [
+      { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.batch.wendelboe.prep.title"), detail: tx(ctx, "step.batch.wendelboe.prep.detail", { coffee: ctx.coffeeG, w }) },
+      { at: "0:00", title: tx(ctx, "step.batch.wendelboe.start.title"), detail: tx(ctx, "step.batch.wendelboe.start.detail") },
+      { at: t, title: tx(ctx, "step.batch.stir.title"), detail: tx(ctx, "step.batch.stir.detail", { t }) },
+    ];
+  }
+  return [
+    { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.batch.sca.prep.title"), detail: tx(ctx, "step.batch.sca.prep.detail", { coffee: ctx.coffeeG, w, gPerL }) },
+    { at: "0:00", title: tx(ctx, "step.batch.sca.start.title"), detail: tx(ctx, "step.batch.sca.start.detail", { temp }) },
+    { at: t, title: tx(ctx, "step.batch.stir.title"), detail: tx(ctx, "step.batch.stir.detail", { t }) },
   ];
 }
 
@@ -445,7 +576,19 @@ export function buildBrewSteps(ctx: BrewStepCtx): BrewStep[] {
       return kalitaSteps(ctx, bloom, temp, t, stall);
     case "origami":
       return origamiSteps(ctx, temp, t, stall);
+    case "siphon":
+      return siphonSteps(ctx, temp, t);
+    case "batch":
+      return batchSteps(ctx, temp, t);
     case "chemex":
+      if (ctx.technique === "stumptown") {
+        return [
+          { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.chemex.stumptown.prep.title"), detail: tx(ctx, "step.chemex.stumptown.prep.detail") },
+          { at: "0:00", title: tx(ctx, "step.chemex.stumptown.bloom.title"), detail: tx(ctx, "step.chemex.stumptown.bloom.detail", { bloom: Math.round(ctx.waterG * (150 / 700)), temp }) },
+          { at: "0:45", title: tx(ctx, "step.chemex.stumptown.mid.title"), detail: tx(ctx, "step.chemex.stumptown.mid.detail", { mid: Math.round(ctx.waterG * (450 / 700)) }) },
+          { at: "1:45", title: tx(ctx, "step.chemex.stumptown.top.title"), detail: tx(ctx, "step.chemex.stumptown.top.detail", { w: ctx.waterG, t }) },
+        ];
+      }
       return [
         { at: at(ctx, "step.at.prep"), title: tx(ctx, "step.chemex.prep.title"), detail: tx(ctx, "step.chemex.prep.detail") },
         { at: "0:00", title: tx(ctx, "step.chemex.bloom.title"), detail: tx(ctx, "step.chemex.bloom.detail", { bloom: Math.max(60, bloom) }) },

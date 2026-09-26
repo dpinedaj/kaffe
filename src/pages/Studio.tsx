@@ -14,6 +14,7 @@ import {
   signed,
   YELLOW_TEMP,
   type RoastIntent,
+  type ZoneRole,
 } from "../lib/generate";
 import { activeZones } from "../lib/kpro";
 import { useI18n } from "../i18n/LocaleContext";
@@ -35,7 +36,7 @@ import {
   ORIGINS,
   PROCESSES,
   STYLES,
-  VARIETIES,
+  varietiesForSelect,
   flavorById,
   originById,
   recommendFlavor,
@@ -88,7 +89,8 @@ export default function Studio({
   onSave: () => void;
   onBrew: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const zoneRole = (role: ZoneRole) => t(`boost.role.${role}` as MessageKey);
   const generated = useMemo(() => generateProfile(intent), [intent]);
   const origin = originById(intent.originId);
   const variety = varietyById(intent.varietyId);
@@ -209,7 +211,7 @@ export default function Studio({
                 </Row>
                 <Row label={t("studio.variety")}>
                   <Select value={intent.varietyId || "unknown"} onChange={(id) => patch({ varietyId: id })}>
-                    {VARIETIES.map((v) => (
+                    {varietiesForSelect((v) => varietyLabel(v.id, t, v.name), locale).map((v) => (
                       <option key={v.id} value={v.id}>
                         {varietyLabel(v.id, t, v.name)}
                       </option>
@@ -789,9 +791,9 @@ export default function Studio({
             label={t("studio.density")}
             value={`${generated.resolvedDensityGL} g/L · ${densityLabel(generated.densityClass, t)}`}
           />
-          <Field label={t("studio.zone1")} value={formatZoneSummary(generated.zones.zone1)} />
-          <Field label={t("studio.zone2")} value={formatZoneSummary(generated.zones.zone2)} />
-          <Field label={t("studio.zone3")} value={formatZoneSummary(generated.zones.zone3)} />
+          <Field label={t("studio.zone1")} value={formatZoneSummary(generated.zones.zone1, zoneRole, t("common.off"))} />
+          <Field label={t("studio.zone2")} value={formatZoneSummary(generated.zones.zone2, zoneRole, t("common.off"))} />
+          <Field label={t("studio.zone3")} value={formatZoneSummary(generated.zones.zone3, zoneRole, t("common.off"))} />
         </Card>
 
         <Card className="p-4">

@@ -6,7 +6,10 @@ import {
   bandForMethod,
   doseGrindT,
   formatDotted,
+  FILTER_ONLY_GRINDERS,
   formatSetting,
+  grinderById,
+  grindersForMethod,
   grindFollowsDose,
   grindNoteWithSetting,
   resolveGrindSetting,
@@ -33,9 +36,8 @@ describe("grinders", () => {
     expect(out?.label).toMatch(/11–18/);
   });
 
-  it("keeps C3S Pro off the kissing-burr clicks", () => {
-    const out = resolveGrindSetting("timemore-c3s-pro", "espresso", "fine");
-    expect(out?.at).toBeGreaterThanOrEqual(6);
+  it("keeps a mill off its kissing-burr clicks", () => {
+    expect(settingAt(5, 10, "fine", 6)).toBeGreaterThanOrEqual(6);
   });
 
   it("reads Niche as the printed ring, not rotations", () => {
@@ -45,8 +47,55 @@ describe("grinders", () => {
     expect(formatSetting(22, "niche")).toBe("22");
   });
 
-  it("does not invent clicks for Cera+ CGE01", () => {
-    expect(resolveGrindSetting("cera-cge01", "v60", "medium")).toBeUndefined();
+  it("gives Cera+ CGE01 clicks from its 20 µm step for espresso and filter", () => {
+    const v60 = resolveGrindSetting("cera-cge01", "v60", "medium");
+    const esp = resolveGrindSetting("cera-cge01", "espresso", "fine");
+    expect(v60?.lo).toBe(20);
+    expect(v60?.hi).toBe(35);
+    expect(esp?.lo).toBe(9);
+    expect(esp?.hi).toBe(19);
+    expect(esp?.label).toMatch(/clicks/);
+    expect(grinderById("cera-cge01")?.note).toMatch(/Estimate/);
+  });
+
+  it("offers only espresso-capable mills on espresso and every mill on filter", () => {
+    const esp = grindersForMethod("espresso").map((g) => g.id);
+    const v60 = grindersForMethod("v60").map((g) => g.id);
+    expect(v60.length).toBe(GRINDERS.length);
+    for (const id of ["timemore-c3-esp-pro", "timemore-c3-esp", "baratza-encore-esp", "niche-zero", "cera-cge01", "baratza-vario"]) {
+      expect(esp, id).toContain(id);
+      expect(v60, id).toContain(id);
+    }
+    for (const id of ["timemore-c3s-pro", "timemore-c2", "baratza-encore", "fellow-ode-brew-grinder-gen-2", "1zpresso-zp6", "hario-skerton"]) {
+      expect(esp, id).not.toContain(id);
+      expect(v60, id).toContain(id);
+    }
+    for (const id of FILTER_ONLY_GRINDERS) expect(grinderById(id), id).toBeDefined();
+    for (const g of grindersForMethod("espresso")) expect(g.bands.espresso, g.id).toBeDefined();
+    expect(resolveGrindSetting("timemore-c3s-pro", "espresso", "fine")).toBeUndefined();
+    expect(resolveGrindSetting("timemore-c3s-pro", "v60", "medium")).toBeDefined();
+    expect(searchGrinders("c3s", grindersForMethod("espresso")).map((g) => g.id)).not.toContain("timemore-c3s-pro");
+  });
+
+  it("forgives a typo or squashed model code", () => {
+    expect(searchGrinders("timemore chesnut c3 esp pro")[0]?.id).toBe("timemore-c3-esp-pro");
+    expect(searchGrinders("chesnut c3 esp pro")[0]?.id).toBe("timemore-c3-esp-pro");
+    expect(searchGrinders("c3esp pro").map((g) => g.id)).toContain("timemore-c3-esp-pro");
+    expect(searchGrinders("comandnte c40").map((g) => g.id)).toContain("comandante-c40");
+    expect(searchGrinders("vario").map((g) => g.id)).toContain("baratza-vario");
+    expect(searchGrinders("zzzz-nope")).toEqual([]);
+  });
+
+  it("reads Vario letters, Eureka turns, and backwards KitchenAid dials", () => {
+    expect(formatSetting(0, "letters", { steps: 23 })).toBe("1A");
+    expect(formatSetting(33, "letters", { steps: 23 })).toBe("2K");
+    expect(formatSetting(9, "rotation", { steps: 6, sep: "+" })).toBe("1+3");
+    expect(formatSetting(3.5, "rotation", { steps: 6, sep: "+" })).toBe("3.5");
+    expect(formatSetting(63, "rotation", { steps: 60, sep: "/" })).toBe("1/3");
+    expect(resolveGrindSetting("baratza-vario", "espresso", "fine")?.label).toMatch(/^1[A-Z] · 1A–2O$/);
+    const kaFine = resolveGrindSetting("kitchenaid-coffee-grinder-5kcg8433", "v60", "fine")?.at ?? 0;
+    const kaCoarse = resolveGrindSetting("kitchenaid-coffee-grinder-5kcg8433", "v60", "coarse")?.at ?? 0;
+    expect(kaFine).toBeGreaterThan(kaCoarse);
   });
 
   it("leaves the qualitative grind when no grinder is picked", () => {

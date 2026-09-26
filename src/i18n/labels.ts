@@ -2,7 +2,7 @@ import type { MessageKey } from "./en";
 import type { Locale } from "./translate";
 import { translate } from "./translate";
 import type { FlavorId, ProcessId, RoastStyleId, BrewId, DensityClass, BeanSize } from "../lib/knowledge";
-import type { Grind } from "../lib/brew";
+import { restWindows, type BrewMethod, type Grind } from "../lib/brew";
 
 type TFn = (key: MessageKey, vars?: Record<string, string | number>) => string;
 
@@ -62,15 +62,14 @@ export function restLabelFor(
   plan: "rest" | "rtd",
   days: number,
   style: RoastStyleId,
+  method?: BrewMethod,
 ): { restLabel: string; restWarn?: string } {
   const t = (key: MessageKey, vars?: Record<string, string | number>) => translate(locale, key, vars);
   if (plan === "rtd") {
     if (days <= 3) return { restLabel: t("rest.rtdWindow", { days }) };
     return { restLabel: t("rest.rtdPast", { days }), restWarn: t("rest.rtdWarn") };
   }
-  const gas = style === "light" ? 10 : style === "medium" ? 6 : 3;
-  const good = style === "light" ? 21 : style === "medium" ? 16 : 10;
-  const aging = style === "light" ? 35 : style === "medium" ? 28 : 18;
+  const { gas, good, aging } = restWindows(style, method);
   if (days <= 2) {
     return {
       restLabel: t("rest.degassing", { days }),

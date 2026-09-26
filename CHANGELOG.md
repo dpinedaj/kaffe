@@ -1,5 +1,61 @@
 # Changelog
 
+## 1.2.0 — 2026-09-26
+
+About 100 cultivars in Generate and This bag, up from 20. Each new one roasts, brews, and suggests flavors like the family it belongs to.
+
+### Varieties
+- Gesha / landrace family: Chiroso, Ombligón, Papayo, Sudan Rume, Laurina, Centroamericano, Starmaya, Casiopea, Typica Mejorado, Bourbon Ají, Maragesha, JARC 74110 / 74112 / 74140 / 74158 / 74165 / 75227, Kurume, Wolisho, Dega, Abyssinia
+- Bourbon and dwarf lines: Red / Orange / Striped Bourbon, Pacas, Villa Sarchi, Tekisic, Jackson, Mibirizi, Semperflorens, Venecia, Yellow Caturra, Villalobos, San Ramón, Pache
+- Kenya: SL14, Batian, K7
+- Catuai and body family: Red / Yellow Catuai, Topázio, Paraíso, Garnica, Catimor, Sarchimor, Marsellesa, Parainema, Lempira, IHCAFE 90, Costa Rica 95, Catisic, Anacafé 14, Oro Azteca, Obatã, Tupi, IAPAR 59, Catiguá, Cenicafé 1, Acaia, Icatu, Arara, Catucaí, Mundo Maya
+- Indonesia / India: Tim Tim, Ateng, Gayo 1, Sigarar Utang, S795, Chandragiri, Kent
+- Large seed and Yemen: Maracaturra, Blue Mountain, Mokka, Udaini, Tuffahi, Dawairi, Jaadi
+- The variety picker is A–Z by the name you see, so in Spanish “Borbón Rojo” sorts under B
+- Spanish names now spell Borbón with the accent everywhere
+
+### Grinders
+- Espresso lists only espresso-capable mills. Filter-only models (non-ESP Timemore C2 / C3 / C3S, Baratza Encore, Fellow Ode, 1Zpresso ZP6 / JX, Hario Mini Mill…) are hidden there and keep the grind word if already picked. Filter methods list every mill, espresso grinders included
+- Cera+ CGE01 now prints clicks for espresso and filter, estimated from its 20 µm step
+- 18 more HCG charts: Baratza Vario / Vario W / Vario+ / Vario W+ / Forté AP / Forté BG / Preciso, Eureka Mignon Specialità / Silenzio / Classico, Acaia Orbit, Bravo IT, Goat Story Arco, Lagom Casa, Mahlkönig EK43 S, Weber EG-1, two KitchenAid mills
+- Vario-style letters (2K) and Eureka turns (1+3) read the way the dial is marked
+- Search forgives one typo and squashed codes: “chesnut c3 esp pro” finds the Timemore C3 ESP Pro
+
+### Brew — science fixes
+- After brew computes extraction on the right mass: **immersion uses all the water** (French press, Clever, Switch steeps, AeroPress, cupping, cold brew, siphon), percolation the drained cup, espresso the shot — plus any bypass. A 21% French press no longer reads 18.5% and asks for a finer grind
+- The chart’s ratio lines sit on that same basis, labelled by what you poured; strength box is **SCA** or **Europe (ECBC)**, and the plot reaches 2% TDS. Rao’s spin V60 and turbo / allongé shots get their own extraction goals
+- Boiling point **100 − h/300** (ISA + Antoine), and the altitude correction under a 92 °C kettle grows gradually instead of jumping a grind step at 92.0 °C
+- Generate and Brew agree on density; the first Why line describes the recipe you are actually brewing
+- Cupping stays on the SCA protocol whatever the flavor, gas or altitude
+- Gassy lots only go coarser on beds that dome, not in a French press or cold brew
+- Espresso rests longer than filter; the card warns when a Light filter roast goes into the espresso machine
+- Kitchen **Water** row (recipe / soft / hard); hard, alkaline water warns on acid cups
+- After brew tips: room-temperature sample, zero with brew water, filter espresso samples; Escape closes the chart
+
+### Brew — recipes and methods
+- **Nas Jaafar, World Brewers Cup 2026 champion** (Switch, open pour then closed finish; round-one routine)
+- Matt Winton WBrC 2021 five pours (V60), Jibbi Little WAC 2022 (AeroPress), April two pours (Patrik Rolf), Hoffmann Better 1-Cup V60, Tim Wendelboe pour-over and French press, Stumptown Chemex, Kyoto slow drip, Rao allongé
+- New methods: **Siphon** (Sprudge, Blue Bottle) and **Batch brew** (SCA Golden Cup, Rao, Wendelboe)
+
+### Roast — science fixes
+- Washed / natural first-crack offsets apply once; moisture no longer shifts the crack temperature; moisture and density no longer add drying time twice
+- Negative boosts are a **flick brake that ends before first crack** (Kaffelogic guidance), not a brake through the endothermic crack
+- At least 60 s of development is designed
+- Flavor goals recommend the three that fit this bean and roast instead of nearly all of them
+
+### Overlay, Library, UI
+- Overlay plots **RoR** (actual vs design) with a ±3 °C band around the design; switch the right axis to Fan when you need it
+- A logged first crack can be sent to Generate as Expected first crack
+- Library roast date and notes; Brew counts rest days from the roast date. Secondary actions live under More; delete asks first
+- Compare table hides rows that are empty for every track; phases and deviation panels are translated
+- Boost zones: one “+ Add” per empty zone, translated reasons, “Flick brake” / “Zone 3 · late”
+- Grinder modal alignment and chart marker labels (no more “Drpp”)
+
+### Docs
+- [docs/ROAST-MODEL.md](docs/ROAST-MODEL.md#variety-families) — variety families table
+- ROAST-MODEL: corrected Schwartzberg title and Kornman attribution, heuristic labels on the crack-temperature slope, rest advice vs Wang & Lim 2014, new Limits (colour vs time, probe vs fan, DTR as output, power headroom)
+- BREW: Batali 2020 read correctly, boiling formula, After-brew basis table, water, community recipe table
+
 ## 1.1.1 — 2026-09-25
 
 Starting grind and kettle targets match published recipes, not a stacked “Light + 96 °C + altitude” card.
