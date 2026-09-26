@@ -3,6 +3,8 @@ import { Card } from "../components/ui";
 import { useI18n } from "../i18n/LocaleContext";
 import { downloadText } from "../lib/generate";
 import { daysSinceRoast, type SavedProfile } from "../lib/storage";
+import { tastesForLot } from "../lib/taste";
+import type { MessageKey } from "../i18n/en";
 
 export default function LibraryPage({
   items,
@@ -138,6 +140,8 @@ function JournalRow({
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState(item.notes ?? "");
   const days = daysSinceRoast(item.roastedOn);
+  const cups = tastesForLot(`library:${item.id}`);
+  const last = cups[0];
   return (
     <div className="mt-2">
       <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted">
@@ -156,6 +160,14 @@ function JournalRow({
         </button>
       </div>
       {item.notes && !open && <p className="mt-1 text-[13px] leading-relaxed text-label">{item.notes}</p>}
+      {last && (
+        <p className="mt-1 text-[12px] text-muted">
+          {t("library.lastCup", { n: cups.length })} · {t(`taste.balance.${last.balance}` as MessageKey)} ·{" "}
+          {t(`taste.strength.${last.strength}` as MessageKey)}
+          {last.stars ? ` · ${"★".repeat(last.stars)}` : ""}
+          {last.note ? ` · ${last.note}` : ""}
+        </p>
+      )}
       {open && (
         <textarea
           value={notes}
