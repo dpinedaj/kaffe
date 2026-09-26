@@ -14,6 +14,8 @@ import {
   suggestedTechniqueId,
   techniquesFor,
   BREW_METHODS,
+  doseForCup,
+  drinkG,
   type BrewMethod,
 } from "./brew";
 import { VARIETIES, type FlavorId, type ProcessId, type RoastStyleId } from "./knowledge";
@@ -1265,5 +1267,13 @@ describe("new champion and community recipes", () => {
     expect(siphon.technique).toBeDefined();
     expect(batch.technique).toBe("wendelboe");
     expect(recommendBrew({ method: "batch", ...light, roastStyle: "medium" }).technique).toBe("sca");
+  });
+});
+
+describe("cup-first scaling", () => {
+  it("finds the dose for a target cup, net of what the grounds keep", () => {
+    expect(doseForCup("v60", 350, 16)).toBeCloseTo(25, 1);
+    expect(drinkG("v60", 25, 16)).toBeCloseTo(350, 5);
+    expect(doseForCup("espresso", 40, 2)).toBe(20);
   });
 });
