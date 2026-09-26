@@ -1908,6 +1908,22 @@ function restCopy(
   };
 }
 
+/** Water a spent bed keeps, g per g coffee (Liang 2021 ≈ 2.5 drained; ~2 is the café rule). */
+export const BED_RETAINS_G_PER_G = 2;
+
+/** What ends up in the cup for a given dose: poured water (+ bypass) minus what the grounds keep. A shot is weighed as-is. */
+export function drinkG(method: BrewMethod, coffeeG: number, cupRatio: number): number {
+  const poured = coffeeG * cupRatio;
+  return method === "espresso" ? poured : Math.max(0, poured - BED_RETAINS_G_PER_G * coffeeG);
+}
+
+/** Dose that lands `cupG` in the cup at this ratio. Inverse of `drinkG`. */
+export function doseForCup(method: BrewMethod, cupG: number, cupRatio: number): number {
+  const perGram = method === "espresso" ? cupRatio : cupRatio - BED_RETAINS_G_PER_G;
+  if (!(cupG > 0) || !(perGram > 0)) return clampDose(5);
+  return clampDose(cupG / perGram);
+}
+
 export function clampDose(n: number): number {
   return Math.max(5, Math.min(80, Math.round(n * 4) / 4));
 }
