@@ -126,6 +126,11 @@ export default function App() {
               saveLibrary(next);
               setLibrary(next);
             }}
+            onPatch={(id, partial) => {
+              const next = library.map((p) => (p.id === id ? { ...p, ...partial } : p));
+              saveLibrary(next);
+              setLibrary(next);
+            }}
             onRename={(id, name) => {
               const next = library.map((p) => (p.id === id ? { ...p, curveName: name, name: name.replace(/\s+/g, "_").slice(0, 17) } : p));
               saveLibrary(next);

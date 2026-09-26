@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n/LocaleContext";
+import type { BrewMethod } from "../lib/brew";
 import {
-  GRINDERS,
   grindersByBrand,
   grinderById,
+  grindersForMethod,
   searchGrinders,
 } from "../lib/grinders";
 
 export function GrinderPicker({
   value,
   onChange,
+  method,
 }: {
   value?: string;
   onChange: (id: string | undefined) => void;
+  method: BrewMethod;
 }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -20,11 +23,13 @@ export function GrinderPicker({
   const inputRef = useRef<HTMLInputElement>(null);
   const selected = grinderById(value);
   const query = q.trim();
-  const hits = useMemo(() => searchGrinders(query), [query]);
+  const pool = useMemo(() => grindersForMethod(method), [method]);
+  const espressoOnly = method === "espresso";
+  const hits = useMemo(() => searchGrinders(query, pool), [query, pool]);
   const groups = useMemo(() => {
     if (query) return [];
-    return grindersByBrand();
-  }, [query]);
+    return grindersByBrand(pool);
+  }, [query, pool]);
 
   useEffect(() => {
     if (!open) return;
@@ -55,7 +60,7 @@ export function GrinderPicker({
         {selected ? `${selected.brand} ${selected.name}` : t("grinders.none")}
       </button>
       {open && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center">
+        <div className="fixed inset-0 z-40 flex items-end justify-center text-left sm:items-center">
           <button
             type="button"
             className="absolute inset-0 bg-black/60"
@@ -67,8 +72,9 @@ export function GrinderPicker({
               <div>
                 <h3 className="text-[18px] font-semibold text-white">{t("grinders.label")}</h3>
                 <p className="mt-0.5 text-[12px] leading-relaxed text-muted">
-                  {t("grinders.n", { n: GRINDERS.length })}
+                  {t(espressoOnly ? "grinders.nEspresso" : "grinders.n", { n: pool.length })}
                 </p>
+                <p className="mt-1 text-[12px] leading-relaxed text-muted">{t("grinders.help")}</p>
               </div>
               <button type="button" className="text-[15px] font-medium text-blue" onClick={() => setOpen(false)}>
                 {t("common.close")}
@@ -99,7 +105,9 @@ export function GrinderPicker({
               </button>
               {query ? (
                 hits.length === 0 ? (
-                  <p className="px-3 py-6 text-[13px] text-muted">{t("grinders.empty")}</p>
+                  <p className="px-3 py-6 text-[13px] text-muted">
+                    {t(espressoOnly ? "grinders.emptyEspresso" : "grinders.empty")}
+                  </p>
                 ) : (
                   hits.map((g) => (
                     <GrinderRow

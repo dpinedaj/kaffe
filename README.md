@@ -48,10 +48,10 @@ Live: [https://dpinedaj.github.io/kaffe/](https://dpinedaj.github.io/kaffe/)
 
 ## What it does
 
-- **Generate** — origin, variety, process, altitude, typed g/L, or vessel mass/volume, moisture, brew, roast style, **Rest / RTD** cup timing, up to two flavor goals, recommended boost zones, live Bézier preview (add / delete / smooth spikes / reset), download `.kpro`
-- **Overlay** — compare profiles, design vs actual from a `.klog`, zone/scalar diff, phases, ±3 °C deviation. Local `npm run dev` only: Cursor overlay coach (off on GitHub Pages).
-- **Library** — save, rename, favorite, export JSON (this device only)
-- **Brew** — starting recipe card from a Generate roast, a library profile, a dropped `.kpro`, or This bag. Kitchen altitude caps kettle temperature at local boil. After brew takes a measured Brix/TDS and places the cup on a Lockhart chart.
+- **Generate** — origin, variety (~100 cultivars grouped into roast families), process, altitude, typed g/L, or vessel mass/volume, moisture, brew, roast style, **Rest / RTD** cup timing, up to two flavor goals, recommended boost zones, live Bézier preview (add / delete / smooth spikes / reset), download `.kpro`
+- **Overlay** — compare profiles, design vs actual from a `.klog` with RoR and a ±3 °C band, zone/scalar diff, phases, send a logged first crack back to Generate. Local `npm run dev` only: Cursor overlay coach (off on GitHub Pages).
+- **Library** — save, rename, favorite, roast date and notes, export JSON (this device only)
+- **Brew** — 15 brewers (incl. siphon and batch brew) with championship and well-documented community recipes (WBrC 2013–2026, WAC, Hoffmann, Wendelboe, Rao…). Starting card from a Generate roast, a library profile, a dropped `.kpro`, or This bag. Kitchen altitude caps kettle temperature at local boil; water type and grinder clicks. After brew takes a measured Brix/TDS and places the cup on a brew control chart (extraction on total water for immersion, drained cup for percolation).
 
 `.kpro` is plain `key:value` ASCII, LF, no checksum. Curves are cubic Bézier groups of three pairs. A `.klog` already contains the design curve in the `=profile` column — Overlay uses that when a log is present, and only analyses samples up to `roast_end`.
 

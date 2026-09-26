@@ -26,8 +26,11 @@ describe("i18n", () => {
     expect(translate("es", "originNote.colombia-huila")).toMatch(/Huila|volcánicos|Honey/);
     expect(translate("es", "methodBlurb.v60")).toMatch(/Hoffmann|bloom/);
     expect(translate("es", "restWhy.bloomingGood")).toMatch(/bloom/);
-    expect(translate("es", "variety.pink-bourbon")).toBe("Borbon Rosado");
-    expect(translate("es", "variety.yellow-bourbon")).toBe("Borbon Amarillo");
+    expect(translate("es", "variety.pink-bourbon")).toBe("Borbón Rosado");
+    expect(translate("es", "variety.yellow-bourbon")).toBe("Borbón Amarillo");
+    expect(translate("es", "variety.chiroso")).toBe("Chiroso");
+    expect(translate("es", "variety.red-bourbon")).toBe("Borbón Rojo");
+    expect(translate("es", "variety.ombligon")).toBe("Ombligón");
     expect(translate("es", "curve.addPoint")).toBe("Añadir punto");
     expect(translate("es", "size.medium")).toBe("medio");
     expect(translate("es", "common.notALock")).toBe("No es definitivo");

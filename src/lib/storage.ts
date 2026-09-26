@@ -9,6 +9,20 @@ export interface SavedProfile {
   kproText: string;
   intent: RoastIntent;
   curveName: string;
+  /** Roast day (YYYY-MM-DD). Brew counts rest days from it. */
+  roastedOn?: string;
+  /** Free tasting / roast notes. */
+  notes?: string;
+}
+
+/** Whole days from a YYYY-MM-DD roast date to today (local time). */
+export function daysSinceRoast(roastedOn: string | undefined, now = new Date()): number | undefined {
+  if (!roastedOn || !/^\d{4}-\d{2}-\d{2}$/.test(roastedOn)) return undefined;
+  const [y, m, d] = roastedOn.split("-").map(Number);
+  const start = new Date(y, m - 1, d);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((today.getTime() - start.getTime()) / 86_400_000);
+  return days >= 0 ? days : undefined;
 }
 
 const KEY = "kaffe.library.v1";

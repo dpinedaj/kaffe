@@ -15,7 +15,19 @@ import {
   curveName,
   kproShortName,
 } from "./generate";
-import { originById, varietyById } from "./knowledge";
+import {
+  isBodyVariety,
+  isVolatileVariety,
+  originById,
+  recommendFlavor,
+  VARIETIES,
+  varietiesForSelect,
+  varietyById,
+  varietyFamilyIds,
+} from "./knowledge";
+import type { MessageKey } from "../i18n/en";
+import { translate } from "../i18n/translate";
+import { varietyLabel } from "../i18n/labels";
 import { BASELINE_KPRO } from "./template";
 import { parseKlog } from "./klog";
 import { computeDeviationSummary, computePhases } from "./overlay";
@@ -588,7 +600,7 @@ describe("generator", () => {
     expect(out.zones.zone1.boost).toBeGreaterThan(0);
   });
 
-  it("recommends a negative after-crack boost for dark espresso with body", () => {
+  it("recommends a flick brake for dark espresso with body that finishes before first crack", () => {
     const out = generateProfile({
       ...defaultIntent(),
       roastStyle: "dark",
@@ -597,7 +609,8 @@ describe("generator", () => {
     });
     expect(out.zones.zone3.enabled).toBe(true);
     expect(out.zones.zone3.boost).toBeLessThan(0);
-    expect(out.zones.zone3.startS).toBeGreaterThan(out.firstCrackTime);
+    expect(out.zones.zone3.endS).toBeLessThanOrEqual(out.firstCrackTime + 1);
+    expect(out.zones.zone3.startS).toBeLessThan(out.zones.zone3.endS);
   });
 
   it("RTD adds a Maillard RoR step and through-crack boost, never a negative after-crack brake", () => {
@@ -711,6 +724,103 @@ describe("arabica varieties", () => {
     expect(defaultIntent().originId).toBe("colombia-antioquia");
     expect(defaultIntent().varietyId).toBe("castillo");
   });
+
+  it("includes Chiroso as a Gesha-family Colombia lot and sorts it in the picker", () => {
+    const chiroso = varietyById("chiroso");
+    expect(chiroso.name).toMatch(/Chiroso/i);
+    expect(chiroso.density).toBe("hard");
+    expect(chiroso.suggestedStyle).toBe("light");
+    expect(chiroso.flavorLean).toEqual(["floral", "juicy"]);
+    expect(chiroso.roast.developmentS).toBeLessThan(0);
+    expect(recommendFlavor("floral", "washed", "light", originById("colombia-antioquia"), chiroso)).toBe(
+      "recommended",
+    );
+    expect(recommendFlavor("body", "washed", "light", originById("colombia-antioquia"), chiroso)).toBe("avoid");
+    const names = varietiesForSelect().map((v) => v.name);
+    expect(names[0]).toMatch(/unknown|mix/i);
+    expect(names.indexOf("Chiroso")).toBeGreaterThan(0);
+    expect(names.indexOf("Chiroso")).toBeLessThan(names.indexOf("Gesha / Geisha"));
+  });
+
+  it("gives every listed cultivar a complete roast, brew lean, and a generatable curve", () => {
+    const ids = new Set<string>();
+    for (const v of VARIETIES) {
+      expect(ids.has(v.id), v.id).toBe(false);
+      ids.add(v.id);
+      expect(v.flavorLean.length).toBeGreaterThan(0);
+      expect(v.flavorLean.length).toBeLessThanOrEqual(2);
+      expect(v.roast.developmentS).toBeDefined();
+      expect(v.shortCode).toBeTruthy();
+      const out = generateProfile({ ...defaultIntent(), varietyId: v.id, roastStyle: v.suggestedStyle });
+      expect(out.kproText.length).toBeGreaterThan(80);
+      expect(out.profile.fileName).toBeTruthy();
+    }
+    expect(VARIETIES.length).toBeGreaterThanOrEqual(95);
+  });
+
+  it("keeps every cultivar inside its roast family", () => {
+    const ids = new Set(VARIETIES.map((v) => v.id));
+    const { volatile, body } = varietyFamilyIds();
+    for (const id of [...volatile, ...body]) expect(ids.has(id), id).toBe(true);
+    for (const id of volatile) expect(body.includes(id), id).toBe(false);
+
+    for (const v of VARIETIES) {
+      if (isVolatileVariety(v.id)) {
+        expect(v.suggestedStyle, v.id).toBe("light");
+        expect(v.roast.midS, v.id).toBeLessThan(0);
+        expect(v.roast.developmentS, v.id).toBeLessThan(0);
+        expect(v.roast.fcTemp, v.id).toBeLessThan(0);
+        expect(v.flavorLean.some((f) => f === "body" || f === "deepSweet"), v.id).toBe(false);
+      }
+      if (isBodyVariety(v.id)) {
+        expect(v.suggestedStyle, v.id).toBe("medium");
+        expect(v.roast.midS, v.id).toBeGreaterThan(0);
+        expect(v.roast.developmentS, v.id).toBeGreaterThan(0);
+        expect(v.flavorLean.some((f) => f === "body" || f === "balance"), v.id).toBe(true);
+      }
+      if (v.beanSize === "large") {
+        expect(v.roast.preheatW, v.id).toBeGreaterThanOrEqual(10);
+        expect(v.roast.dryingS, v.id).toBeGreaterThanOrEqual(8);
+      }
+      if (v.beanSize === "small") expect(v.roast.dryingS, v.id).toBeLessThanOrEqual(0);
+      if (v.density === "hard" && !isVolatileVariety(v.id)) expect(v.roast.preheatW, v.id).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it("gives every cultivar a unique ASCII short code and EN / ES copy", () => {
+    const codes = VARIETIES.map((v) => v.shortCode ?? "");
+    expect(new Set(codes).size).toBe(codes.length);
+    for (const c of codes) expect(c).toMatch(/^[A-Z0-9]{2,4}$/);
+    for (const v of VARIETIES) {
+      for (const loc of ["en", "es"] as const) {
+        expect(translate(loc, `varietyCup.${v.id}` as MessageKey), `${loc} cup ${v.id}`).not.toBe(`varietyCup.${v.id}`);
+        expect(translate(loc, `varietyNote.${v.id}` as MessageKey), `${loc} note ${v.id}`).not.toBe(`varietyNote.${v.id}`);
+      }
+    }
+  });
+
+  it("sorts the picker by the shown label", () => {
+    const es = (v: { id: string; name: string }) => varietyLabel(v.id, (k) => translate("es", k), v.name);
+    const names = varietiesForSelect(es, "es").map(es);
+    expect(names[0]).toMatch(/desconocid|mezcla|unknown/i);
+    expect(names.indexOf("Borbón Rojo")).toBeLessThan(names.indexOf("Castillo"));
+    expect(names.indexOf("74110")).toBeLessThan(names.indexOf("74158"));
+  });
+
+  it("new families roast the way their templates do", () => {
+    const base = { ...defaultIntent(), originId: "colombia-huila", flavors: [] };
+    const castillo = generateProfile({ ...base, varietyId: "castillo" });
+    const gesha = generateProfile({ ...base, varietyId: "gesha" });
+    const lempira = generateProfile({ ...base, varietyId: "lempira" });
+    const mejorado = generateProfile({ ...base, varietyId: "mejorado" });
+    const chandragiri = generateProfile({ ...base, varietyId: "chandragiri" });
+    expect(lempira.breakdown.variety).toEqual(castillo.breakdown.variety);
+    expect(mejorado.breakdown.variety.developmentS).toBeLessThan(castillo.breakdown.variety.developmentS);
+    expect(mejorado.breakdown.variety.developmentS).toBeGreaterThanOrEqual(gesha.breakdown.variety.developmentS);
+    expect(chandragiri.breakdown.variety.dryingS).toBeGreaterThan(castillo.breakdown.variety.dryingS);
+    expect(recommendFlavor("body", "washed", "medium", originById("indonesia"), varietyById("tim-tim"))).toBe("recommended");
+    expect(recommendFlavor("floral", "washed", "light", originById("ethiopia"), varietyById("kurume"))).toBe("recommended");
+  });
 });
 
 describe("curve edit", () => {
@@ -810,5 +920,38 @@ describe("klog + overlay", () => {
     const dev = computeDeviationSummary(log);
     expect(dev.atEnd).not.toBeNull();
     expect(Math.abs(dev.atEnd ?? 99)).toBeLessThan(2);
+  });
+});
+
+describe("roast model consistency", () => {
+  const base = { ...defaultIntent(), originId: "colombia", varietyId: "unknown", flavors: [], altitudeM: 1500 };
+
+  it("applies the washed / natural crack offset once", () => {
+    const washed = generateProfile({ ...base, process: "washed" });
+    const other = generateProfile({ ...base, process: "other" });
+    const natural = generateProfile({ ...base, process: "natural" });
+    expect(washed.breakdown.total.fcTemp - other.breakdown.total.fcTemp).toBeCloseTo(-0.5, 5);
+    expect(natural.breakdown.total.fcTemp - other.breakdown.total.fcTemp).toBeCloseTo(0.3, 5);
+    expect(washed.firstCrackTemp).toBeLessThan(other.firstCrackTemp);
+  });
+
+  it("lets moisture delay the crack in time, not move its temperature", () => {
+    const dry = generateProfile({ ...base, moisture: 10 });
+    const wet = generateProfile({ ...base, moisture: 13 });
+    expect(wet.firstCrackTemp).toBeCloseTo(dry.firstCrackTemp, 1);
+    expect(wet.firstCrackTime).toBeGreaterThan(dry.firstCrackTime);
+  });
+
+  it("never designs under a minute of development", () => {
+    const fast = generateProfile({
+      ...base,
+      varietyId: "gesha",
+      drinkPlan: "rtd",
+      flavors: [
+        { id: "floral", weight: 0.5 },
+        { id: "bright", weight: 0.5 },
+      ],
+    });
+    expect(fast.totalTime - fast.firstCrackTime).toBeGreaterThanOrEqual(58);
   });
 });

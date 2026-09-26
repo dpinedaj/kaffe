@@ -1,4 +1,10 @@
-import { inferredDensityClass, type DrinkPlan, type RoastIntent } from "./generate";
+import {
+  classifyDensity,
+  inferredDensityClass,
+  resolveDensityGL,
+  type DrinkPlan,
+  type RoastIntent,
+} from "./generate";
 import type { MessageKey } from "../i18n/en";
 import { translate, type Locale } from "../i18n/translate";
 import { techField } from "../i18n/recipeCopy";
@@ -32,7 +38,9 @@ export type BrewMethod =
   | "coldbrew"
   | "moka"
   | "espresso"
-  | "cupping";
+  | "cupping"
+  | "siphon"
+  | "batch";
 
 export type Grind = "coarse" | "medium-coarse" | "medium" | "medium-fine" | "fine";
 /** Hario Switch valve pattern. Closed = immersion; open = percolation. */
@@ -55,6 +63,8 @@ export interface BrewRoastSnapshot {
   densityClass?: DensityClass;
   varietyName?: string;
   beanSize?: BeanSize;
+  /** Roast day from the library journal (YYYY-MM-DD). */
+  roastedOn?: string;
 }
 
 export interface BrewQuery {
@@ -78,6 +88,36 @@ export interface BrewQuery {
   technique?: string;
   /** UI language for helper / why copy. Card numbers stay the same. */
   locale?: Locale;
+  /** Brew destination the roast was designed for (Generate / .kpro). Not set for This bag. */
+  roastBrew?: BrewId;
+  /** Kitchen brew water, by alkalinity. */
+  water?: WaterId;
+}
+
+/**
+ * Brew water by what it does to the cup. Alkalinity (KH) buffers acids: SCA targets
+ * ~40 mg/L CaCO₃; hard tap water is often well above 80 and flattens acidity.
+ */
+export type WaterId = "unknown" | "recipe" | "soft" | "hard";
+export const WATERS: WaterId[] = ["unknown", "recipe", "soft", "hard"];
+const WATER_KEY = "kaffe.brew.water";
+
+export function loadKitchenWater(): WaterId {
+  try {
+    const raw = typeof localStorage === "undefined" ? null : localStorage.getItem(WATER_KEY);
+    return WATERS.includes(raw as WaterId) ? (raw as WaterId) : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+export function saveKitchenWater(water: WaterId): void {
+  try {
+    if (water === "unknown") localStorage.removeItem(WATER_KEY);
+    else localStorage.setItem(WATER_KEY, water);
+  } catch {
+    /* quota / private mode */
+  }
 }
 
 export interface BrewStep {
@@ -116,6 +156,11 @@ export interface BrewRecipe {
   gaggiuino?: string;
   /** Short competition or document credit for the selected recipe. */
   origin?: string;
+  /**
+   * Extra position inside the grinder band (−0.1…0) from a kettle a little under the
+   * 92 °C floor. Whole grind words only move per ~3 °C; this keeps clicks continuous.
+   */
+  grindNudgeT?: number;
   steps: BrewStep[];
   why: string[];
   sources: string[];
@@ -264,16 +309,16 @@ const ACID: FlavorId[] = ["fruity", "bright", "juicy", "floral", "winey"];
 const HEAVY: FlavorId[] = ["body", "deepSweet"];
 const CLOGS: ProcessId[] = ["natural", "honey", "anaerobic"];
 /** Championship scripts that skip a gas dump. Suggested pick never lands here while gassy. */
-const GASSY_RISKY = new Set(["bull", "du", "extractamundo", "short"]);
+const GASSY_RISKY = new Set(["bull", "du", "extractamundo", "short", "jaafar", "allonge"]);
 
 /** Mucilage / ferment lots shed fines. Same paper-bed stall risk as a natural. */
 export function processClogsPaper(process?: ProcessId): boolean {
   return process != null && CLOGS.includes(process);
 }
 
-/** Barometric engineering fit, inhabited elevations: −1 °C per ~285 m. */
+/** ISA pressure + Antoine for water agree with this within ~0.05 °C up to 3 600 m. */
 export function boilingPointC(altitudeM: number): number {
-  return 100 - Math.max(0, altitudeM) / 285;
+  return 100 - Math.max(0, altitudeM) / 300;
 }
 
 export function defaultMethod(brew: BrewId): BrewMethod {
@@ -299,7 +344,7 @@ export function snapshotFromIntent(intent: RoastIntent, label: string): BrewRoas
     level: intent.autoLevel ? style?.level : intent.level,
     farmAltitudeM: intent.altitudeM,
     flavors: intent.flavors.filter((f) => f.weight > 0).map((f) => f.id),
-    densityClass: inferredDensityClass(origin, intent.altitudeM),
+    densityClass: classifyDensity(resolveDensityGL(intent, origin, variety)),
     varietyName:
       [origin.name, variety.id !== "unknown" ? variety.name : undefined].filter(Boolean).join(" · ") ||
       undefined,
@@ -471,6 +516,18 @@ const BASE: Record<BrewMethod, Record<RoastStyleId, MethodStyleBase>> = {
     medium: { ratio: 18.2, wantedC: 93, timeS: 240, grind: "medium-coarse", doseG: 8.25 },
     dark: { ratio: 18.2, wantedC: 93, timeS: 240, grind: "medium-coarse", doseG: 8.25 },
   },
+  /** Sprudge / Blue Bottle siphon ~1:12.5–1:16. No source splits by roast; Medium / Dark follow the other brewers’ −1…−3 °C. */
+  siphon: {
+    light: { ratio: 16, wantedC: 93, timeS: 210, grind: "medium", doseG: 24 },
+    medium: { ratio: 16, wantedC: 92, timeS: 200, grind: "medium", doseG: 24 },
+    dark: { ratio: 16, wantedC: 90, timeS: 190, grind: "medium-coarse", doseG: 24 },
+  },
+  /** SCA Golden Cup 55 g/L ±10%, 92–96 °C at the grounds, 4–8 min contact. */
+  batch: {
+    light: { ratio: 16.5, wantedC: 95, timeS: 330, grind: "medium", doseG: 30 },
+    medium: { ratio: 17, wantedC: 93, timeS: 330, grind: "medium", doseG: 30 },
+    dark: { ratio: 17.5, wantedC: 92, timeS: 300, grind: "medium-coarse", doseG: 30 },
+  },
 };
 
 export const BREW_METHODS: BrewMethodInfo[] = [
@@ -486,6 +543,8 @@ export const BREW_METHODS: BrewMethodInfo[] = [
   { id: "coldbrew", name: "Cold brew", family: "cold", blurb: "Hoffmann-style fridge steep: ~1:13, 12–16 h, medium grind. No kettle — altitude does not cap this." },
   { id: "moka", name: "Moka", family: "pressure", blurb: "Fill boiler with hot water to the valve, basket level, off at first blonde. Not espresso." },
   { id: "espresso", name: "Espresso", family: "pressure", blurb: "Gaggiuino / SproFiler scripts — blooming, turbo, adaptive, lever — suggested from roast and flavor. Not one 1:2 shot." },
+  { id: "siphon", name: "Siphon", family: "immersion", blurb: "Vacuum brewer: water rises, steeps with the grounds, then draws down through the filter. Sprudge 1:16 at ~93 °C or Blue Bottle 24 g / 300 g at 90 °C." },
+  { id: "batch", name: "Batch brew", family: "pour", blurb: "Automatic drip (Moccamaster-type). SCA Golden Cup 55 g/L, 92–96 °C, 4–8 min contact. Rao and Wendelboe café settings." },
   { id: "cupping", name: "Cupping", family: "cupping", blurb: "SCA protocol 8.25 g / 150 g at 93 °C, 4 min, break and skim. The academic reference cup." },
 ];
 
@@ -567,6 +626,18 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       timeS: 130,
     },
     {
+      id: "jaafar",
+      name: "Open pour, closed finish",
+      mechanic: "Open 100 g spiral · close at 1:00 for the last 100 g · open at 2:00",
+      flavor: "Clarity / floral",
+      blurb: "Nas Jaafar, World Brewers Cup 2026 champion (Malaysia). Round-one routine: 15 g / 200 g at 92 °C, ~2:10, on a UFO cone over a Switch base. Percolate for clarity, immerse the second half for sweetness. No bloom — wait until the lot is degassed.",
+      timeS: 130,
+      wantedC: 92,
+      doseG: 15,
+      brewRatio: 13.3,
+      lockTemp: true,
+    },
+    {
       id: "bull",
       name: "Open first, then steep",
       mechanic: "Valve open for the first pour, close to steep, open to drain",
@@ -626,6 +697,21 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       brewRatio: 3.3,
       bypassRatio: 4,
       grind: "medium-coarse",
+      lockTemp: true,
+    },
+    {
+      id: "little",
+      name: "Stirred inverted + hot bypass",
+      mechanic: "Inverted 94 g at 92 °C, 35 stirs, press 1:40–2:10, 150 g bypass at 90 °C",
+      flavor: "Sweet / clean",
+      blurb: "Jibbi Little, WAC 2022 champion (Australia). 18 g, coarse and sifted, 94 g at 92 °C stirred 35 times, flip at 1:30, press to 2:10, then 150 g at 90 °C. Aims for ~1.30–1.35% TDS in the cup.",
+      timeS: 130,
+      wantedC: 92,
+      finishC: 90,
+      doseG: 18,
+      brewRatio: 5.2,
+      bypassRatio: 8.3,
+      grind: "coarse",
       lockTemp: true,
     },
     {
@@ -713,6 +799,32 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       timeS: 150,
     },
     {
+      id: "winton",
+      name: "Five pours, cooler after bloom",
+      mechanic: "60 g bloom at 93 °C, then four 60 g pours at 88 °C. No stir; swirl at the end.",
+      flavor: "Clarity / sweetness",
+      blurb: "Matt Winton, World Brewers Cup 2021 champion (Switzerland). 20 g / 300 g. Each pour starts when the bed is almost drained; the cooler water after the bloom keeps it sweet and clear.",
+      timeS: 160,
+      wantedC: 93,
+      finishC: 88,
+      doseG: 20,
+      brewRatio: 15,
+      lockTemp: true,
+    },
+    {
+      id: "hoffmann1",
+      name: "Better 1-cup",
+      mechanic: "50 g bloom + swirl, then four 50 g pours by 2:00, swirl, ~3:00",
+      flavor: "Even / one cup",
+      blurb: "James Hoffmann’s “A Better 1-Cup V60” (2023). 15 g / 250 g, freshly boiled water for lighter roasts, medium-fine. Small pulses keep a 15 g bed even.",
+      timeS: 180,
+      wantedC: 99,
+      doseG: 15,
+      brewRatio: 16.7,
+      grind: "medium-fine",
+      lockTemp: true,
+    },
+    {
       id: "iced",
       name: "Japanese iced",
       mechanic: "Hot brew onto ice in the server · 60% hot / 40% ice",
@@ -733,6 +845,30 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       flavor: "Even / daily",
       blurb: "Café / older WBrC flat-bottom skeleton. Forgiving. Suggested for Medium / Dark.",
       timeS: 180,
+    },
+    {
+      id: "april",
+      name: "April two pours",
+      mechanic: "Two 100 g pours: circles for 30 g, then the centre for 70 g",
+      flavor: "Clarity / sweet",
+      blurb: "Patrik Rolf (April, WBrC 2019 runner-up). 13 g / 200 g at 94 °C, medium-fine, ~2:30–3:00. Written for the flat April brewer; runs on any flat bottom.",
+      timeS: 165,
+      wantedC: 94,
+      doseG: 13,
+      brewRatio: 15.4,
+      grind: "medium-fine",
+      lockTemp: true,
+    },
+    {
+      id: "wendelboe",
+      name: "Wendelboe filter",
+      mechanic: "~60 g stirred bloom, to 200 g by 0:30, circles to the end by ~2:15, stir the brew",
+      flavor: "Clean / sweet",
+      blurb: "Tim Wendelboe (Oslo). 65 g/L, medium-fine, ~3:00–3:30 total. Over 3:30 → coarser; well under 2:00 → finer.",
+      timeS: 195,
+      brewRatio: 15.4,
+      doseG: 30,
+      grind: "medium-fine",
     },
     {
       id: "mccarthy",
@@ -801,6 +937,18 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       timeS: 540,
     },
     {
+      id: "wendelboe",
+      name: "Wendelboe press",
+      mechanic: "Half the water, stir, top up, 4–5 min, stir and skim, press slowly, wait",
+      flavor: "Clean / sweet",
+      blurb: "Tim Wendelboe. 65–70 g/L with boiling water, filter grind or a touch finer. Skim the foam and let it settle 1–5 min before a gentle pour.",
+      timeS: 480,
+      wantedC: 99,
+      brewRatio: 15.4,
+      grind: "medium",
+      lockTemp: true,
+    },
+    {
       id: "classic",
       name: "Classic 4:00",
       mechanic: "Break, plunge, pour — no long settle",
@@ -818,6 +966,16 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       blurb: "Hoffmann-style ready-to-drink. Suggested for Light.",
       timeS: 16 * 3600,
       brewRatio: 13.3,
+    },
+    {
+      id: "kyoto",
+      name: "Kyoto slow drip",
+      mechanic: "Ice water drips through the bed, ~1 drop / 2 s, 5 h+",
+      flavor: "Sweet / clear cold",
+      blurb: "Slow-drip (“Dutch”) tower, e.g. Hario Water Dripper. 60 g to ~500 g of ice + water, coarse, then dilute to taste. Clearer than a steep; suits light, fruity lots.",
+      timeS: 5 * 3600,
+      brewRatio: 8.3,
+      grind: "coarse",
     },
     {
       id: "concentrate",
@@ -945,6 +1103,18 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       gaggiuino: "Stock - 9 Bar",
     },
     {
+      id: "allonge",
+      name: "Rao allongé",
+      mechanic: "No pre-infusion, 8–9 bar, 4–4.5 ml/s, 1:4–1:6 in 30–60 s",
+      flavor: "Acid / fruit / high extraction",
+      blurb: "Scott Rao’s allongé (Decent documentation). 18 g → ~90 g at ~92 °C, ground coarser than espresso. For light to ultra-light roasts; aims at ~22–23% extraction.",
+      timeS: 45,
+      wantedC: 92,
+      brewRatio: 5,
+      grind: "fine",
+      lockTemp: true,
+    },
+    {
       id: "filter",
       name: "Filter on espresso",
       mechanic: "Paper in the basket, 1:5, then dilute ~230 g",
@@ -965,7 +1135,75 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       name: "Hoffmann Chemex",
       mechanic: "Bloom, 60% pour, stir and shake — 30 g : 500 g, ~4:10",
       flavor: "Clean / paper",
-      blurb: "Hoffmann Chemex as a V60. Thick bonded paper, slower and cleaner than a cone. The one published skeleton we keep.",
+      blurb: "Hoffmann Chemex as a V60. Thick bonded paper, slower and cleaner than a cone.",
+    },
+    {
+      id: "stumptown",
+      name: "Stumptown Chemex",
+      mechanic: "150 g bloom, wiggle to 450 g, top to 700 g, ~4:00",
+      flavor: "Clean / full",
+      blurb: "Stumptown brew guide. 42 g / 700 g just off boil (~96 °C), kosher-salt grind. Bigger batch, fuller cup than the V60-style Chemex.",
+      timeS: 240,
+      wantedC: 96,
+      doseG: 42,
+      brewRatio: 16.7,
+      grind: "medium-coarse",
+    },
+  ],
+  siphon: [
+    {
+      id: "sprudge",
+      name: "Sprudge siphon",
+      mechanic: "Water up, grounds in, stir 0:00 and 0:30, heat off at 2:00, draw down",
+      flavor: "Balanced / clean",
+      blurb: "Sprudge siphon guide. 35 g / 560 g (1:16), ~93 °C held once risen, beach-sand grind, ~3:30 total.",
+      timeS: 210,
+      wantedC: 93,
+      doseG: 35,
+      brewRatio: 16,
+    },
+    {
+      id: "bluebottle",
+      name: "Blue Bottle siphon",
+      mechanic: "Grounds in at 0:40, 70 s steep, heat off, 10 brisk stirs, ~60 s draw",
+      flavor: "Bright / aromatic",
+      blurb: "Blue Bottle’s café siphon (via Gota). 24 g / 300 g at 90 °C, medium, ~3:10. Shorter, cooler contact than Sprudge — more aromatic, lighter body.",
+      timeS: 190,
+      wantedC: 90,
+      doseG: 24,
+      brewRatio: 12.5,
+      lockTemp: true,
+    },
+  ],
+  batch: [
+    {
+      id: "sca",
+      name: "SCA Golden Cup",
+      mechanic: "55 g/L, 92–96 °C at the grounds, 4–8 min contact, 2.5–5 cm bed",
+      flavor: "Reference / balanced",
+      blurb: "SCA Golden Cup and certified-brewer standard. Aim for 1.15–1.35% TDS and 18–22% extraction. Stir the carafe before pouring; hold at 80–85 °C, not on a hot plate for hours.",
+      timeS: 330,
+      brewRatio: 18.2,
+    },
+    {
+      id: "rao",
+      name: "Rao batch brew",
+      mechanic: "1:16–1:18, 3–5 cm bed, 6:00–6:30 contact, no bypass under ~4 L",
+      flavor: "Sweet / even",
+      blurb: "Scott Rao, Batch Brew Basics. Coarse (the coarsest ~15% of the dial), deep enough bed, a program that finishes spraying by ~4:30. Keep batches under 2 L for evenness.",
+      timeS: 375,
+      brewRatio: 17,
+      grind: "medium-coarse",
+    },
+    {
+      id: "wendelboe",
+      name: "Wendelboe machine",
+      mechanic: "65 g/L in a rinsed filter, stir when dripping starts, stir the carafe",
+      flavor: "Clean / stronger",
+      blurb: "Tim Wendelboe’s home filter-machine method. 32.5 g / 500 g, ~3:00–3:30. A stronger cup than the SCA box — Nordic style.",
+      timeS: 195,
+      brewRatio: 15.4,
+      doseG: 32.5,
     },
   ],
   moka: [
@@ -1004,6 +1242,7 @@ const RECIPE_ORIGIN: Partial<Record<BrewMethod, Record<string, string>>> = {
     hold: "Shop hybrid",
     double: "WBrC 2024 · Ryan Wibawa (3rd)",
     bull: "US Brewers Cup 2025 · Justin Bull",
+    jaafar: "WBrC 2026 · Nas Jaafar (round one)",
   },
   aeropress: {
     stanica: "WAC 2024 · George Stanica",
@@ -1011,6 +1250,7 @@ const RECIPE_ORIGIN: Partial<Record<BrewMethod, Record<string, string>>> = {
     merikanto: "WAC 2021 · Tuomas Merikanto",
     wendelien: "WAC 2019 · Wendelien van Bunnik",
     tay: "WAC 2023 · Tay Wipvasutt",
+    little: "WAC 2022 · Jibbi Little",
   },
   v60: {
     hoffmann: "Hoffmann · Ultimate V60",
@@ -1021,10 +1261,14 @@ const RECIPE_ORIGIN: Partial<Record<BrewMethod, Record<string, string>>> = {
     rao: "Rao · V60 spin",
     hedrick: "Hedrick · double bloom",
     iced: "Hoffmann · Japanese iced",
+    winton: "WBrC 2021 · Matt Winton",
+    hoffmann1: "Hoffmann · Better 1-Cup (2023)",
   },
   kalita: {
     wave: "Café / older WBrC",
     mccarthy: "WBrC 2013 · James McCarthy",
+    april: "April · Patrik Rolf (WBrC 2019 2nd)",
+    wendelboe: "Tim Wendelboe · filter",
   },
   origami: {
     medina: "WBrC 2023 · Carlos Medina",
@@ -1037,10 +1281,12 @@ const RECIPE_ORIGIN: Partial<Record<BrewMethod, Record<string, string>>> = {
   frenchpress: {
     hoffmann: "Hoffmann · Ultimate French Press",
     classic: "Community · 4:00 press",
+    wendelboe: "Tim Wendelboe · French press",
   },
   coldbrew: {
     rtd: "Hoffmann · fridge steep",
     concentrate: "Counter Culture · concentrate",
+    kyoto: "Kyoto / slow drip · Hario Water Dripper",
   },
   clever: {
     steep: "Hoffmann / Clever hybrid",
@@ -1056,9 +1302,20 @@ const RECIPE_ORIGIN: Partial<Record<BrewMethod, Record<string, string>>> = {
     "adaptive-dark": "SproFiler / Decent · Adaptive Dark",
     stock: "SproFiler · Stock 9 Bar",
     filter: "SproFiler · Filter",
+    allonge: "Scott Rao · allongé (Decent)",
   },
   chemex: {
     hoffmann: "Hoffmann · Chemex as V60",
+    stumptown: "Stumptown · Chemex guide",
+  },
+  siphon: {
+    sprudge: "Sprudge · siphon guide",
+    bluebottle: "Blue Bottle · café siphon",
+  },
+  batch: {
+    sca: "SCA Golden Cup · 55 g/L",
+    rao: "Scott Rao · Batch Brew Basics",
+    wendelboe: "Tim Wendelboe · filter machine",
   },
   moka: {
     hoffmann: "Hoffmann · moka",
@@ -1082,6 +1339,8 @@ const METHOD_ORIGIN: Partial<Record<BrewMethod, string>> = {
   moka: "Hoffmann · moka",
   espresso: "WBC Light cluster · 1:2–1:2.5",
   cupping: "SCA cupping protocol",
+  siphon: "Sprudge · siphon guide",
+  batch: "SCA Golden Cup · 55 g/L",
 };
 
 export function techniquesFor(method: BrewMethod, locale: Locale = "en"): BrewTechnique[] {
@@ -1140,6 +1399,7 @@ export function suggestedTechniqueId(
     if (gassy || winey) return "hybrid";
     if (clogs && acid) return "bull";
     if (clogs) return "steep";
+    if (style === "light" && floral) return "jaafar";
     if (style === "light" && acid) return "fukahori";
     if (style === "medium") return "hold";
     return "hybrid";
@@ -1157,10 +1417,17 @@ export function suggestedTechniqueId(
     if (floral) return "peng";
     if (acid) return "kasuya-acid";
     if (sweet || style === "medium") return "kasuya-sweet";
-    if (flavors.includes("clean")) return "rao";
+    if (flavors.includes("clean")) return "winton";
     return "hoffmann";
   }
-  if (method === "kalita") return style === "light" && !heavy ? "mccarthy" : "wave";
+  if (method === "kalita") {
+    if (style !== "light" || heavy) return "wave";
+    if (floral || flavors.includes("clean")) return "april";
+    return "mccarthy";
+  }
+  if (method === "chemex") return style === "dark" || heavy ? "stumptown" : "hoffmann";
+  if (method === "siphon") return style === "light" && (acid || floral) && !gassy ? "bluebottle" : "sprudge";
+  if (method === "batch") return style === "light" && !heavy ? "wendelboe" : "sca";
   if (method === "origami") {
     if (gassy || heavy) return "medina";
     return style === "light" && (acid || floral) ? "du" : "medina";
@@ -1197,7 +1464,8 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
   const flavors = query.flavors ?? [];
   const acid = flavors.some((id) => ACID.includes(id));
   const heavy = flavors.some((id) => HEAVY.includes(id));
-  const gassy = stillBlooming(query.drinkPlan, query.daysSinceRoast, query.roastStyle);
+  const gassy = stillBlooming(query.drinkPlan, query.daysSinceRoast, query.roastStyle, query.method);
+  const protocol = query.method === "cupping";
   const openKettle = query.method !== "espresso" && query.method !== "coldbrew";
   const userDose = query.coffeeG != null && Number.isFinite(query.coffeeG);
   const userRatio = query.ratio != null && Number.isFinite(query.ratio);
@@ -1217,7 +1485,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
   const switchMode = query.method === "switch" ? ((techniqueId as SwitchMode | undefined) ?? suggestedMode) : undefined;
 
   let wantedC = tech?.wantedC ?? base.wantedC;
-  if (!tech?.lockTemp) {
+  if (!tech?.lockTemp && !protocol) {
     if (acid && openKettle) wantedC = Math.min(96, wantedC + 1);
     if (heavy && openKettle) wantedC = Math.max(85, wantedC - 2);
   }
@@ -1237,20 +1505,26 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     }
   }
 
-  /** Only treat the kettle as “cool” when it sits under the SCA 92 °C floor — not when it is short of a sea-level 96 card. */
-  const belowScaFloor = openKettle && boilC != null && kettleC < 92;
-  const stepsN = belowScaFloor ? (92 - kettleC) / 3 : 0;
+  /**
+   * Only a kettle under the SCA 92 °C floor counts as cool — not one short of a sea-level
+   * 96 card. The correction grows with the deficit instead of jumping at 92.0: one grind
+   * word per ~3 °C, a little time and strength in between. Size is an estimate (Batali 2020
+   * matched extraction by moving grind and time).
+   */
+  const deficitC = openKettle && boilC != null && !protocol ? Math.max(0, 92 - kettleC) : 0;
+  const stepsN = deficitC / 3;
   const immersion = info.family === "immersion" || info.family === "hybrid" || info.family === "cupping";
   let timeS = base.timeS + Math.round(stepsN * (immersion ? 40 : 20));
-  if (heavy) timeS += 15;
+  if (heavy && !protocol) timeS += 15;
   if (acid && !immersion) timeS = Math.max(base.timeS - 10, timeS - 10);
 
   const brewR = tech?.brewRatio ?? base.ratio;
   const bypassR = tech?.brewRatio != null ? (tech.bypassRatio ?? 0) : (base.bypassRatio ?? 0);
   const cardCup = brewR + bypassR;
   let cupRatio = userRatio ? clampRatio(query.ratio as number, query.method) : cardCup;
-  if (!userRatio && belowScaFloor && 92 - kettleC >= 3 && query.method !== "espresso") {
-    cupRatio = Math.max(query.method === "moka" ? 7 : 13, round1(cupRatio * 0.93));
+  if (!userRatio && deficitC > 0 && query.method !== "espresso") {
+    const tighter = 1 - 0.023 * Math.min(deficitC, 4.5);
+    cupRatio = Math.max(query.method === "moka" ? 7 : 13, round1(cupRatio * tighter));
   }
 
   const cardDoseG = tech?.doseG ?? base.doseG;
@@ -1270,7 +1544,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
 
   if (tech?.timeS != null) {
     timeS = tech.timeS + Math.round(stepsN * (immersion ? 40 : 20));
-    if (heavy && !tech.lockTemp) timeS += 15;
+    if (heavy && !tech.lockTemp && !protocol) timeS += 15;
   }
   if (info.family === "pour") {
     timeS = Math.round(timeS * Math.pow(coffeeG / cardDoseG, 0.4));
@@ -1287,16 +1561,19 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     query.method === "espresso";
   const skipFinerOnGas = gassy && paperBed;
   let grindShift = 0;
-  if (pourAltitude && belowScaFloor && !skipFinerOnGas) {
-    grindShift += Math.min(2, Math.max(1, Math.round(stepsN)));
+  let grindNudgeT = 0;
+  if (pourAltitude && deficitC > 0 && !skipFinerOnGas) {
+    const whole = Math.min(2, Math.floor(stepsN));
+    grindShift += whole;
+    if (whole < 2) grindNudgeT = -0.1 * (stepsN - whole);
   }
   if (acid && !skipFinerOnGas) grindShift += 1;
   if (heavy) grindShift -= 1;
   if (!skipFinerOnGas && (query.densityClass === "hard" || query.beanSize === "small")) grindShift += 1;
   if (query.densityClass === "soft" || query.beanSize === "large") grindShift -= 1;
-  if (gassy) grindShift -= 1;
-  else if (processClogsPaper(query.process) && query.method !== "espresso") grindShift -= 1;
-  grindShift = Math.max(-2, Math.min(2, grindShift));
+  if (gassy && paperBed) grindShift -= 1;
+  else if (!gassy && processClogsPaper(query.process) && query.method !== "espresso") grindShift -= 1;
+  grindShift = protocol ? 0 : Math.max(-2, Math.min(2, grindShift));
   if (bedResistsDose(query.method)) {
     const doseRel = coffeeG / cardDoseG;
     if (doseRel >= 1.45) grindShift -= 1;
@@ -1325,6 +1602,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     query.daysSinceRoast,
     query.roastStyle,
     t,
+    query.method,
   );
   const ctx = {
     locale,
@@ -1347,11 +1625,11 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
   const why: string[] = [
     t("why.starts", {
       style: t(`style.${query.roastStyle}` as MessageKey),
-      method: METHOD_NAME[query.method],
-      ratio: formatRatio(base.ratio),
-      bypass: base.bypassRatio ? t("why.bypass") : "",
-      temp: base.wantedC,
-      time: timeCopy(query.method, base.timeS, t),
+      method: tech ? `${METHOD_NAME[query.method]} · ${tech.name}` : METHOD_NAME[query.method],
+      ratio: formatRatio(cardCup),
+      bypass: bypassR > 0 ? t("why.bypass") : "",
+      temp: tech?.wantedC ?? base.wantedC,
+      time: timeCopy(query.method, tech?.timeS ?? base.timeS, t),
     }),
   ];
   if (query.varietyName) {
@@ -1406,6 +1684,9 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     );
   }
   why.push(restWhy);
+  if (query.water && query.water !== "unknown" && query.water !== "hard") {
+    why.push(t(`why.water.${query.water}` as MessageKey));
+  }
 
   const warnings: string[] = [];
   if (openKettle && boilC == null) {
@@ -1421,6 +1702,12 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     warnings.push(t("why.origami"));
   }
   if (restWarn) warnings.push(restWarn);
+  if (query.method === "espresso" && query.roastBrew === "filter" && query.roastStyle === "light") {
+    warnings.push(t("warn.filterRoastEspresso"));
+  }
+  if (query.water === "hard" && (acid || query.roastStyle === "light") && query.method !== "coldbrew") {
+    warnings.push(t("warn.hardWater"));
+  }
   if (gassy && tech && GASSY_RISKY.has(tech.id)) {
     warnings.push(t("warn.gassyNoBloom", { days: query.daysSinceRoast ?? 4 }));
   }
@@ -1454,6 +1741,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     suggestedTechnique: suggestedTech,
     gaggiuino: tech?.gaggiuino,
     origin: recipeOrigin(query.method, tech?.id),
+    grindNudgeT: grindNudgeT || undefined,
     steps: buildBrewSteps(ctx),
     why,
     sources,
@@ -1464,7 +1752,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
 function methodSources(method: BrewMethod, style: RoastStyleId, openKettle: boolean): string[] {
   const out = [
     "SCA / Lockhart Golden Cup — strength and a 90–96 °C window",
-    "Batali, Frost, Guinard et al. 2020, Sci. Rep. — brew T at fixed TDS/PE",
+    "Batali, Ristenpart & Guinard 2020, Sci. Rep. — brew T barely moved the cup once PE was matched by grind and time",
   ];
   if (method === "v60" || method === "kalita" || method === "chemex") {
     out.push("Hoffmann Ultimate V60 / Chemex adaptation — bloom, 60% pour, stir");
@@ -1505,7 +1793,23 @@ function methodSources(method: BrewMethod, style: RoastStyleId, openKettle: bool
     );
   }
   if (method === "cupping") out.push("SCA cupping protocol — 8.25 g / 150 g, 93 °C, 4 min");
-  if (openKettle) out.push("T_boil ≈ 100 − h/285 °C; Erdélyi / Perfect Daily Grind — grind finer, stay longer at altitude");
+  if (method === "siphon") {
+    out.push("Sprudge siphon guide — 35 g / 560 g, ~93 °C, ~3:30 · Blue Bottle café siphon (via Gota) 24 g / 300 g, 90 °C · HCG siphon 375–800 µm");
+  }
+  if (method === "batch") {
+    out.push("SCA Golden Cup / certified brewer — 55 g/L, 92–96 °C, 4–8 min · Rao Batch Brew Basics · Wendelboe filter machine 65 g/L");
+  }
+  if (method === "v60") out.push("Winton WBrC 2021 five pours 93 then 88 °C · Hoffmann Better 1-Cup V60 (Hario, 2023)");
+  if (method === "switch") out.push("Jaafar WBrC 2026 (round one) — open 100 g, close at 1:00, open at 2:00, 92 °C");
+  if (method === "aeropress") out.push("Little WAC 2022 — 18 g, 94 g at 92 °C, 150 g bypass at 90 °C (aeropress.com WAC recipes)");
+  if (method === "kalita") out.push("April / Patrik Rolf 13 g / 200 g, 94 °C · Wendelboe 65 g/L pour-over");
+  if (method === "chemex") out.push("Stumptown Chemex 42 g / 700 g, ~96 °C, ~4:00");
+  if (method === "frenchpress") out.push("Wendelboe French press 65–70 g/L, boiling, settle 1–5 min");
+  if (method === "coldbrew") out.push("Kyoto / slow drip — ~1 drop / 2 s, 5 h+ (Hario Water Dripper)");
+  if (method === "espresso") out.push("Rao allongé — 1:4–1:6, 8–9 bar, 4–4.5 ml/s, no pre-infusion (Decent docs)");
+  if (openKettle) {
+    out.push("T_boil ≈ 100 − h/300 °C (ISA + Antoine). Under a 92 °C kettle Kaffe nudges grind, time and strength a little per °C — an estimate, not a paper");
+  }
   return out;
 }
 
@@ -1530,17 +1834,24 @@ function kettleCopy(
   return t("kettle.offBoil", { kettle: kettleC.toFixed(0), boil: boilC.toFixed(1) });
 }
 
-function stillBlooming(plan: DrinkPlan, days: number, style: RoastStyleId): boolean {
+export function stillBlooming(plan: DrinkPlan, days: number, style: RoastStyleId, method?: BrewMethod): boolean {
   if (plan === "rtd") return days <= 1;
-  if (style === "light") return days <= 10;
-  if (style === "medium") return days <= 6;
-  return days <= 3;
+  return days <= restWindows(style, method).gas;
 }
 
-function restWindows(style: RoastStyleId): { gas: number; good: number; aging: number } {
-  if (style === "light") return { gas: 10, good: 21, aging: 35 };
-  if (style === "medium") return { gas: 6, good: 16, aging: 28 };
-  return { gas: 3, good: 10, aging: 18 };
+/**
+ * Days a Rest roast stays gassy / good / ageing. Espresso pressure pushes CO₂ through the
+ * puck, so shots want longer rest than filter (craft: KL, Rao, café practice — no paper
+ * gives these day counts).
+ */
+export function restWindows(
+  style: RoastStyleId,
+  method?: BrewMethod,
+): { gas: number; good: number; aging: number } {
+  const shot = method === "espresso";
+  if (style === "light") return shot ? { gas: 14, good: 30, aging: 45 } : { gas: 10, good: 21, aging: 35 };
+  if (style === "medium") return shot ? { gas: 8, good: 21, aging: 32 } : { gas: 6, good: 16, aging: 28 };
+  return shot ? { gas: 4, good: 14, aging: 21 } : { gas: 3, good: 10, aging: 18 };
 }
 
 function restCopy(
@@ -1549,6 +1860,7 @@ function restCopy(
   style: RoastStyleId,
   t: (key: MessageKey, vars?: Record<string, string | number>) => string = (key, vars) =>
     translate("en", key, vars),
+  method?: BrewMethod,
 ): { restLabel: string; restWhy: string; restWarn?: string } {
   if (plan === "rtd") {
     if (days <= 3) {
@@ -1563,7 +1875,7 @@ function restCopy(
       restWarn: t("rest.rtdWarn"),
     };
   }
-  const w = restWindows(style);
+  const w = restWindows(style, method);
   if (days <= 2) {
     return {
       restLabel: t("rest.degassing", { days }),

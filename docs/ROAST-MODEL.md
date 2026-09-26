@@ -77,8 +77,9 @@ T_{\mathrm{FC}} = 203.5 + 3.8\cdot\frac{\rho-680}{80} + \mathrm{adj} + \delta_{\
 \quad \in \bigl[196,\ \min(212,\,T_{\mathrm{drop}}-4)\bigr]
 $$
 
-- Density raises crack temperature (stronger cell wall, more energy to rupture). Moisture mainly **delays the time** to crack via evaporative cooling, not the crack temperature itself (Hernández: initial moisture strongly affects the drying *phase*; bean-temperature kinetics at 9–13% are closer to each other than to $X=0$).
-- Washed $-0.4$ °C, natural $+0.3$ °C (typical KL-user spread; washed often sounds slightly earlier).
+- Density raises crack temperature (stronger cell wall, more energy to rupture). **The 3.8 °C per 80 g/L slope is a Kaffe heuristic** — no published density → crack-temperature relation exists; Kaffelogic only says crack “typically starts around 205 °C” and varies by bean. Log your crack and set Expected first crack (Overlay → *Use in Generate*).
+- Moisture **delays the time** to crack (evaporative load), and Kaffe does not move the crack temperature for it. That split is plausible but weakly evidenced either way.
+- Washed $-0.5$ °C, natural $+0.3$ °C, applied once (craft: washed often sounds slightly earlier). Cupping adds $+0.5$ °C.
 - Variety and flavor `fcTemp` adj stack on top.
 - Capped **4 °C below drop** when Kaffe *guesses* crack, so an estimated light roast still has a development band.
 - **Measured `expect_fc` is lot knowledge**, not a colour stop. Roast style still sets `recommended_level` on the Nordic **205–218 °C** table (light L1.6 ≈ 209 °C). If this lot pops at 207 °C, Light still drops ~209 °C — a short °C band, not a darker roast. Measured crack is only pulled down if it would sit **at or after** drop (the curve cannot pin crack past the colour stop).
@@ -148,7 +149,7 @@ Turn **Density from altitude** off when you have a measured g/L. Heat then follo
 
 The **BOOST kit** is hardware (chamber rings + variable batch size). A **boost zone** is software.
 
-Chris Hilder: the Nano controls **rate of rise**, not temperature error. A boost is a constant **°C/min added to RoR-error** every PID cycle — like aiming up-current when sailing. Official Nordic Light uses a short **+3 °C/min into crack**; Kaffe Rest **does not copy that**. Nano logs showed the extra RoR raising crack temperature a couple of degrees. Rao: enter crack already decelerating — do not slam heat *at* crack. Community espresso sometimes uses **−6…−15** after crack; Kaffe stays in **−6…−2**. A crashing design RoR is a curve fault. Maillard is rebuilt as a **declining-RoR quadratic** (yellow → crack), not a late 30 s approach pin — that pin made the 24→7 °C/min cliff on log0039.
+Chris Hilder: the Nano controls **rate of rise**, not temperature error. A boost is a constant **°C/min added to RoR-error** every PID cycle — like aiming up-current when sailing. Official Nordic Light uses a short **+3 °C/min into crack**; Kaffe Rest **does not copy that**. Nano logs showed the extra RoR raising crack temperature a couple of degrees. Rao: enter crack already decelerating — do not slam heat *at* crack. Community espresso sometimes uses **−6…−15** after crack. The *Kaffelogic Roaster’s Companion* says to **finish any negative boost before the onset of first crack** — crack itself absorbs heat, so a brake running through it can crash RoR. Kaffe’s **flick brake** therefore runs from ~45 s before crack to ~3 s before it, at −2…−6 °C/min. A crashing design RoR is a curve fault. Maillard is rebuilt as a **declining-RoR quadratic** (yellow → crack), not a late 30 s approach pin — that pin made the 24→7 °C/min cliff on log0039.
 
 `roast_min_desired_rate_of_rise` is the **floor** of what that controller may ask for while catching the profile. The Nordic baseline copies **−0.7**. Kaffelogic Studio warns when the Bézier itself never goes below ~0.8 °C/min: −0.7 then permits an unduly negative correction. Kaffe sets the field to about **design min RoR − 1**, clamped to **[−1, −0.2]** (so typical generated curves write **−0.2**). It is saved in the `.kpro`, not a separate machine pref.
 
@@ -176,7 +177,7 @@ Official Kaffelogic core profiles ([RTD](https://kaffelogicjp.com/en/pages/kl-rt
 | Boosts | Only if the bean needs them (drying, Maillard, after-crack brake). **No** auto into-crack +boost. | Always a Maillard **RoR step**, then **+boost into first crack** (“T through crack”), truncated at crack if the roast-level band is tight. No negative after-crack brake (that would hold gas in). |
 | Slopes | Baseline | Slightly steeper dry (esp. ≥ 1500 m), Maillard, and development |
 
-Fluid-bed coffee often needs **more rest than drum coffee** at the same colour: convection leaves cell structure more intact, so CO₂ escapes slowly (Green Coffee Collective / KL community). RTD is the exception.
+KL community advice is that Nano roasts want **more rest than drum coffee**. Treat it as craft: Wang & Lim (2014) found high-temperature short-time roasts degas *faster* at equal roast degree, with larger pores. The Rest / RTD day windows come from Kaffelogic’s own pages (RTD best 1–3 days; Rest at least 3–5).
 
 Fnq (KL community, *Rest Time and Profile Selection*): RTD 1500–2000 shows a large RoR step just after drying–Maillard, plus sustained energy through crack to force CO₂ out and flatten dip/flick. Rest profiles do that less directly. Altitude bands matter for how CO₂ moves.
 
@@ -205,6 +206,24 @@ These are **roast levers**, not a full SCA wheel. Variety-locked notes (blueberr
 | Balance | No single loud phase. | Classic 8–10 min, moderate DTR. |
 
 Dark roast style marks floral/fruit/bright as **avoid** (those notes are already gone at a ~4.6 drop). Light style recommends them. Variety `flavorLean` and process (washed → clean/bright; natural → fruity/winey) nudge recommendations.
+
+### Variety families
+
+About 100 cultivars live in `VARIETIES` (`src/lib/knowledge.ts`). Each one reuses a small set of heat templates instead of inventing its own numbers. The `roast` deltas stack on origin / process / density / moisture exactly like the rest of the model. A variety also gives density (±6 g/L and a one-step brew density bump), seed size (drying `sizeK`), and up to two `flavorLean` icons that This bag uses when no flavor is picked. `kpro.test.ts` checks every row against its family.
+
+| Family | Examples | Roast deltas | Style |
+|---|---|---|---|
+| Gesha / landrace (volatile) | Gesha, Pink Bourbon, Chiroso, Sidra, Ethiopian landrace, JARC 741xx, Kurume, Typica Mejorado, Bourbon Ají, Casiopea | Lower FC, preheat up, **mid and development negative** | Light |
+| Kenya dense | SL28, SL34, SL14, K7 | Preheat +8…12, drying +2…4, restrained development | Light |
+| Bourbon sweet | Bourbon, Red / Yellow / Orange / Striped Bourbon, Tekisic, Jackson, Mibirizi | Longer mid, a little more development, fan −40…−50 | Light–medium |
+| Compact dwarf | Caturra, Villa Sarchi, Pacas, Villalobos, San Ramón | Preheat −2, drying −3, small negatives | Light |
+| Typica / clean | Typica, Java, Pache, Kent, Tabi, Marsellesa, Mundo Maya | Small negatives, modest development | Light |
+| Catuai baseline | Catuai, Red / Yellow Catuai, Topázio, Paraíso | Near zero, a little extra mid | Medium |
+| Body (Catimor / Sarchimor / Timor) | Castillo, Cenicafé 1, Catimor, Lempira, IHCAFE 90, Obatã, Tupi, Tim Tim, Ateng, S795 | **Mid and development positive**, fan −60…−80 | Medium |
+| Large seed | Pacamara, Maragogipe, Maracaturra, Maragesha, Blue Mountain, Chandragiri | Preheat ≥ +10, drying ≥ +8, fan up | By cup |
+| Mokka / Yemen | Mokka, Udaini, Tuffahi, Dawairi, Jaadi | Small dense seed: firm charge, short drying, modest development | Medium |
+
+The volatile and body sets (`VOLATILE_VARIETIES` / `BODY_VARIETIES`) also drive `recommendFlavor`. Volatile cultivars recommend floral / fruity / bright and mark body / deep sweet as **avoid** on Light. Body cultivars recommend body / balance / deep sweet. These are craft groupings from cultivar lineage and seed size (WCR Varieties catalogue), not measured per-cultivar kinetics.
 
 ---
 
@@ -266,11 +285,18 @@ Implementation: `planFanSchedule` / `buildOfficialFanCurve` in `src/lib/generate
 
 ---
 
+- **Colour is not modelled from time.** Style maps to a drop temperature, but the same colour needs a hotter end on a fast roast than a slow one (Schenker/ETH fluid-bed data cited by Schwartzberg: ~245 °C at 3 min vs ~212 °C at 12 min). A 5:30 Nordic and an 11:00 slow roast at the same “Light” will not match in Agtron. Measure colour if you can.
+- **The probe reads air as well as bean.** Kaffelogic: the probe sits 5–10 °C above the bean surface and the gap grows with air speed. Kaffe changes fan RPM per lot but does not shift its crack / colour-change estimates for that. Colour change is written at 150 °C; Kaffelogic’s guide puts it nearer 160 °C on the probe.
+- **DTR is an output, not a law.** Rao’s 20–25% assumes a loaded drum dropped after first crack ends; Kaffe’s light drops are mid-crack. Kaffe designs at least **60 s** of development (Alstrup’s shortest arm was 90 s on a 1 kg drum) and reports DTR.
+- **Moisture and density enter once.** They set the drying / Maillard slopes through $k_{\mathrm{bean}}$; their second-count offsets only move preheat and fan.
+- **Naturals and anaerobics.** Naturals carry more glucose and fructose (Knopp et al. 2006), so they brown faster at a given temperature; Kaffe’s gentler natural RoR follows the craft response (lower thermal load). There is no good kinetic data for anaerobic lots — treat their offsets as guesses.
+- **Power headroom is not checked.** Kaffelogic suggests keeping heater power under ~1 300 W; cold rooms, low mains, wet or dense lots and high fan can leave a steep design curve unreachable, and the roast then runs below it.
+
 ## References
 
 ### Heat, mass, Maillard
 
-1. Schwartzberg, H.G. (2002). Modeling coffee roasting. In Welti-Chanes, J., Barbosa-Cánovas, G.V. & Aguilera, J.M. (eds.), *Engineering and Food for the 21st Century*. CRC Press. Moisture-loss and energy balances used by later roasting models.
+1. Schwartzberg, H.G. (2002). Modeling bean heating during batch roasting of coffee beans. In Welti-Chanes, J., Barbosa-Cánovas, G.V. & Aguilera, J.M. (eds.), *Engineering and Food for the 21st Century*, pp. 862–881. CRC Press. Moisture-loss and energy balances used by later roasting models.
 2. Hernández, J.A., Heyd, B., Irles, C., Valdovinos, B. & Trystram, G. (2007). Analysis of the heat and mass transfer during coffee batch roasting. *Journal of Food Engineering*, 78(4), 1141–1148. [https://doi.org/10.1016/j.jfoodeng.2005.12.041](https://doi.org/10.1016/j.jfoodeng.2005.12.041)
 3. van Boekel, M.A.J.S. (2006). Formation of flavour compounds in the Maillard reaction. *Biotechnology Advances*, 24(2), 230–233. [https://doi.org/10.1016/j.biotechadv.2005.11.004](https://doi.org/10.1016/j.biotechadv.2005.11.004)
 4. Labuza, T.P. & Saltmarch, M. (1981). The nonenzymatic browning reaction as affected by water in foods. In Rockland, L.B. & Stewart, G.F. (eds.), *Water Activity: Influences on Food Quality*. Academic Press. Maillard rate vs water activity (peak near $a_{w} \approx 0.6$–$0.7$).
@@ -283,7 +309,7 @@ Implementation: `planFanSchedule` / `buildOfficialFanCurve` in `src/lib/generate
 ### Craft roasting (DTR, acids, body)
 
 7. Rao, S. (2014). *The Coffee Roaster’s Companion*. (DTR ~20–25%; phase language used throughout specialty roasting.)
-8. Apodaca, C. (2017). The relationship between water activity and the Maillard reaction in roasting. Royal Coffee. Faster Maillard → more sweetness/acidity, less viscosity; slower → more body. [https://royalcoffee.com/the-relationship-between-water-activity-and-the-maillard-reaction-in-roasting/](https://royalcoffee.com/the-relationship-between-water-activity-and-the-maillard-reaction-in-roasting/)
+8. Kornman, C. (2017). The relationship between water activity and the Maillard reaction in roasting. Royal Coffee. Informal sample-roaster tests (author calls them preliminary): faster Maillard → more sweetness/acidity, less viscosity; slower → more body. [https://royalcoffee.com/the-relationship-between-water-activity-and-the-maillard-reaction-in-roasting/](https://royalcoffee.com/the-relationship-between-water-activity-and-the-maillard-reaction-in-roasting/)
 9. Yeretzian, C., Jordan, A., Badoud, R. & Lindinger, W. (2002). From the green bean to the cup of coffee: investigating coffee roasting by on-line monitoring of volatiles. *European Food Research and Technology*, 214, 92–104. Volatile aromatics are generated and then lost with heat/time.
 
 ### Kaffelogic (machine, boosts, RTD/Rest)
