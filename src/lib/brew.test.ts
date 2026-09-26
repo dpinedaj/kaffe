@@ -16,18 +16,18 @@ import {
   BREW_METHODS,
   type BrewMethod,
 } from "./brew";
-import type { FlavorId, ProcessId, RoastStyleId } from "./knowledge";
+import { VARIETIES, type FlavorId, type ProcessId, type RoastStyleId } from "./knowledge";
 import { defaultIntent, generateProfile } from "./generate";
 import { parseKpro } from "./kpro";
 
 const GRIND_ORDER = ["coarse", "medium-coarse", "medium", "medium-fine", "fine"] as const;
 
 describe("boiling point", () => {
-  it("is 100 °C at sea level and falls about 1 °C per 285 m", () => {
+  it("matches ISA pressure + Antoine: about 1 °C per 300 m", () => {
     expect(boilingPointC(0)).toBeCloseTo(100, 2);
-    expect(boilingPointC(1500)).toBeCloseTo(94.74, 1);
-    expect(boilingPointC(1800)).toBeCloseTo(93.68, 1);
-    expect(boilingPointC(2600)).toBeCloseTo(90.88, 1);
+    expect(boilingPointC(1500)).toBeCloseTo(95.02, 1);
+    expect(boilingPointC(1800)).toBeCloseTo(94.03, 1);
+    expect(boilingPointC(2600)).toBeCloseTo(91.36, 1);
   });
 });
 
@@ -65,6 +65,18 @@ describe("defaults from the roast", () => {
     expect(gesha.flavors).toEqual(["floral", "bright"]);
     expect(gesha.densityClass).toBe("hard");
     expect(gesha.varietyName).toMatch(/Gesha/);
+
+    const chiroso = bagBrewFields({
+      roastStyle: "light",
+      process: "washed",
+      flavors: [],
+      originId: "colombia-antioquia",
+      varietyId: "chiroso",
+      farmAltitudeM: 1900,
+    });
+    expect(chiroso.flavors).toEqual(["floral", "juicy"]);
+    expect(chiroso.densityClass).toBe("hard");
+    expect(chiroso.varietyName).toMatch(/Chiroso/);
 
     const picked = bagBrewFields({
       roastStyle: "light",
@@ -200,8 +212,8 @@ describe("recommendBrew", () => {
       daysSinceRoast: 14,
       kitchenAltitudeM: 2000,
     });
-    expect(at2000.boilC).toBeCloseTo(93.0, 1);
-    expect(at2000.kettleC).toBeCloseTo(92.0, 1);
+    expect(at2000.boilC).toBeCloseTo(93.3, 1);
+    expect(at2000.kettleC).toBeCloseTo(92.3, 1);
     expect(at2000.cappedByBoil).toBe(true);
     expect(at2000.grind).toBe(sea.grind);
     expect(at2000.timeS).toBe(sea.timeS);
@@ -214,7 +226,8 @@ describe("recommendBrew", () => {
       kitchenAltitudeM: 2600,
     });
     expect(bogota.kettleC).toBeLessThan(92);
-    expect(GRIND_ORDER.indexOf(bogota.grind)).toBeGreaterThan(GRIND_ORDER.indexOf(sea.grind));
+    expect(GRIND_ORDER.indexOf(bogota.grind)).toBeGreaterThanOrEqual(GRIND_ORDER.indexOf(sea.grind));
+    expect(bogota.grindNudgeT ?? 0).toBeLessThan(0);
     expect(bogota.timeS).toBeGreaterThan(sea.timeS);
   });
 
@@ -570,8 +583,10 @@ describe("flavor-mapped competition recipes", () => {
       daysSinceRoast: 12,
       kitchenAltitudeM: 0,
       flavors: ["clean"],
+      technique: "rao",
     });
     expect(rao.technique).toBe("rao");
+    expect(rao.suggestedTechnique).toBe("winton");
     expect(rao.steps.some((s) => /spin/i.test(`${s.title} ${s.detail}`))).toBe(true);
 
     const fresh = recommendBrew({
@@ -690,7 +705,7 @@ describe("flavor-mapped competition recipes", () => {
       method: "espresso",
       roastStyle: "light",
       drinkPlan: "rest",
-      daysSinceRoast: 14,
+      daysSinceRoast: 16,
       flavors: ["juicy"],
     });
     expect(turbo.gaggiuino).toBe("Extractamundo Dos!");
@@ -714,7 +729,7 @@ describe("flavor-mapped competition recipes", () => {
       method: "espresso",
       roastStyle: "light",
       drinkPlan: "rest",
-      daysSinceRoast: 14,
+      daysSinceRoast: 16,
     });
     expect(light.gaggiuino).toBe("Adaptive for Light Roast");
     expect(light.gaggiuino).not.toMatch(/\bv\d/i);
@@ -747,8 +762,9 @@ describe("flavor-mapped competition recipes", () => {
     expect(cupping.origin).toMatch(/SCA/);
   });
 
-  it("shows a single cited card for Chemex, Moka, and cupping", () => {
-    for (const method of ["chemex", "moka", "cupping"] as const) {
+  it("shows a single cited card for Moka and cupping", () => {
+    expect(techniquesFor("chemex").map((t) => t.id)).toEqual(["hoffmann", "stumptown"]);
+    for (const method of ["moka", "cupping"] as const) {
       const list = techniquesFor(method);
       expect(list).toHaveLength(1);
       const rec = recommendBrew({
@@ -838,7 +854,7 @@ describe("gassy recipe matrix", () => {
     expect(recommendBrew({ method: "v60", ...rested }).technique).toBe("kasuya-acid");
     expect(recommendBrew({ method: "switch", ...rested }).technique).toBe("fukahori");
     expect(recommendBrew({ method: "origami", ...rested }).technique).toBe("du");
-    expect(recommendBrew({ method: "espresso", ...rested }).technique).toBe("extractamundo");
+    expect(recommendBrew({ method: "espresso", ...rested, daysSinceRoast: 16 }).technique).toBe("extractamundo");
     expect(recommendBrew({ method: "clever", ...rested }).technique).toBe("short");
   });
 
@@ -892,10 +908,10 @@ describe("flavor combinations pick the recipe that claims that cup", () => {
       [["juicy"], "kasuya-acid", "fukahori", "du", "extractamundo", "stanica", "short"],
       [["fruity"], "kasuya-acid", "fukahori", "du", "extractamundo", "stanica", "short"],
       [["bright"], "kasuya-acid", "fukahori", "du", "extractamundo", "stanica", "short"],
-      [["floral"], "peng", "fukahori", "du", "blooming", "merikanto", "gina"],
+      [["floral"], "peng", "jaafar", "du", "blooming", "merikanto", "gina"],
       [["winey"], "hedrick", "hybrid", "du", "blooming", "merikanto", "steep"],
       [["lightSweet"], "kasuya-sweet", "hybrid", "medina", "adaptive-light", "merikanto", "gina"],
-      [["clean"], "rao", "hybrid", "medina", "adaptive-light", "stanica", "steep"],
+      [["clean"], "winton", "hybrid", "medina", "adaptive-light", "stanica", "steep"],
       [["balance"], "hoffmann", "hybrid", "medina", "adaptive-light", "stanica", "steep"],
       [["body"], "hoffmann", "steep", "medina", "adaptive-dark", "pop", "steep"],
       [["deepSweet"], "hoffmann", "steep", "medina", "adaptive-dark", "pop", "steep"],
@@ -916,8 +932,8 @@ describe("flavor combinations pick the recipe that claims that cup", () => {
       [["juicy", "lightSweet"], "kasuya-acid", "fukahori", "du", "extractamundo", "stanica", "gina"],
       [["fruity", "lightSweet"], "kasuya-acid", "fukahori", "du", "extractamundo", "stanica", "gina"],
       [["bright", "lightSweet"], "kasuya-acid", "fukahori", "du", "extractamundo", "stanica", "gina"],
-      [["floral", "juicy"], "peng", "fukahori", "du", "blooming", "merikanto", "gina"],
-      [["floral", "lightSweet"], "peng", "fukahori", "du", "blooming", "merikanto", "gina"],
+      [["floral", "juicy"], "peng", "jaafar", "du", "blooming", "merikanto", "gina"],
+      [["floral", "lightSweet"], "peng", "jaafar", "du", "blooming", "merikanto", "gina"],
       [["floral", "winey"], "hedrick", "hybrid", "du", "blooming", "merikanto", "gina"],
       [["winey", "juicy"], "hedrick", "hybrid", "du", "blooming", "merikanto", "steep"],
       [["winey", "lightSweet"], "hedrick", "hybrid", "du", "blooming", "merikanto", "gina"],
@@ -1035,8 +1051,39 @@ describe("every method × every 0–2 flavor combo", () => {
     }
   });
 
-  it("keeps Chemex, Moka, and cupping on their single cited skeleton for every bag", () => {
-    for (const method of ["chemex", "moka", "cupping"] as const) {
+  it("builds a card from This bag for every cultivar × every method", () => {
+    for (const v of VARIETIES) {
+      for (const process of ["washed", "natural"] as const) {
+        const bag = bagBrewFields({
+          roastStyle: v.suggestedStyle,
+          process,
+          flavors: [],
+          originId: "colombia-huila",
+          varietyId: v.id,
+          farmAltitudeM: 1800,
+        });
+        if (v.id !== "unknown") expect(bag.flavors, v.id).toEqual(v.flavorLean.slice(0, 2));
+        for (const method of methods) {
+          const card = recommendBrew({
+            method,
+            roastStyle: v.suggestedStyle,
+            drinkPlan: "rest",
+            daysSinceRoast: 14,
+            ...bag,
+          });
+          const label = `${v.id} ${process} ${method}`;
+          expect(card.method, label).toBe(method);
+          expect(card.steps.length, label).toBeGreaterThan(0);
+          expect(card.kettleC, label).toBeGreaterThan(0);
+          expect(card.kettleC, label).toBeLessThanOrEqual(100);
+          if (v.id !== "unknown") expect(card.why.join(" "), label).toContain(v.name);
+        }
+      }
+    }
+  });
+
+  it("keeps Moka and cupping on their single cited skeleton for every bag", () => {
+    for (const method of ["moka", "cupping"] as const) {
       const only = techniquesFor(method)[0].id;
       for (const flavors of combos) {
         expect(suggestedTechniqueId(method, "light", flavors, "natural", true)).toBe(only);
@@ -1072,7 +1119,7 @@ describe("every method × every 0–2 flavor combo", () => {
           method,
           roastStyle: "light",
           drinkPlan: "rest",
-          daysSinceRoast: 14,
+          daysSinceRoast: method === "espresso" ? 16 : 14,
           process: "washed",
           flavors,
         });
@@ -1086,5 +1133,137 @@ describe("every method × every 0–2 flavor combo", () => {
         expect(rested.technique).toBe(rested.suggestedTechnique);
       }
     }
+  });
+});
+
+
+describe("science fixes", () => {
+  it("keeps cupping on the SCA protocol whatever the flavor, gas or altitude", () => {
+    for (const flavors of [[], ["juicy"], ["body"]] as FlavorId[][]) {
+      const cup = recommendBrew({
+        method: "cupping",
+        roastStyle: "light",
+        drinkPlan: "rest",
+        daysSinceRoast: 3,
+        kitchenAltitudeM: 2600,
+        densityClass: "hard",
+        flavors,
+      });
+      expect(cup.wantedC).toBe(93);
+      expect(cup.timeS).toBe(240);
+      expect(cup.grind).toBe("medium-coarse");
+    }
+  });
+
+  it("grows the altitude correction with the kettle deficit instead of jumping at 92 °C", () => {
+    const at = (m: number) =>
+      recommendBrew({ method: "v60", roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 14, kitchenAltitudeM: m });
+    const justUnder = at(2400);
+    expect(justUnder.kettleC).toBeLessThan(92);
+    expect(justUnder.grind).toBe(at(0).grind);
+    expect(justUnder.grindNudgeT ?? 0).toBeLessThan(0);
+    const high = at(3100);
+    expect(high.timeS).toBeGreaterThan(justUnder.timeS);
+  });
+
+  it("only coarsens gassy lots on beds that dome", () => {
+    const base = { roastStyle: "light" as const, drinkPlan: "rest" as const, process: "washed" as const };
+    const pressGassy = recommendBrew({ method: "frenchpress", ...base, daysSinceRoast: 3 });
+    const pressRested = recommendBrew({ method: "frenchpress", ...base, daysSinceRoast: 16 });
+    expect(pressGassy.grind).toBe(pressRested.grind);
+  });
+
+  it("rests espresso longer than filter", () => {
+    const shot = recommendBrew({ method: "espresso", roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 12 });
+    const filter = recommendBrew({ method: "v60", roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 12 });
+    expect(shot.technique).toBe("blooming");
+    expect(filter.technique).not.toBe("hedrick");
+  });
+
+  it("describes the chosen script in the first Why line", () => {
+    const card = recommendBrew({ method: "v60", roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 4 });
+    expect(card.technique).toBe("hedrick");
+    expect(card.why[0]).toMatch(/Double bloom/);
+    expect(card.why[0]).toMatch(/2:30/);
+  });
+
+  it("warns when a Light filter roast goes into the espresso machine, and on hard water for acid cups", () => {
+    const shot = recommendBrew({
+      method: "espresso",
+      roastStyle: "light",
+      drinkPlan: "rest",
+      daysSinceRoast: 20,
+      roastBrew: "filter",
+    });
+    expect(shot.warnings.some((w) => /filter/i.test(w))).toBe(true);
+    const hard = recommendBrew({ method: "v60", roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 14, water: "hard" });
+    expect(hard.warnings.some((w) => /alkalin/i.test(w))).toBe(true);
+  });
+
+  it("uses the same density class as Generate for a Generate roast", () => {
+    const intent = { ...defaultIntent(), originId: "colombia-antioquia", varietyId: "chiroso", altitudeM: 1550 };
+    const out = generateProfile(intent);
+    expect(snapshotFromIntent(intent, "x").densityClass).toBe(out.densityClass);
+  });
+});
+
+
+describe("new champion and community recipes", () => {
+  const light = { roastStyle: "light" as const, drinkPlan: "rest" as const, daysSinceRoast: 16, kitchenAltitudeM: 0 };
+
+  it("prints Jaafar WBrC 2026 on a degassed floral Light Switch, never while gassy", () => {
+    const card = recommendBrew({ method: "switch", ...light, flavors: ["floral"] });
+    expect(card.technique).toBe("jaafar");
+    expect(card.ratioN).toBeCloseTo(13.3, 1);
+    expect(card.kettleC).toBe(92);
+    expect(card.origin).toMatch(/2026/);
+    const gassy = recommendBrew({ method: "switch", ...light, daysSinceRoast: 4, flavors: ["floral"] });
+    expect(gassy.technique).not.toBe("jaafar");
+  });
+
+  it("builds every new recipe with steps and a credit", () => {
+    const picks: [BrewMethod, string][] = [
+      ["v60", "winton"],
+      ["v60", "hoffmann1"],
+      ["aeropress", "little"],
+      ["kalita", "april"],
+      ["kalita", "wendelboe"],
+      ["chemex", "stumptown"],
+      ["frenchpress", "wendelboe"],
+      ["coldbrew", "kyoto"],
+      ["espresso", "allonge"],
+      ["siphon", "sprudge"],
+      ["siphon", "bluebottle"],
+      ["batch", "sca"],
+      ["batch", "rao"],
+      ["batch", "wendelboe"],
+    ];
+    for (const [method, technique] of picks) {
+      for (const locale of ["en", "es"] as const) {
+        const card = recommendBrew({ method, ...light, technique, locale });
+        expect(card.technique, `${method} ${technique}`).toBe(technique);
+        expect(card.steps.length, `${method} ${technique}`).toBeGreaterThanOrEqual(3);
+        for (const step of card.steps) {
+          expect(step.title, `${method} ${technique} ${locale}`).not.toMatch(/^step\./);
+          expect(step.detail, `${method} ${technique} ${locale}`).not.toMatch(/\{[a-zA-Z]+\}/);
+        }
+        expect(card.origin, `${method} ${technique}`).toBeTruthy();
+      }
+    }
+  });
+
+  it("keeps Winton's cool pours and Little's hot bypass on the card", () => {
+    const winton = recommendBrew({ method: "v60", ...light, technique: "winton" });
+    expect(winton.kettleNote).toMatch(/88/);
+    const little = recommendBrew({ method: "aeropress", ...light, technique: "little" });
+    expect(little.bypassG).toBeGreaterThan(little.waterG);
+  });
+
+  it("treats siphon as immersion and batch brew as percolation for After brew", () => {
+    const siphon = recommendBrew({ method: "siphon", ...light });
+    const batch = recommendBrew({ method: "batch", ...light });
+    expect(siphon.technique).toBeDefined();
+    expect(batch.technique).toBe("wendelboe");
+    expect(recommendBrew({ method: "batch", ...light, roastStyle: "medium" }).technique).toBe("sca");
   });
 });

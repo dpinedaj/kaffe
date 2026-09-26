@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from "r
 import { useI18n } from "../i18n/LocaleContext";
 import { InteractiveCurve } from "../components/InteractiveCurve";
 import { OverlayCoach } from "../components/OverlayCoach";
-import { OverlayChart } from "../components/RoastChart";
+import { OverlayChart, type OverlayRightAxis } from "../components/RoastChart";
 import { OverlayTrackDetails } from "../components/OverlayTrackDetails";
 import { Card } from "../components/ui";
 import { expandCurve, formatClock, formatClockFine, rebuildFromAnchors, rorSeries, timeAtValue } from "../lib/curve";
@@ -51,6 +51,7 @@ export default function OverlayPage({
 }) {
   const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
+  const [rightAxis, setRightAxis] = useState<OverlayRightAxis>("ror");
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -247,13 +248,31 @@ export default function OverlayPage({
       {tracks.length > 0 && (
         <>
           <Card className="p-4">
-            <OverlayChart tracks={tracks} />
+            <div className="mb-2 flex justify-end">
+              <div className="flex rounded-lg bg-card2 p-0.5">
+                {(["ror", "fan"] as OverlayRightAxis[]).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`rounded-md px-2.5 py-1 text-[12px] font-semibold ${
+                      rightAxis === id ? "bg-blue text-white" : "text-muted"
+                    }`}
+                    onClick={() => setRightAxis(id)}
+                  >
+                    {id === "ror" ? "RoR" : t("overlay.fanAxis")}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <OverlayChart tracks={tracks} right={rightAxis} />
             <div className="mt-3 flex flex-wrap gap-3 text-[12px] text-muted">
               {tracks.map((track) => (
                 <span key={track.id} className="flex items-center gap-2">
                   <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: track.color }} />
                   {track.name} {track.log ? t("overlay.solidDashed") : t("overlay.design")}
-                  <span className="text-muted">{t("overlay.dottedFan")}</span>
+                  <span className="text-muted">
+                    {t(rightAxis === "ror" ? (track.log ? "overlay.rorLog" : "overlay.rorDesign") : "overlay.dottedFan")}
+                  </span>
                 </span>
               ))}
             </div>
@@ -391,7 +410,11 @@ export default function OverlayPage({
           <DiffTable tracks={tracks} />
 
           {logs.map((log) => (
-            <LogPanels key={log.fileName} log={log} />
+            <LogPanels
+              key={log.fileName}
+              log={log}
+              onUseCrack={(fc) => onOpenInGenerate({ ...studioIntent, expectFc: Math.round(fc * 10) / 10 })}
+            />
           ))}
         </>
       )}
@@ -445,13 +468,13 @@ function DiffTable({ tracks }: { tracks: OverlayTrack[] }) {
       <table className="mt-2 w-full text-left text-[13px]">
         <thead>
           <tr className="border-b border-line text-muted">
-            <th className="px-4 py-3 font-medium">Item</th>
-            {tracks.map((t, i) => (
-              <th key={t.id} className="px-4 py-3 font-medium">
+            <th className="px-4 py-3 font-medium">{t("overlay.item")}</th>
+            {tracks.map((tr, i) => (
+              <th key={tr.id} className="px-4 py-3 font-medium">
                 <span className="inline-flex items-center gap-2">
-                  <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: t.color }} />
-                  {t.name}
-                  {i === 0 && <span className="text-[11px] text-muted">baseline</span>}
+                  <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: tr.color }} />
+                  {tr.name}
+                  {i === 0 && <span className="text-[11px] text-muted">{t("overlay.baseline")}</span>}
                 </span>
               </th>
             ))}
@@ -509,42 +532,48 @@ function GroupRows({
   );
 }
 
-function LogPanels({ log }: { log: RoastLog }) {
+function LogPanels({ log, onUseCrack }: { log: RoastLog; onUseCrack: (fcTemp: number) => void }) {
+  const { t } = useI18n();
   const phases = computePhases(log);
   const dev = computeDeviationSummary(log);
   const align = defaultAlignTemp(log);
+  const row = (label: string, value: string) => (
+    <div className="flex justify-between">
+      <dt className="text-muted">{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card className="p-4">
-        <h3 className="mb-2 text-[15px] font-semibold">Phases · {log.name}</h3>
-        <p className="mb-3 text-[12px] text-muted">Align-by-temperature default {align.toFixed(1)} °C (mean_temp at FC).</p>
+        <h3 className="mb-2 text-[15px] font-semibold">{t("overlay.phasesOf", { name: log.name })}</h3>
         <dl className="space-y-2 text-[14px]">
-          <div className="flex justify-between"><dt className="text-muted">Dry end</dt><dd>{phases.dryEnd != null ? formatClockFine(phases.dryEnd) : "—"}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted">Maillard</dt><dd>{phases.maillard != null ? formatClockFine(phases.maillard) : "—"}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted">Development</dt><dd>{phases.development != null ? formatClockFine(phases.development) : "—"}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted">DTR</dt><dd>{phases.dtr != null ? `${(phases.dtr * 100).toFixed(2)}%` : "—"}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted">Roast end</dt><dd>{formatClock(log.roastEnd)}</dd></div>
+          {row(t("overlay.dryEnd"), phases.dryEnd != null ? formatClockFine(phases.dryEnd) : "—")}
+          {row("Maillard", phases.maillard != null ? formatClockFine(phases.maillard) : "—")}
+          {row("Development", phases.development != null ? formatClockFine(phases.development) : "—")}
+          {row("DTR", phases.dtr != null ? `${(phases.dtr * 100).toFixed(1)}%` : "—")}
+          {row(t("overlay.roastEnd"), formatClock(log.roastEnd))}
         </dl>
+        {log.firstCrack != null && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+            <p className="text-[12px] text-muted">{t("overlay.crackAt", { c: align.toFixed(1) })}</p>
+            <button
+              type="button"
+              className="rounded-lg bg-card2 px-3 py-1.5 text-[12px] font-semibold text-blue"
+              onClick={() => onUseCrack(align)}
+            >
+              {t("overlay.useCrack")}
+            </button>
+          </div>
+        )}
       </Card>
       <Card className="p-4">
-        <h3 className="mb-2 text-[15px] font-semibold">Deviation ±3 °C</h3>
+        <h3 className="mb-2 text-[15px] font-semibold">{t("overlay.deviation")}</h3>
         <dl className="space-y-2 text-[14px]">
-          <div className="flex justify-between">
-            <dt className="text-muted">Max above</dt>
-            <dd>{dev.maxAbove ? `${dev.maxAbove.value.toFixed(2)} °C @ ${formatClock(dev.maxAbove.t)}` : "—"}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-muted">Max below</dt>
-            <dd>{dev.maxBelow ? `${dev.maxBelow.value.toFixed(2)} °C @ ${formatClock(dev.maxBelow.t)}` : "—"}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-muted">Converged</dt>
-            <dd>{dev.converged != null ? formatClock(dev.converged) : "never inside band"}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-muted">At end</dt>
-            <dd>{dev.atEnd != null ? `${dev.atEnd.toFixed(2)} °C` : "—"}</dd>
-          </div>
+          {row(t("overlay.maxAbove"), dev.maxAbove ? `${dev.maxAbove.value.toFixed(2)} °C @ ${formatClock(dev.maxAbove.t)}` : "—")}
+          {row(t("overlay.maxBelow"), dev.maxBelow ? `${dev.maxBelow.value.toFixed(2)} °C @ ${formatClock(dev.maxBelow.t)}` : "—")}
+          {row(t("overlay.converged"), dev.converged != null ? formatClock(dev.converged) : t("overlay.never"))}
+          {row(t("overlay.atEnd"), dev.atEnd != null ? `${dev.atEnd.toFixed(2)} °C` : "—")}
         </dl>
       </Card>
     </div>

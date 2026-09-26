@@ -110,6 +110,24 @@ function shape(id: BrewMethod) {
           <path d="M16 28c0 6 4 10 8 10s8-4 8-10" />
         </>
       );
+    case "siphon":
+      return (
+        <>
+          <path d="M18 6h12v12a6 6 0 0 1-12 0z" />
+          <path d="M24 24v4" />
+          <circle cx="24" cy="35" r="7" />
+          <path d="M14 44h20" />
+        </>
+      );
+    case "batch":
+      return (
+        <>
+          <rect x="10" y="6" width="28" height="8" rx="2" />
+          <path d="M16 14l2 8h12l2-8" />
+          <path d="M16 26h16v12a4 4 0 0 1-4 4h-8a4 4 0 0 1-4-4z" />
+          <path d="M32 30h3a2 2 0 0 1 0 6h-3" />
+        </>
+      );
     case "cupping":
       return (
         <>

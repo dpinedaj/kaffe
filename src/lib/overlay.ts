@@ -201,7 +201,11 @@ export function visibleDiffGroups(tracks: OverlayTrack[]): [string, DiffField[]]
     list.push(field);
     map.set(field.group, list);
   }
-  return [...map.entries()].filter(([, fields]) => !isInactiveZoneGroup(fields, tracks));
+  const blank = (raw: string | undefined) => raw == null || raw.trim() === "";
+  return [...map.entries()]
+    .filter(([, fields]) => !isInactiveZoneGroup(fields, tracks))
+    .map(([group, fields]) => [group, fields.filter((f) => !tracks.every((t) => blank(t.profile.raw[f.key])))] as [string, DiffField[]])
+    .filter(([, fields]) => fields.length > 0);
 }
 
 function isInactiveZoneGroup(fields: DiffField[], tracks: OverlayTrack[]): boolean {

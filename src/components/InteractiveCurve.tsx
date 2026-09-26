@@ -268,6 +268,9 @@ export function InteractiveCurve({
               fill="#FFD60A"
               fontSize="11"
               fontWeight="700"
+              stroke="#000"
+              strokeWidth="3"
+              paintOrder="stroke"
             >
               CC
             </text>
@@ -291,6 +294,9 @@ export function InteractiveCurve({
               fill="#FF453A"
               fontSize="11"
               fontWeight="700"
+              stroke="#000"
+              strokeWidth="3"
+              paintOrder="stroke"
             >
               FC
             </text>
@@ -314,6 +320,9 @@ export function InteractiveCurve({
               fill="#30D158"
               fontSize="11"
               fontWeight="700"
+              stroke="#000"
+              strokeWidth="3"
+              paintOrder="stroke"
             >
               Drop
             </text>
