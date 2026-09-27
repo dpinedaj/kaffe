@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.1 — 2026-09-27
+
+Phone layout fixes after installing Kaffe.
+
+### Fixed
+- **Install popover** no longer runs off the left edge on phones — it opens as a full-width panel under the header with a Close link
+- The **Install** button hides in the browser once Kaffe is already installed (Chrome / Android); it never shows inside the installed app
+- **Curve preview** on Generate draws at the phone’s real width, so axes and labels stay readable instead of shrinking a desktop canvas
+- **Overlay chart** spaces time labels to the chart width (no more “0:00:30:00…”), and its legend reads as one line per track
+- “Install” and “Update ready” never wrap in the header
+- A doubled full stop in the Brew “Why” text
+
 ## 1.3.0 — 2026-09-26
 
 Brew from the phone at the counter: a step timer, two-tap tasting, cup-first sizing, and Kaffe installs as an offline app.
