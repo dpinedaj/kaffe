@@ -1,6 +1,11 @@
 # Kaffe
 
-Local-first studio for [Kaffelogic Nano 7](https://www.kaffelogic.com/) profiles. Generate `.kpro` files from bean parameters and flavor goals, then overlay `.kpro` / `.klog` files in the browser. Nothing is uploaded.
+Local-first coffee studio for **brewing** and **roasting**. Nothing is uploaded; it works offline.
+
+- **Brew** — for any coffee: recipes from world champions and the best community guides for 15 brewers, grinder clicks for ~210 mills, a step timer, and two-tap tasting that says what to change next.
+- **Roast & brew** — design roast profiles for your roaster, overlay them with your logs, then brew what you roasted. Today that roaster is [Kaffelogic Nano 7](https://www.kaffelogic.com/) (`.kpro` profiles, `.klog` logs); more machines can be added one by one through `src/lib/roasters.ts`.
+
+On first launch Kaffe asks which one you want; switch anytime from the top bar.
 
 **Roast science** (equations, boosts, RTD/Rest, flavors, citations) lives in **[docs/ROAST-MODEL.md](docs/ROAST-MODEL.md)**. **Brew science** (SCA / UC Davis, altitude, WBrC / WAC / WBC, Hoffmann skeletons) lives in **[docs/BREW.md](docs/BREW.md)**. A short roast version is below.
 
