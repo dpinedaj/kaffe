@@ -11,7 +11,9 @@ import {
   YAxis,
 } from "recharts";
 import { clockTick, FAN_RPM_MAX, FAN_RPM_MIN, FAN_TICKS, ROR_TICKS, TEMP_TICKS, timeTicks } from "../lib/chart";
+import { useRef } from "react";
 import { expandCurve, rorSeries, sampleAtTime } from "../lib/curve";
+import { useElementWidth } from "../lib/useElementWidth";
 import { KLOG_COL } from "../lib/klog";
 import { DEVIATION_BAND, type OverlayTrack, trackZones } from "../lib/overlay";
 
@@ -129,6 +131,8 @@ export function PreviewChart({
 }
 
 export function OverlayChart({ tracks, right = "ror" }: { tracks: OverlayTrack[]; right?: OverlayRightAxis }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const plotW = Math.max(160, useElementWidth(boxRef, 600) - 100);
   const step = 2;
   let maxT = 60;
   const series: Record<string, number | number[] | null>[] = [];
@@ -178,7 +182,7 @@ export function OverlayChart({ tracks, right = "ror" }: { tracks: OverlayTrack[]
   }
 
   return (
-    <div className="h-[380px] w-full">
+    <div ref={boxRef} className="h-[320px] w-full sm:h-[380px]">
       <ResponsiveContainer>
         <ComposedChart data={series} margin={{ top: 12, right: 44, left: 8, bottom: 28 }}>
           <CartesianGrid stroke="#2c2c2e" />
@@ -186,7 +190,7 @@ export function OverlayChart({ tracks, right = "ror" }: { tracks: OverlayTrack[]
             dataKey="t"
             type="number"
             domain={[0, maxT]}
-            ticks={timeTicks(maxT)}
+            ticks={timeTicks(maxT, plotW)}
             interval={0}
             minTickGap={36}
             tickFormatter={clockTick}

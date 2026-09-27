@@ -1663,7 +1663,7 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
   }
   if (tech) {
     why.push(
-      `${tech.name} · ${tech.flavor}. ${tech.mechanic}. ${
+      `${tech.name} · ${tech.flavor}. ${tech.mechanic.replace(/[.\s]+$/, "")}. ${
         tech.id === suggestedTech
           ? t("why.suggested")
           : t("why.overrode", {

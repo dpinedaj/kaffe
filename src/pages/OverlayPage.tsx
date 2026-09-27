@@ -267,10 +267,10 @@ export default function OverlayPage({
             <OverlayChart tracks={tracks} right={rightAxis} />
             <div className="mt-3 flex flex-wrap gap-3 text-[12px] text-muted">
               {tracks.map((track) => (
-                <span key={track.id} className="flex items-center gap-2">
-                  <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: track.color }} />
-                  {track.name} {track.log ? t("overlay.solidDashed") : t("overlay.design")}
-                  <span className="text-muted">
+                <span key={track.id} className="flex items-start gap-2">
+                  <i className="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: track.color }} />
+                  <span className="min-w-0">
+                    <span className="text-label">{track.name}</span> {track.log ? t("overlay.solidDashed") : t("overlay.design")}
                     {t(rightAxis === "ror" ? (track.log ? "overlay.rorLog" : "overlay.rorDesign") : "overlay.dottedFan")}
                   </span>
                 </span>

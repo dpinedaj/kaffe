@@ -12,6 +12,7 @@ export interface PwaState {
 }
 
 let deferred: InstallPromptEvent | null = null;
+let installedElsewhere = false;
 let waiting: ServiceWorker | null = null;
 const listeners = new Set<(s: PwaState) => void>();
 
@@ -21,8 +22,23 @@ function standalone(): boolean {
   return window.matchMedia?.("(display-mode: standalone)").matches || nav.standalone === true;
 }
 
+/** Chrome on Android / desktop can tell a browser tab that this PWA is already installed. */
+async function checkInstalled(): Promise<void> {
+  const nav = navigator as Navigator & { getInstalledRelatedApps?: () => Promise<unknown[]> };
+  if (!nav.getInstalledRelatedApps) return;
+  try {
+    const apps = await nav.getInstalledRelatedApps();
+    if (apps.length > 0) {
+      installedElsewhere = true;
+      emit();
+    }
+  } catch {
+    /* not supported here */
+  }
+}
+
 export function pwaState(): PwaState {
-  return { canPrompt: deferred != null, installed: standalone(), updateReady: waiting != null };
+  return { canPrompt: deferred != null, installed: standalone() || installedElsewhere, updateReady: waiting != null };
 }
 
 function emit() {
@@ -64,8 +80,10 @@ export function initPwa(): void {
   });
   window.addEventListener("appinstalled", () => {
     deferred = null;
+    installedElsewhere = true;
     emit();
   });
+  void checkInstalled();
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
     navigator.serviceWorker
