@@ -36,11 +36,12 @@
       "type": "image/svg+xml"
     }
   ],
-  "id": "./",
+  "id": "/kaffe/",
   "related_applications": [
     {
       "platform": "webapp",
-      "url": "https://dpinedaj.github.io/kaffe/manifest.webmanifest"
+      "url": "https://dpinedaj.github.io/kaffe/manifest.webmanifest",
+      "id": "https://dpinedaj.github.io/kaffe/"
     }
   ]
 }
