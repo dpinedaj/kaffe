@@ -10,7 +10,10 @@ export const en = {
   "install.update": "Update ready",
   "install.title": "Install Kaffe",
   "install.ios": "In Safari, tap Share, then “Add to Home Screen”. Kaffe opens full-screen and works offline.",
-  "install.other": "Open this page in Chrome or Edge and choose “Install app” in the address bar or menu. On Android it lands on your home screen.",
+  "install.version": "Version {v}",
+  "install.firefox": "Firefox cannot install web apps. Open this page in Chrome, Edge or Safari to install Kaffe.",
+  "install.macSafari": "In Safari, choose File → Add to Dock. Kaffe opens in its own window and works offline.",
+  "install.other": "Use your browser’s Install app option (in the address bar or menu). On Android it lands on your home screen.",
   "install.offline": "Everything stays on this device. Updates arrive on their own when you are online.",
 
   "common.save": "Save",

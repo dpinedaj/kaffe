@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.2 — 2026-09-27
+
+Install button that knows when Kaffe is already installed — on desktop too.
+
+### Fixed
+- In Chrome and Edge the **Install** button only appears when the browser can actually install Kaffe, so it disappears once the app is installed (the browser tab that says “Open in App” no longer offers Install)
+- The manifest’s related-app entry now carries the app id, which desktop Chrome / Edge 140+ need to report the app as installed
+- Install help per browser: Safari on a Mac → File → Add to Dock; iPhone → Share → Add to Home Screen; Firefox → use Chrome, Edge or Safari
+
+### Added
+- The app version shows in the header (and in the install panel), so you can tell whether a device is up to date
+
 ## 1.3.1 — 2026-09-27
 
 Phone layout fixes after installing Kaffe.
