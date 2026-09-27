@@ -36,7 +36,7 @@ export function InstallButton() {
     return (
       <button
         type="button"
-        className="rounded-lg bg-blue px-2.5 py-1.5 text-[12px] font-semibold text-white"
+        className="whitespace-nowrap rounded-lg bg-blue px-2.5 py-1.5 text-[12px] font-semibold text-white"
         onClick={applyUpdate}
       >
         {t("install.update")}
@@ -59,7 +59,7 @@ export function InstallButton() {
         type="button"
         onClick={onClick}
         aria-expanded={open}
-        className="flex items-center gap-1.5 rounded-lg bg-card2 px-2.5 py-1.5 text-[12px] font-semibold text-white"
+        className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-card2 px-2.5 py-1.5 text-[12px] font-semibold text-white"
       >
         <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10" />
@@ -67,8 +67,13 @@ export function InstallButton() {
         <span className="hidden sm:inline">{t("install.button")}</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl bg-card p-4 text-left shadow-2xl ring-1 ring-line">
-          <div className="text-[15px] font-semibold text-white">{t("install.title")}</div>
+        <div className="fixed inset-x-4 top-[calc(env(safe-area-inset-top)+64px)] z-50 rounded-2xl bg-card p-4 text-left shadow-2xl ring-1 ring-line sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80">
+          <div className="flex items-start justify-between gap-3">
+            <div className="text-[15px] font-semibold text-white">{t("install.title")}</div>
+            <button type="button" className="text-[13px] font-medium text-blue" onClick={() => setOpen(false)}>
+              {t("common.close")}
+            </button>
+          </div>
           <p className="mt-1 text-[13px] leading-relaxed text-label">
             {isIos() ? t("install.ios") : t("install.other")}
           </p>

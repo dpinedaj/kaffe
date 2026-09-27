@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useElementWidth } from "../lib/useElementWidth";
 import { useI18n } from "../i18n/LocaleContext";
 import { clockTick, FAN_RPM_MAX, FAN_RPM_MIN, ROR_TICKS, TEMP_TICKS, timeTickAnchor, timeTicks } from "../lib/chart";
 import { deleteAnchor, formatClock, insertAnchor, sampleAtTime, smoothAnchors } from "../lib/curve";
@@ -11,10 +12,6 @@ const ZONE_FILL: Record<string, string> = {
   corner1: "#64D2FF",
 };
 
-const W = 720;
-const H = 360;
-const PAD = { l: 52, r: 48, t: 18, b: 46 };
-const PLOT_W = W - PAD.l - PAD.r;
 const ROR_MIN = -5;
 const ROR_MAX = 40;
 
@@ -45,6 +42,13 @@ export function InteractiveCurve({
 }) {
   const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  /** Draw at the real width so labels stay readable on a phone instead of shrinking a 720-wide canvas. */
+  const W = Math.round(Math.max(280, Math.min(720, useElementWidth(boxRef, 720))));
+  const compact = W < 520;
+  const H = compact ? Math.round(W * 0.8) : 360;
+  const PAD = compact ? { l: 34, r: 28, t: 18, b: 40 } : { l: 52, r: 48, t: 18, b: 46 };
+  const PLOT_W = W - PAD.l - PAD.r;
   const [drag, setDrag] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [walkT, setWalkT] = useState<number | null>(null);
@@ -123,7 +127,7 @@ export function InteractiveCurve({
   const walkBean = activeT != null ? sampleAtTime(poly, activeT) : null;
 
   return (
-    <div className="w-full">
+    <div ref={boxRef} className="w-full">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -192,7 +196,7 @@ export function InteractiveCurve({
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
-        className="h-[340px] w-full touch-none"
+        className="block h-auto w-full touch-none"
         onPointerMove={(e) => {
           if (drag != null) {
             move(drag, fromClient(e.clientX, e.clientY));
