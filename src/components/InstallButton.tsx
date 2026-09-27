@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n/LocaleContext";
+import type { MessageKey } from "../i18n/en";
 import {
   applyUpdate,
-  isIos,
+  installHelp,
   promptInstall,
   pwaState,
   subscribePwa,
@@ -44,6 +45,7 @@ export function InstallButton() {
     );
   }
   if (state.installed) return null;
+  if (state.chromium && !state.canPrompt) return null;
 
   async function onClick() {
     if (state.canPrompt) {
@@ -75,9 +77,10 @@ export function InstallButton() {
             </button>
           </div>
           <p className="mt-1 text-[13px] leading-relaxed text-label">
-            {isIos() ? t("install.ios") : t("install.other")}
+            {t(`install.${installHelp()}` as MessageKey)}
           </p>
           <p className="mt-2 text-[12px] leading-relaxed text-muted">{t("install.offline")}</p>
+          <p className="mt-2 text-[11px] text-muted">{t("install.version", { v: __APP_VERSION__ })}</p>
         </div>
       )}
     </div>

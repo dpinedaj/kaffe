@@ -9,7 +9,11 @@ export interface PwaState {
   canPrompt: boolean;
   installed: boolean;
   updateReady: boolean;
+  /** Chrome / Edge / other Chromium: installs only through the browser's own prompt. */
+  chromium: boolean;
 }
+
+export type InstallHelp = "ios" | "macSafari" | "firefox" | "other";
 
 let deferred: InstallPromptEvent | null = null;
 let installedElsewhere = false;
@@ -19,7 +23,27 @@ const listeners = new Set<(s: PwaState) => void>();
 function standalone(): boolean {
   if (typeof window === "undefined") return false;
   const nav = navigator as Navigator & { standalone?: boolean };
-  return window.matchMedia?.("(display-mode: standalone)").matches || nav.standalone === true;
+  const modes = ["standalone", "window-controls-overlay", "minimal-ui", "fullscreen"];
+  return modes.some((m) => window.matchMedia?.(`(display-mode: ${m})`).matches) || nav.standalone === true;
+}
+
+/**
+ * Chromium fires `beforeinstallprompt` only when the site is installable and not
+ * installed yet, so without that event there is nothing to install — the app is
+ * already on this machine (or the browser cannot install it).
+ */
+function isChromium(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const brands = (navigator as Navigator & { userAgentData?: { brands?: { brand: string }[] } }).userAgentData?.brands;
+  return Array.isArray(brands) && brands.some((b) => /Chromium|Google Chrome|Microsoft Edge/i.test(b.brand));
+}
+
+export function installHelp(): InstallHelp {
+  if (isIos()) return "ios";
+  const ua = navigator.userAgent;
+  if (/Firefox\//.test(ua)) return "firefox";
+  if (/Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome|Chromium|Edg\//.test(ua)) return "macSafari";
+  return "other";
 }
 
 /** Chrome on Android / desktop can tell a browser tab that this PWA is already installed. */
@@ -38,7 +62,12 @@ async function checkInstalled(): Promise<void> {
 }
 
 export function pwaState(): PwaState {
-  return { canPrompt: deferred != null, installed: standalone() || installedElsewhere, updateReady: waiting != null };
+  return {
+    canPrompt: deferred != null,
+    installed: standalone() || installedElsewhere,
+    updateReady: waiting != null,
+    chromium: isChromium(),
+  };
 }
 
 function emit() {

@@ -12,7 +12,10 @@ export const es: Record<MessageKey, string> = {
   "install.update": "Actualizar",
   "install.title": "Instala Kaffe",
   "install.ios": "En Safari, toca Compartir y luego “Agregar a inicio”. Kaffe abre en pantalla completa y funciona sin conexión.",
-  "install.other": "Abre esta página en Chrome o Edge y elige “Instalar app” en la barra de direcciones o el menú. En Android queda en tu pantalla de inicio.",
+  "install.version": "Versión {v}",
+  "install.firefox": "Firefox no instala apps web. Abre esta página en Chrome, Edge o Safari para instalar Kaffe.",
+  "install.macSafari": "En Safari, elige Archivo → Añadir al Dock. Kaffe abre en su propia ventana y funciona sin conexión.",
+  "install.other": "Usa la opción Instalar app de tu navegador (en la barra de direcciones o el menú). En Android queda en tu pantalla de inicio.",
   "install.offline": "Todo queda en este dispositivo. Las actualizaciones llegan solas cuando tienes conexión.",
 
   "common.save": "Guardar",

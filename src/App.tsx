@@ -52,7 +52,9 @@ export default function App() {
           <img src="./icons/icon.svg" alt="" className="h-8 w-8 rounded-xl" />
           <div className="min-w-0">
             <div className="text-[17px] font-semibold leading-none">Kaffe</div>
-            <div className="hidden truncate text-[11px] text-muted sm:block">{t("brand.tagline")}</div>
+            <div className="truncate text-[11px] text-muted">
+              <span className="hidden sm:inline">{t("brand.tagline")} · </span>v{__APP_VERSION__}
+            </div>
           </div>
         </div>
         <nav className="hidden shrink-0 gap-1 rounded-xl bg-card p-1 md:flex">
