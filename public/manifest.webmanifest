@@ -1,7 +1,7 @@
 {
-  "name": "Kaffe — Nano 7 roast & brew studio",
+  "name": "Kaffe — roast & brew studio",
   "short_name": "Kaffe",
-  "description": "Generate Kaffelogic Nano 7 profiles, overlay roast logs, and brew from the roast. Works offline; data stays on this device.",
+  "description": "Brew recipes from world champions with a step timer and tasting, plus roast profile design for Kaffelogic Nano 7. Works offline; data stays on this device.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

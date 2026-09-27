@@ -8,6 +8,9 @@ import { defaultIntent, generateProfile, type RoastIntent } from "./lib/generate
 import type { OverlayTrack } from "./lib/overlay";
 import { LocaleSwitch, useI18n } from "./i18n/LocaleContext";
 import { InstallButton } from "./components/InstallButton";
+import { BeanGlyph, CupGlyph, Welcome } from "./components/Welcome";
+import { loadMode, loadRoaster, saveMode, saveRoaster, type AppMode } from "./lib/appMode";
+import { roasterById, roasterName } from "./lib/roasters";
 import {
   intentFromSaved,
   loadLibrary,
@@ -23,7 +26,9 @@ type StudioTab = "parameters" | "flavor" | "curve";
 
 export default function App() {
   const { t } = useI18n();
-  const [route, setRoute] = useState<Route>("studio");
+  const [mode, setMode] = useState<AppMode | null>(() => loadMode());
+  const [roasterId, setRoasterId] = useState(() => loadRoaster());
+  const [route, setRoute] = useState<Route>(() => (loadMode() === "brew" ? "brew" : "studio"));
   const [studioTab, setStudioTab] = useState<StudioTab>("parameters");
   const [intent, setIntent] = useState<RoastIntent>(defaultIntent);
   const [library, setLibrary] = useState<SavedProfile[]>([]);
@@ -36,6 +41,30 @@ export default function App() {
   useEffect(() => {
     setLibrary(loadLibrary());
   }, []);
+
+  function chooseMode(next: AppMode) {
+    setMode(next);
+    saveMode(next);
+    setRoute(next === "brew" ? "brew" : "studio");
+    window.scrollTo({ top: 0 });
+  }
+
+  const roast = mode === "roast";
+  const roaster = roasterById(roasterId);
+
+  if (mode == null) {
+    return (
+      <Welcome
+        onDone={(next, rid) => {
+          if (rid) {
+            setRoasterId(rid);
+            saveRoaster(rid);
+          }
+          chooseMode(next);
+        }}
+      />
+    );
+  }
 
   function saveCurrent() {
     const generated = generateProfile(intent);
@@ -53,10 +82,14 @@ export default function App() {
           <div className="min-w-0">
             <div className="text-[17px] font-semibold leading-none">Kaffe</div>
             <div className="truncate text-[11px] text-muted">
-              <span className="hidden sm:inline">{t("brand.tagline")} · </span>v{__APP_VERSION__}
+              <span className="hidden sm:inline">
+                {roast ? `${t("brand.roastTag")} · ${roasterName(roaster)}` : t("brand.brewTag")} ·{" "}
+              </span>
+              v{__APP_VERSION__}
             </div>
           </div>
         </div>
+        {roast && (
         <nav className="hidden shrink-0 gap-1 rounded-xl bg-card p-1 md:flex">
           <NavButton active={route === "studio"} onClick={() => setRoute("studio")}>
             {t("nav.generate")}
@@ -71,17 +104,23 @@ export default function App() {
             {t("nav.brew")}
           </NavButton>
         </nav>
+        )}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           {import.meta.env.DEV && (
             <span className="hidden rounded-lg bg-card2 px-2 py-1 text-[11px] text-orange md:inline">Local AI</span>
           )}
+          <ModeSwitch mode={mode} onChange={chooseMode} />
           <InstallButton />
           <LocaleSwitch />
         </div>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
-        {route === "studio" && (
+      <main
+        className={`flex min-h-0 flex-1 flex-col md:pb-0 ${
+          roast ? "pb-[calc(4.75rem+env(safe-area-inset-bottom))]" : "pb-[env(safe-area-inset-bottom)]"
+        }`}
+      >
+        {roast && route === "studio" && (
           <Studio
             intent={intent}
             setIntent={(next) => {
@@ -97,7 +136,7 @@ export default function App() {
             }}
           />
         )}
-        <div className={route === "overlay" ? undefined : "hidden"}>
+        <div className={roast && route === "overlay" ? undefined : "hidden"}>
           <OverlayPage
             library={library}
             tracks={overlayTracks}
@@ -116,7 +155,7 @@ export default function App() {
             studioIntent={intent}
           />
         </div>
-        {route === "library" && (
+        {roast && route === "library" && (
           <LibraryPage
             items={library}
             onOpen={(item, mode) => {
@@ -147,8 +186,9 @@ export default function App() {
             }}
           />
         )}
-        {route === "brew" && (
+        {(route === "brew" || !roast) && (
           <BrewPage
+            brewOnly={!roast}
             attach={brewAttach}
             setAttach={setBrewAttach}
             studioIntent={intent}
@@ -157,6 +197,7 @@ export default function App() {
         )}
       </main>
 
+      {roast && (
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-ink/95 px-2 pt-1 pb-[max(0.4rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-md justify-around">
           <TabIcon label={t("nav.generate")} active={route === "studio"} onClick={() => setRoute("studio")}>
@@ -177,6 +218,38 @@ export default function App() {
           </TabIcon>
         </div>
       </nav>
+      )}
+    </div>
+  );
+}
+
+function ModeSwitch({ mode, onChange }: { mode: AppMode; onChange: (m: AppMode) => void }) {
+  const { t } = useI18n();
+  const items: [AppMode, string, ReactNode][] = [
+    ["brew", t("mode.brew"), <CupGlyph key="c" />],
+    ["roast", t("mode.roast"), <BeanGlyph key="b" />],
+  ];
+  return (
+    <div className="flex rounded-lg bg-card2 p-0.5" role="radiogroup" aria-label={t("mode.label")}>
+      {items.map(([id, label, glyph]) => (
+        <button
+          key={id}
+          type="button"
+          role="radio"
+          aria-checked={mode === id}
+          aria-label={label}
+          title={label}
+          onClick={() => mode !== id && onChange(id)}
+          className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1.5 text-[12px] font-semibold ${
+            mode === id ? "bg-card text-white" : "text-muted"
+          }`}
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {glyph}
+          </svg>
+          <span className="hidden sm:inline">{label}</span>
+        </button>
+      ))}
     </div>
   );
 }

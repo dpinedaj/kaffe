@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+Kaffe is now a roast **and** brew studio, and brewing no longer needs a roaster.
+
+### Added
+- **First-launch choice**: “I brew coffee” or “I roast too”. Brewers land straight on Brew — no roast tabs, no .kpro — starting from *Your coffee*
+- **Roaster step** for roasting: Kaffelogic Nano 7 today, with room for more machines later (`src/lib/roasters.ts`)
+- **Brew | Roast switch** in the top bar to change anytime; people who already have roast profiles stay in Roast and skip the welcome
+- Rebrand to “Kaffe — roast & brew studio” (header, installed app name, README)
+
 ## 1.3.2 — 2026-09-27
 
 Install button that knows when Kaffe is already installed — on desktop too.

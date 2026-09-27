@@ -85,7 +85,9 @@ export default function BrewPage({
   setAttach,
   studioIntent,
   library,
+  brewOnly = false,
 }: {
+  brewOnly?: boolean;
   attach: BrewAttach;
   setAttach: (next: BrewAttach) => void;
   studioIntent: RoastIntent;
@@ -117,7 +119,8 @@ export default function BrewPage({
   const [cupTarget, setCupTarget] = useState<number | undefined>();
   const [ratio, setRatio] = useState<number | undefined>();
   const [technique, setTechnique] = useState<string | undefined>();
-  const [roastTab, setRoastTab] = useState<"profile" | "bag">("profile");
+  const [roastTabPicked, setRoastTab] = useState<"profile" | "bag">("profile");
+  const roastTab = brewOnly ? "bag" : roastTabPicked;
   const [timerOpen, setTimerOpen] = useState(false);
   const tasteRef = useRef<HTMLElement>(null);
   const [bag, setBag] = useState<BrewBag>(() => loadBrewBag());
@@ -343,7 +346,7 @@ export default function BrewPage({
         <div className="flex items-center gap-2">
           <h2 className="text-[22px] font-semibold">{t("brew.title")}</h2>
         </div>
-        <p className="mt-1 text-[13px] leading-relaxed text-muted">{t("brew.intro")}</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-muted">{t(brewOnly ? "brew.introBrewOnly" : "brew.intro")}</p>
       </div>
 
       <section>
@@ -380,8 +383,10 @@ export default function BrewPage({
       </section>
 
       <section>
-        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.roast")}</h3>
-        <div className="mb-2 flex rounded-lg bg-card2 p-0.5">
+        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
+          {t(brewOnly ? "brew.yourCoffee" : "brew.roast")}
+        </h3>
+        <div className={`mb-2 flex rounded-lg bg-card2 p-0.5 ${brewOnly ? "hidden" : ""}`}>
           {(
             [
               ["profile", t("brew.profile")],
