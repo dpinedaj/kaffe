@@ -6,6 +6,8 @@ This is a **reduced-form** model for Nano 7 Bézier profiles. It keeps the same 
 
 Implementation: `src/lib/generate.ts` (`durationPlan`, `suggestedZones`, `densityFromAltitude`, `FLAVOR_DELTA`).
 
+**Roaster.** Everything here is calibrated for **Kaffelogic Nano 7**, the one machine in `src/lib/roasters.ts` (the Roaster picker in the Roast section and the ⋯ menu). A new roaster needs its own coefficients — heat transfer, probe placement, load and control differ — so Kaffe will not translate a Nano profile to another machine.
+
 ---
 
 ## 1. Phases

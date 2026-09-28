@@ -46,3 +46,10 @@ input[type="range"] {
 .recharts-cartesian-grid-vertical line {
   stroke: #2c2c2e;
 }
+
+/* Keep jump-to targets clear of the fixed phone header. */
+@media (max-width: 767px) {
+  html {
+    scroll-padding-top: 76px;
+  }
+}

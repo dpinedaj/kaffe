@@ -8,9 +8,11 @@ The card is built from three corpora, in this order:
 2. **Competition** — published winning recipes, almost all **Light** filter or espresso.
 3. **Community** — Hoffmann and SCA-shaped daily skeletons where competition is silent.
 
-Implementation: `src/lib/brew.ts` (`recommendBrew`, `snapshotFromKpro`, `boilingPointC`). Farm altitude stays on Generate. **Kitchen** altitude is a separate, persisted input.
+Brew is its own section, the same page whether you roast or not. It does not depend on a roaster.
 
-The Roast section has two tabs. **Profile** attaches a Generate / library / .kpro roast. **This bag** is for a bought coffee: origin, variety, style, process, farm metres, and up to two flavor icons. Origin / variety move **density**, **seed size**, and a **flavor lean** (when you have not picked I want) — not a separate origin-indexed recipe table. Same `recommendBrew` path; no .kpro required.
+Implementation: `src/lib/brew.ts` (`recommendBrew`, `snapshotFromKpro`, `boilingPointC`). Farm altitude stays on the lot (This bag or the roast). **Kitchen** altitude is a separate, persisted input.
+
+**Your coffee** has two tabs. **This bag** (the default) is for a bought coffee: origin, variety, style, process, farm metres, and up to two flavor icons. **Profile** attaches a Generate / library / .kpro roast; Generate’s **Brew →** and Library’s **Brew recipe** open Brew on this tab with that roast attached. Origin / variety move **density**, **seed size**, and a **flavor lean** (when you have not picked I want) — not a separate origin-indexed recipe table. Same `recommendBrew` path; no .kpro required.
 
 ---
 
