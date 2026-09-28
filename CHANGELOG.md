@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 — 2026-09-27
 
 Kaffe is now a roast **and** brew studio, and brewing no longer needs a roaster.
 
@@ -9,8 +9,8 @@ Kaffe is now a roast **and** brew studio, and brewing no longer needs a roaster.
 - **Brew starts on This bag** (the coffee you bought). The **Profile** tab is still there to attach a Generate roast, a library profile or a dropped .kpro; “Brew →” in Generate and “Brew recipe” in Library jump to Brew with that roast attached
 - **First-launch choice**: “I brew coffee” or “I roast too”, then a roaster step. People who already have roast profiles skip it and stay in Roast
 - **Roaster picker** (Kaffelogic Nano 7 for now) in the Roast bar, in Generate and in the menu. File formats already follow it; future machines add their own adjustments (`src/lib/roasters.ts`)
-- **Menu (⋯)**: roaster, language, **Show welcome screen**, and the version
-- On phones the header has two rows: brand and actions on top, a full-width **Brew | Roast** switch below
+- **Menu (⋯)**: Install / Update, roaster, language, **Show welcome screen**, and the version (a blue dot marks a waiting update)
+- On phones the header has two rows: brand and actions on top, a full-width **Brew | Roast** switch below. Scrolling down folds it to one row (logo, Brew | Roast, language, ⋯) without shifting the page; it opens again near the top
 - Timer header keeps the full recipe name (sound is an icon), step sources wrap instead of truncating, and long library names wrap in Overlay
 - Rebrand to “Kaffe — roast & brew studio” (header, installed app name, README)
 
