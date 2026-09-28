@@ -1,5 +1,7 @@
 # Roast model
 
+> The in-app **How Kaffe works** page (`src/science/content.ts`) is the reader-facing summary of this doc. When a figure here changes, change it there too (EN and ES).
+
 Kaffe does not pick a 6 / 9 / 11 minute bucket and then stretch a curve to fit. It estimates **dehydration slope**, **Maillard slope**, **first-crack temperature and time**, and **development**, then labels the result Nordic / classic / slow from total time.
 
 This is a **reduced-form** model for Nano 7 Bézier profiles. It keeps the same *dependencies* as the literature (wetter and denser seed slow the front; faster Maillard reads brighter and thinner; DTR near 20%). It does **not** integrate Hernández’s moisture ODE inside the bean, and the numerical coefficients are calibrated to Kaffelogic fluid-bed behaviour, not to a drum.

@@ -1,7 +1,7 @@
 {
   "name": "Kaffe — roast & brew studio",
   "short_name": "Kaffe",
-  "description": "Brew recipes from world champions with a step timer and tasting, plus roast profile design for Kaffelogic Nano 7. Works offline; data stays on this device.",
+  "description": "Champion brew recipes for your brewer and grinder, with a step timer and tasting, plus roast profile design. Works offline; data stays on this device.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
