@@ -43,6 +43,15 @@ export function saveMode(mode: AppMode): void {
   write(MODE_KEY, mode);
 }
 
+/** Back to the welcome choice (menu → Show welcome screen). */
+export function clearMode(): void {
+  try {
+    localStorage.removeItem(MODE_KEY);
+  } catch {
+    /* private mode */
+  }
+}
+
 export function loadRoaster(): RoasterId {
   return roasterById(read(ROASTER_KEY) ?? undefined).id;
 }
