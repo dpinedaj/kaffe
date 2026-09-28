@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCollapseOnScroll } from "./lib/useCollapseOnScroll";
 import BrewPage from "./pages/BrewPage";
 import LibraryPage from "./pages/LibraryPage";
 import OverlayPage from "./pages/OverlayPage";
@@ -6,7 +7,7 @@ import Studio from "./pages/Studio";
 import type { BrewAttach } from "./lib/brew";
 import { defaultIntent, generateProfile, type RoastIntent } from "./lib/generate";
 import type { OverlayTrack } from "./lib/overlay";
-import { LocaleSwitch, useI18n } from "./i18n/LocaleContext";
+import { LocaleSwitch, LocaleToggle, useI18n } from "./i18n/LocaleContext";
 import { InstallButton } from "./components/InstallButton";
 import { BeanGlyph, CupGlyph, Welcome } from "./components/Welcome";
 import { AppMenu } from "./components/AppMenu";
@@ -41,6 +42,26 @@ export default function App() {
   const [overlaySyncLevels, setOverlaySyncLevels] = useState(false);
   const [brewAttach, setBrewAttach] = useState<BrewAttach>({ kind: "generate" });
   const [brewSource, setBrewSource] = useState<BrewSource>("bag");
+  const collapsed = useCollapseOnScroll();
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerH, setHeaderH] = useState(120);
+  const collapsedRef = useRef(collapsed);
+  collapsedRef.current = collapsed;
+
+  /**
+   * On phones the header is fixed and a spacer keeps its full (expanded) height, so
+   * collapsing it never shifts the page under your finger.
+   */
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([entry]) => {
+      if (!collapsedRef.current) setHeaderH(Math.round(entry.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [mode]);
+
 
   useEffect(() => {
     setLibrary(loadLibrary());
@@ -89,11 +110,19 @@ export default function App() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-ink">
-      <header className="sticky top-0 z-20 w-full border-b border-line bg-ink/90 backdrop-blur">
-        <div className="flex items-center gap-2 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
+      <header
+        ref={headerRef}
+        data-collapsed={collapsed || undefined}
+        className="fixed inset-x-0 top-0 z-20 w-full border-b border-line bg-ink/90 backdrop-blur md:sticky"
+      >
+        <div
+          className={`flex items-center gap-2 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] motion-safe:transition-[padding] motion-safe:duration-150 md:pb-3 ${
+            collapsed ? "pb-2" : "pb-3"
+          }`}
+        >
+          <div className={`flex min-w-0 items-center gap-2 md:flex-1 ${collapsed ? "" : "flex-1"}`}>
             <img src="./icons/icon.svg" alt="" className="h-8 w-8 shrink-0 rounded-xl" />
-            <div className="min-w-0">
+            <div className={`min-w-0 md:block ${collapsed ? "hidden" : ""}`}>
               <div className="text-[17px] font-semibold leading-none">Kaffe</div>
               <div className="truncate text-[11px] text-muted">
                 <span className="hidden sm:inline">{t("brand.tagline")} · </span>v{__APP_VERSION__}
@@ -103,23 +132,41 @@ export default function App() {
           <div className="hidden md:block">
             <SectionSwitch mode={mode} onChange={(m) => go(m)} />
           </div>
-          <div className="flex flex-1 items-center justify-end gap-2">
+          {collapsed && (
+            <div className="flex min-w-0 flex-1 justify-center md:hidden">
+              <SectionSwitch mode={mode} onChange={(m) => go(m)} />
+            </div>
+          )}
+          <div className={`flex items-center justify-end gap-2 md:flex-1 ${collapsed ? "" : "flex-1"}`}>
             {import.meta.env.DEV && (
               <span className="hidden rounded-lg bg-card2 px-2 py-1 text-[11px] text-orange lg:inline">Local AI</span>
             )}
-            <InstallButton />
-            <div className="hidden sm:block">
-              <LocaleSwitch />
+            <div className={`md:block ${collapsed ? "hidden" : ""}`}>
+              <InstallButton />
             </div>
+            {collapsed ? (
+              <>
+                <div className="md:hidden">
+                  <LocaleToggle />
+                </div>
+                <div className="hidden md:block">
+                  <LocaleSwitch />
+                </div>
+              </>
+            ) : (
+              <LocaleSwitch />
+            )}
             <AppMenu roaster={roasterId} onRoaster={pickRoaster} onWelcome={() => {
               clearMode();
               setMode(null);
             }} />
           </div>
         </div>
-        <div className="px-4 pb-3 md:hidden">
-          <SectionSwitch mode={mode} onChange={(m) => go(m)} full />
-        </div>
+        {!collapsed && (
+          <div className="px-4 pb-3 md:hidden">
+            <SectionSwitch mode={mode} onChange={(m) => go(m)} full />
+          </div>
+        )}
         {roast && (
           <div className="hidden items-center justify-between gap-3 border-t border-line/60 px-4 py-2 md:flex">
             <nav className="flex gap-1 rounded-xl bg-card p-1">
@@ -143,6 +190,7 @@ export default function App() {
           </div>
         )}
       </header>
+      <div aria-hidden="true" className="shrink-0 md:hidden" style={{ height: headerH }} />
 
       <main
         className={`flex min-h-0 flex-1 flex-col md:pb-0 ${
