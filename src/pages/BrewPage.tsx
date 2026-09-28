@@ -50,6 +50,7 @@ import { useI18n } from "../i18n/LocaleContext";
 import {
   defText,
   flavorLabel,
+  grindLabel,
   originLabel,
   processLabel,
   restLabelFor,
@@ -85,7 +86,12 @@ export default function BrewPage({
   setAttach,
   studioIntent,
   library,
+  source,
+  setSource,
 }: {
+  /** Which coffee the card is for: the bag you bought (default) or one of your roast profiles. */
+  source: "bag" | "profile";
+  setSource: (next: "bag" | "profile") => void;
   attach: BrewAttach;
   setAttach: (next: BrewAttach) => void;
   studioIntent: RoastIntent;
@@ -117,7 +123,8 @@ export default function BrewPage({
   const [cupTarget, setCupTarget] = useState<number | undefined>();
   const [ratio, setRatio] = useState<number | undefined>();
   const [technique, setTechnique] = useState<string | undefined>();
-  const [roastTab, setRoastTab] = useState<"profile" | "bag">("profile");
+  const roastTab = source;
+  const setRoastTab = setSource;
   const [timerOpen, setTimerOpen] = useState(false);
   const tasteRef = useRef<HTMLElement>(null);
   const [bag, setBag] = useState<BrewBag>(() => loadBrewBag());
@@ -380,12 +387,12 @@ export default function BrewPage({
       </section>
 
       <section>
-        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.roast")}</h3>
+        <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.yourCoffee")}</h3>
         <div className="mb-2 flex rounded-lg bg-card2 p-0.5">
           {(
             [
-              ["profile", t("brew.profile")],
               ["bag", t("brew.thisBag")],
+              ["profile", t("brew.profile")],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -929,9 +936,9 @@ export default function BrewPage({
 
       <section>
         <div className="mb-2 flex items-center justify-between gap-3 px-1">
-          <div className="flex min-w-0 items-baseline gap-3">
+          <div className="min-w-0">
             <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.steps")}</h3>
-            {shown.origin && <span className="min-w-0 truncate text-[12px] text-muted">{shown.origin}</span>}
+            {shown.origin && <p className="mt-0.5 text-[12px] leading-snug text-muted">{shown.origin}</p>}
           </div>
           <button
             type="button"
@@ -984,7 +991,9 @@ export default function BrewPage({
           title={`${methodInfo?.name ?? method}${
             shown.technique ? ` · ${techniques.find((x) => x.id === shown.technique)?.name ?? ""}` : ""
           }`}
-          subtitle={`${shown.coffeeG} g · ${shown.waterG + (shown.bypassG ?? 0)} g · ${shown.kettleC.toFixed(0)} °C · ${grindShown}`}
+          subtitle={`${shown.coffeeG} g · ${shown.waterG + (shown.bypassG ?? 0)} g · ${shown.kettleC.toFixed(0)} °C · ${grindLabel(shown.grind, t)}${
+            grindSetting ? ` · ${grindSetting.label}` : ""
+          }`}
           steps={shown.steps}
           totalS={shown.timeS}
           onClose={() => setTimerOpen(false)}

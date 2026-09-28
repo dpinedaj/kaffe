@@ -56,6 +56,24 @@ export function useI18n() {
   return useContext(LocaleContext);
 }
 
+/** One tap flips to the other language — for tight rows (collapsed phone header). */
+export function LocaleToggle() {
+  const { locale, setLocale, t } = useI18n();
+  const idx = LOCALES.findIndex((l) => l.id === locale);
+  const next = LOCALES[(idx + 1) % LOCALES.length];
+  return (
+    <button
+      type="button"
+      onClick={() => setLocale(next.id)}
+      aria-label={`${t("nav.lang")}: ${next.label}`}
+      title={`${t("nav.lang")}: ${next.label}`}
+      className="flex h-8 min-w-9 shrink-0 items-center justify-center rounded-lg bg-card2 px-2 text-[12px] font-semibold text-white"
+    >
+      {LOCALES[idx]?.label ?? locale.toUpperCase()}
+    </button>
+  );
+}
+
 export function LocaleSwitch() {
   const { locale, setLocale, t } = useI18n();
   return (

@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { BoostZones } from "../components/BoostZones";
 import { InteractiveCurve } from "../components/InteractiveCurve";
 import { Card, Field, Pill, Row, Select, Toggle } from "../components/ui";
@@ -17,6 +17,7 @@ import {
   type ZoneRole,
 } from "../lib/generate";
 import { activeZones } from "../lib/kpro";
+import type { RoasterInfo } from "../lib/roasters";
 import { useI18n } from "../i18n/LocaleContext";
 import {
   brewLabel,
@@ -81,7 +82,12 @@ export default function Studio({
   setTab,
   onSave,
   onBrew,
+  roaster,
+  roasterSelect,
 }: {
+  roaster: RoasterInfo;
+  /** Roaster picker; the machine sets file formats today and, later, its own adjustments. */
+  roasterSelect: ReactNode;
   intent: RoastIntent;
   setIntent: (next: RoastIntent) => void;
   tab: StudioTab;
@@ -183,12 +189,17 @@ export default function Studio({
             onClick={onBrew}
             className="rounded-xl bg-card2 px-2 py-2.5 text-[13px] font-semibold text-white"
           >
-            {t("nav.brew")}
+            {t("nav.brew")} →
           </button>
         </div>
 
         {tab === "parameters" ? (
           <div className="space-y-4">
+            <Card className="md:hidden">
+              <Row label={t("roaster.label")} last>
+                {roasterSelect}
+              </Row>
+            </Card>
             <section>
               <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("studio.beanInfo")}</h2>
               <Card>
@@ -687,7 +698,7 @@ export default function Studio({
         <Card className="p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-[15px] font-semibold">{t("studio.curvePreview")}</h2>
-            <span className="text-[12px] text-muted">{t("studio.curveHint")}</span>
+            <span className="hidden text-[12px] text-muted sm:inline">{t("studio.curveHint")}</span>
           </div>
           <InteractiveCurve
             poly={generated.roastPoly}
@@ -846,7 +857,7 @@ export default function Studio({
             onClick={() => downloadText(generated.profile.fileName, generated.kproText)}
             className="rounded-xl bg-blue px-4 py-3 text-[15px] font-semibold text-white"
           >
-            {t("studio.downloadKpro")}
+            {t("studio.downloadFile", { ext: roaster.profileExt })}
           </button>
           <button
             type="button"
