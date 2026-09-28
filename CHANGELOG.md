@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.5.0 — 2026-09-28
+
+Brewing gets a real prep step, a timer that warns you before each step, and Spanish that reads naturally.
+
+### Added
+- **A real Prep step for every recipe**: heat the water to the recipe’s temperature, weigh and grind the dose, rinse and preheat the brewer, load the coffee and tare. Recipe-specific setup stays in it (Switch valve position, inverted AeroPress, two kettles with both temperatures, ice in the server, the AeroPress bypass). With a grinder chosen it shows the setting too: “grind medium-coarse (22 clicks)”
+- **Recipe notes** (who made it and why it works) now show above the steps and in the timer header instead of inside the Prep step
+- **Heads-up before every step**: in the last 10 seconds the clock, the “next step” line, the progress bar and the next card turn red, the next card opens so you can read what is coming, and 3-2-1 beeps play when sound is on
+
+### Changed
+- **Timer layout for phones**: a slim top bar (✕, recipe, setup line, notes and sound buttons) and one bottom panel with the clock, the next step, the progress bar, Reset and Start / Pause. The steps get most of the screen. Recipe notes hide once you start or scroll, and the ⓘ button brings them back
+- **Kitchen card**: altitude and boiling point share one row (“Water boils at 91.3 °C here.”), Water and Grinder fit on one line on phones, and only one boiling-point warning shows. “Same as this lot” is gone: the farm altitude is where the coffee grew, not where you brew. The grinder with none picked now reads “None”
+- **Spanish rewritten** across the app and every recipe so it reads as natural Latin American Spanish, and filler lines were trimmed in both languages
+
+### Fixed
+- Click grinders show whole clicks (“22 clicks”, not “22.5 clicks”)
+
 ## 1.4.1 — 2026-09-28
 
 The science behind Kaffe, one tap away, and an easier install on iPhone.

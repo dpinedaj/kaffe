@@ -8,16 +8,26 @@ export function Row({
   label,
   children,
   last = false,
+  inline = false,
 }: {
   label: string;
   children: ReactNode;
   last?: boolean;
+  /** Keep label and value on one line on phones too — for short values. */
+  inline?: boolean;
 }) {
+  const border = last ? "" : "border-b border-line";
+  if (inline) {
+    return (
+      <div className={`flex items-center justify-between gap-4 px-4 py-3 ${border}`}>
+        <span className="shrink-0 text-[15px] text-white">{label}</span>
+        <div className="min-w-0 truncate text-right [&>*]:text-right">{children}</div>
+      </div>
+    );
+  }
   return (
     <div
-      className={`flex flex-col items-stretch gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${
-        last ? "" : "border-b border-line"
-      }`}
+      className={`flex flex-col items-stretch gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${border}`}
     >
       <span className="text-[13px] text-muted sm:text-[15px] sm:text-white">{label}</span>
       <div className="flex min-w-0 justify-end sm:block sm:text-right">{children}</div>

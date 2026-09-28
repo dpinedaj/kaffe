@@ -735,7 +735,7 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       name: "Hoffmann Ultimate",
       mechanic: "Bloom, 60% pour, stir N–S / E–W",
       flavor: "Balanced / daily",
-      blurb: "Community skeleton. Body and evenness. The card default when no louder flavor goal is set.",
+      blurb: "James Hoffmann’s Ultimate V60. Body and evenness. The default when you have no stronger flavor goal.",
       timeS: 165,
     },
     {
@@ -843,7 +843,7 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       name: "Café pulses",
       mechanic: "Centre pulses, keep a flat bed",
       flavor: "Even / daily",
-      blurb: "Café / older WBrC flat-bottom skeleton. Forgiving. Suggested for Medium / Dark.",
+      blurb: "Classic flat-bottom recipe. Forgiving. Suggested for Medium / Dark.",
       timeS: 180,
     },
     {
@@ -1212,7 +1212,7 @@ const TECHNIQUES: Partial<Record<BrewMethod, BrewTechnique[]>> = {
       name: "Hoffmann moka",
       mechanic: "Hot fill to the valve, no tamp, off at first blonde",
       flavor: "Body / chocolate",
-      blurb: "Hoffmann moka. Not espresso — stop when the stream turns honey. The one published skeleton we keep.",
+      blurb: "Hoffmann moka. Not espresso — stop when the stream turns honey.",
     },
   ],
   cupping: [

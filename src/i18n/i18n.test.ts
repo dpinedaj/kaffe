@@ -11,9 +11,9 @@ describe("i18n", () => {
 
   it("translates recipe descriptions and steps", () => {
     expect(recipeText("es", "tech.v60.hoffmann.flavor")).toMatch(/Balanceado|diario/);
-    expect(recipeText("es", "step.v60.hoffmann.prep.title")).toBe("Enjuagar");
+    expect(recipeText("es", "step.v60.hoffmann.prep.title")).toBe("Enjuagar y precalentar");
     expect(recipeText("es", "step.v60.hoffmann.bloom.title")).toBe("Bloom");
-    expect(recipeText("en", "step.v60.hoffmann.prep.title")).toBe("Rinse");
+    expect(recipeText("en", "step.v60.hoffmann.prep.title")).toBe("Rinse & preheat");
   });
 
   it("interpolates and leaves technical words in Spanish copy", () => {

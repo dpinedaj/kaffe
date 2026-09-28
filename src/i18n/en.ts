@@ -1,7 +1,5 @@
 export const en = {
   "brand.tagline": "Roast & brew studio",
-  "brand.roastTag": "Roast & brew studio",
-  "brand.brewTag": "Brew studio",
   "mode.label": "What you use Kaffe for",
   "mode.brew": "Brew",
   "mode.roast": "Roast",
@@ -19,7 +17,7 @@ export const en = {
   "science.fullBody": "Equations and working notes on GitHub (English)",
   "science.why": "Why?",
   "menu.label": "Menu",
-  "roaster.help": "Profiles, file formats and roast adjustments follow this machine. More roasters will be added over time.",
+  "roaster.help": "Profiles, file formats and roast adjustments follow this machine.",
   "roaster.more": "More roasters coming",
   "roaster.label": "Roaster",
   "welcome.title": "What brings you to Kaffe?",
@@ -47,7 +45,6 @@ export const en = {
   "nav.overlay": "Overlay",
   "nav.library": "Library",
   "nav.brew": "Brew",
-  "nav.preview": "Preview",
   "nav.lang": "Language",
   "install.button": "Install",
   "install.update": "Update ready",
@@ -88,7 +85,6 @@ export const en = {
   "common.add": "Add",
   "common.added": "Added",
   "common.clear": "Clear",
-  "common.reset": "Reset",
   "common.off": "off",
   "common.none": "None",
   "common.suggested": "Suggested",
@@ -110,7 +106,6 @@ export const en = {
   "common.grind": "Grind",
   "common.rest": "Rest",
   "common.ratio": "Ratio",
-  "common.you": "You",
 
   "style.light": "Light",
   "style.medium": "Medium",
@@ -205,8 +200,6 @@ export const en = {
   "studio.variety": "Variety",
   "studio.process": "Process",
   "studio.altitude": "Altitude (m)",
-  "studio.densityFromAlt": "Density from altitude",
-  "studio.densityGL": "Density (g/L)",
   "studio.densityAlt": "Alt",
   "studio.densityGLShort": "g/L",
   "studio.densityVessel": "Vessel",
@@ -235,7 +228,7 @@ export const en = {
   "studio.moistureRef": "At the 11% reference. No extra moisture adjustment.",
   "studio.rtdTitle": "RTD · drink 1–3 days. ",
   "studio.rtdHelp":
-    "Official Kaffelogic Ready-to-Drink profiles are for roasting, grinding, and brewing before the lot has degassed — guests, test roasts, or an empty jar. A fluid-bed bean keeps more CO₂ than a drum roast, so RTD forces that gas out during the roast: a RoR step after drying/Maillard, then a +boost through first crack (“T through crack”). That is the same idea as the stock RTD 1500–2000 boosts, not the BOOST kit hardware. Flavour is front-loaded and fades hard around day 4. Rest is the better pick if you can wait.",
+    "Official Kaffelogic Ready-to-Drink profiles are for roasting, grinding, and brewing before the lot has degassed — guests, test roasts, or an empty jar. A fluid-bed bean keeps more CO₂ than a drum roast, so RTD forces that gas out during the roast: a RoR step after drying/Maillard, then a +boost through first crack (“T through crack”). Flavour is front-loaded and fades hard around day 4. Rest is the better pick if you can wait.",
   "studio.restTitle": "Rest · peak 3–5 days. ",
   "studio.restHelp":
     "Official Rest profiles wait for degassing. Boosts only fire when the bean actually needs them: wet drying, a Maillard stall, or a runaway dark espresso. Energy through first crack stays gentler, so CO₂ leaves in the bag and acidity/sweetness settle. Use this for the “best cup,” RTD for “drink tonight.”",
@@ -243,7 +236,7 @@ export const en = {
   "studio.autoLevel": "Auto level (roast-style default)",
   "studio.expectFc": "Expected first crack (°C)",
   "studio.expectFcSet":
-    "This lot’s crack {fc} °C. That is when the seed pops on the Nano probe, not the roast colour. Drop stays at the roast-style level (L{level} · {temp} °C). If crack sits close to drop, development °C is short — we do not darken the roast to invent a band.",
+    "This lot’s crack is {fc} °C — when the seed pops on the Nano probe, not the roast colour. Drop stays at the roast-style level (L{level} · {temp} °C). If crack sits close to drop, development is short.",
   "studio.expectFcEmpty":
     "Leave empty to estimate from origin, variety, and flavor ({fc} °C). Set it when you already know where this lot cracks on the Nano 7 probe. Roast level is still the colour stop, not the crack.",
   "studio.level": "Level",
@@ -303,7 +296,6 @@ export const en = {
   "studio.bdMid": "Mid {v}",
   "studio.bdDev": "Development {v}",
   "studio.bdFan": "Fan {v}",
-  "studio.downloadKpro": "Download .kpro",
   "studio.saveLibrary": "Save to library",
   "studio.brewThis": "Brew this roast",
 
@@ -412,7 +404,7 @@ export const en = {
 
   "coach.title": "Local Cursor coach",
   "coach.blurb":
-    "Only on npm run dev. GitHub Pages never loads this. Key stays on the Vite server, not in the browser bundle.",
+    "Dev only (npm run dev). The API key stays on the Vite server.",
   "coach.newChat": "New chat",
   "coach.empty":
     "Ask why the log drifted, or request a new Generate intent (flavors, Rest/RTD, moisture). The model cannot rewrite Bézier points directly — Kaffe regenerates the .kpro from parameters.",
@@ -444,7 +436,7 @@ export const en = {
   "brew.orImport": "or click to import a roast file",
   "brew.iWant": "I want",
   "brew.bagHelp":
-    "What is on the bag, not a roast file. Origin and variety set density, seed size, and a flavor lean — they do not invent a Kenya-only recipe. Farm metres refine density. Kitchen altitude still caps the kettle.",
+    "What the bag says, not a roast file. Origin and variety adjust density, bean size and flavor lean — they fine-tune the recipe, not swap in a different one per country. Farm altitude refines density.",
   "brew.days": "Days since roast",
   "brew.mine": "My recipes",
   "brew.newRecipe": "New Recipe",
@@ -457,14 +449,8 @@ export const en = {
     "Named championship or shop scripts that aim at a flavor. The orange tag is the pick for this roast; tap another to override.",
   "brew.compHelpOne": "The published script for this method. The orange tag is the pick for this roast.",
   "brew.kitchen": "Kitchen",
-  "brew.localBoil": "Local boil",
-  "brew.setAltitude": "Set altitude",
-  "brew.sameLot": "Same as this lot",
-  "brew.useM": "Use {m} m",
-  "brew.kitchenHelp":
-    "This is where you brew, not where the cherry grew. Saved on this device; it does not change the .kpro.",
   "grinders.label": "Grinder",
-  "grinders.none": "Word only",
+  "grinders.none": "None",
   "grinders.searchPh": "C3S, Encore, 1Zpresso…",
   "grinders.empty": "No mill matches that.",
   "grinders.n": "{n} grinders",
@@ -472,12 +458,11 @@ export const en = {
   "grinders.emptyEspresso": "No espresso-capable mill matches that. Filter-only mills are hidden on espresso.",
   "grinders.notEspresso": "{name} is a filter mill, so the espresso card keeps the grind word. Pick an espresso-capable grinder for clicks.",
   "grinders.help":
-    "Starting clicks from Honest Coffee Guide micron charts. Search brand or model. Zero is burrs touching. On pour-over, Switch, Clever, espresso, and moka a bigger dose moves a click coarser so the drain does not stall. Dial in — not a lock.",
+    "Starting clicks from Honest Coffee Guide micron charts. Zero is burrs touching. On pour-over, Switch, Clever, espresso, and moka a bigger dose moves a click coarser so the drain does not stall. Dial in from there.",
   "brew.warnAltitude":
     "Set kitchen altitude. Kettle temperature is capped by local boil, not by the sea-level card.",
-  "brew.warnSca":
-    "Boil ({boil} °C) sits under the SCA 92 °C certification floor. Pour at boil; do not print a hotter number.",
-  "brew.warnCapped": "Wanted {wanted} °C. Local boil will not reach it.",
+  "brew.warnSca": "Your water boils at {boil} °C, under the SCA 92 °C minimum. Pour right off the boil.",
+  "brew.warnCapped": "This recipe wants {wanted} °C, above your boiling point. Pour right off the boil.",
   "warn.gassyNoBloom":
     "This script skips a gas dump. On day {days} that often channels and leaves a bitter tail — a long bloom, Super Hybrid, or Blooming espresso is safer until the lot is degassed.",
   "brew.cup": "Cup",
@@ -492,6 +477,9 @@ export const en = {
   "brew.steps": "Steps",
   "brew.farmM": "Farm (m)",
   "brew.altPh": "e.g. {m}",
+  "brew.kitchenAlt": "Altitude",
+  "brew.boilsAt": "Water boils at {c} °C here.",
+  "brew.altHint": "Where you brew, not where the coffee grew. Sets your boiling point.",
   "brew.yours": "Yours",
   "brew.mineSaved": "{name} is saved on this device.",
   "brew.mineForked": "Forked from {name}. Championship cards were not edited.",
@@ -505,9 +493,7 @@ export const en = {
   "timer.reset": "Reset",
   "timer.again": "Again",
   "timer.of": "of {total}",
-  "timer.next": "Next",
   "timer.in": "in {t}",
-  "timer.before": "Before you start",
   "timer.done": "Done — pour and taste",
   "timer.taste": "How did it taste?",
   "timer.soundOn": "Sound on",
@@ -518,6 +504,8 @@ export const en = {
   "timer.finish": "Finish",
   "timer.expandAll": "Expand all",
   "timer.collapseAll": "Collapse all",
+  "timer.aboutShow": "Show recipe notes",
+  "timer.aboutHide": "Hide recipe notes",
   "taste.title": "Taste",
   "taste.balance": "Cup",
   "taste.strength": "Strength",
@@ -587,11 +575,6 @@ export const en = {
   "extract.strength.weak": "thin",
   "extract.strength.ok": "in band",
   "extract.strength.strong": "heavy",
-  "extract.ideal": "Classic",
-  "extract.strong": "Thick",
-  "extract.weak": "Thin",
-  "extract.sour": "Sour",
-  "extract.bitter": "Bitter",
   "extract.detail.under": "{ey}% PE — still sour / grassy. Give the water more surface or more time.",
   "extract.detail.underWeak": "{ey}% PE and {tds}% TDS — thin and under-done. Finer or longer before you add dose.",
   "extract.detail.underStrong": "{ey}% PE but strong — concentrated and under-done. Finer / longer, or a little more water.",
@@ -622,7 +605,7 @@ export const en = {
 
   "sheet.new": "New recipe",
   "sheet.edit": "Edit this card",
-  "sheet.savedHelp": "Changes stay on this device. Championship cards are not edited.",
+  "sheet.savedHelp": "Changes stay on this device.",
   "sheet.basedOn": "Based on {name}. The original stays as it is.",
   "sheet.blankHelp": "A blank card on this device. Add steps, then Create.",
   "sheet.name": "Name",
@@ -721,10 +704,10 @@ export const en = {
   "restWhy.bloomingGood":
     "KL Rest’s 3–5 day mark is the start of the window, not the end. Air-roasted light filter often holds CO₂ through day 10–14 — a long bloom is normal, not a sign the bag is tired. Keep 3× / 45–60 s.",
   "restWhy.stillGood":
-    "Light Rest on a Nano is typically fine through about day {good}. Bloom can shorten toward 2× as the foam calms. No need for a new bag.",
+    "Light Rest on a Nano is typically fine through about day {good}. Bloom can shorten toward 2× as the foam calms.",
   "restWhy.aging":
     "Past the main window. Less CO₂ means a faster drawdown — bloom 2×, and go a click finer if the bed races. Freeze what you will not drink this week.",
-  "restWhy.fading": "Aromatics are usually thinning. Freeze the rest rather than forcing a “fresher bag” story at two weeks.",
+  "restWhy.fading": "Aromatics are usually thinning. Freeze what is left.",
 
   "originCup.colombia": "Clean, sweet, balanced",
   "originNote.colombia": "Washed Arabica on three cordilleras. Pick a department below when you know the lot.",

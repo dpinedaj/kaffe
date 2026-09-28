@@ -300,7 +300,7 @@ export function formatSetting(value: number, kind: SettingKind, grinder?: Pick<G
   if (kind === "dotted") return formatDotted(value);
   if (kind === "letters" && grinder?.steps) return formatLetters(value, grinder.steps);
   if (kind === "rotation" && grinder?.steps) return formatRotation(value, grinder.steps, grinder.sep ?? "+");
-  if (kind === "niche") return String(Math.round(value));
+  if (kind === "niche" || kind === "clicks") return String(Math.round(value));
   const rounded = Math.round(value * 2) / 2;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }

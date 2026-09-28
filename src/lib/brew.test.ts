@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { withGrindSetting } from "./brewSteps";
 import {
   boilingPointC,
   bagBrewFields,
@@ -789,12 +790,12 @@ describe("flavor-mapped competition recipes", () => {
       daysSinceRoast: 12,
       locale: "es",
     });
-    expect(rec.steps[0].title).toBe("Enjuagar");
+    expect(rec.steps[0].title).toBe("Enjuagar y precalentar");
     expect(rec.steps[0].detail).toMatch(/Kasuya|papel|cono/i);
     expect(rec.steps.some((s) => /vertido|drenaje|enjuaga/i.test(`${s.title} ${s.detail}`))).toBe(true);
     const techs = techniquesFor("v60", "es");
     expect(techs.find((x) => x.id === rec.technique)?.flavor).not.toMatch(/Balanced \/ daily/);
-    expect(techs.find((x) => x.id === rec.technique)?.blurb).toMatch(/esqueleto|Kasuya|Peng|Hoffmann|Hedrick|Wang|Rao/i);
+    expect(techs.find((x) => x.id === rec.technique)?.blurb).toMatch(/Kasuya|Peng|Hoffmann|Hedrick|Wang|Rao/i);
   });
 });
 
@@ -1275,5 +1276,21 @@ describe("cup-first scaling", () => {
     expect(doseForCup("v60", 350, 16)).toBeCloseTo(25, 1);
     expect(drinkG("v60", 25, 16)).toBeCloseTo(350, 5);
     expect(doseForCup("espresso", 40, 2)).toBe(20);
+  });
+});
+
+describe("withGrindSetting", () => {
+  it("puts the grinder setting next to the grind word in the Prep card only", () => {
+    const rec = recommendBrew({ method: "v60", roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 14 });
+    const steps = withGrindSetting(rec.steps, "en", rec.grind, { value: "18", clicks: true });
+    expect(steps[0].detail).toContain(`grind ${rec.grind} (18 clicks)`);
+    expect(steps.slice(1)).toEqual(rec.steps.slice(1));
+    expect(withGrindSetting(rec.steps, "en", rec.grind, undefined)).toBe(rec.steps);
+  });
+
+  it("uses the Spanish noun and a neutral word for non-click dials", () => {
+    const rec = recommendBrew({ method: "v60", roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 14, locale: "es" });
+    expect(withGrindSetting(rec.steps, "es", rec.grind, { value: "18", clicks: true })[0].detail).toMatch(/\(18 clics\)/);
+    expect(withGrindSetting(rec.steps, "es", rec.grind, { value: "2.5", clicks: false })[0].detail).toMatch(/\(posición 2\.5\)/);
   });
 });

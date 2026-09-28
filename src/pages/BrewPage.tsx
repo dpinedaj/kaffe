@@ -76,9 +76,11 @@ import {
   grinderById,
   grinderFitsMethod,
   loadKitchenGrinder,
+  formatSetting,
   resolveGrindSetting,
   saveKitchenGrinder,
 } from "../lib/grinders";
+import { withGrindSetting } from "../lib/brewSteps";
 import { daysSinceRoast, type SavedProfile } from "../lib/storage";
 import { WhyLink } from "../components/WhyLink";
 
@@ -207,6 +209,7 @@ export default function BrewPage({
   );
   const mineOnMethod = mineForMethod(method, mineItems);
   const techniques = techniquesFor(method, locale);
+  const aboutRecipe = mine ? undefined : techniques.find((x) => x.id === recipe.technique)?.blurb;
   const methodInfo = BREW_METHODS.find((m) => m.id === method);
 
   function patchKitchen(raw: string) {
@@ -234,6 +237,20 @@ export default function BrewPage({
     nudgeT: shown.grindNudgeT,
   });
   const grindShown = grindNoteWithSetting(shown.grindNote, grindSetting);
+  const settingValue = grindSetting
+    ? formatSetting(grindSetting.at, grindSetting.grinder.kind, grindSetting.grinder)
+    : undefined;
+  const settingClicks = grindSetting?.grinder.kind === "clicks";
+  const steps = useMemo(
+    () =>
+      withGrindSetting(
+        shown.steps,
+        locale,
+        shown.grind,
+        settingValue != null ? { value: settingValue, clicks: settingClicks } : undefined,
+      ),
+    [shown.steps, shown.grind, locale, settingValue, settingClicks],
+  );
   const kitchenGrinder = grinderById(grinderId);
 
   async function importKpro(file: File) {
@@ -777,36 +794,31 @@ export default function BrewPage({
       <section>
         <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.kitchen")}</h3>
         <Card>
-          <Row label={t("studio.altitude")}>
-            <input
-              type="number"
-              min={0}
-              max={4500}
-              step={50}
-              placeholder={t("brew.altPh", { m: 1500 })}
-              value={kitchenM ?? ""}
-              onChange={(e) => patchKitchen(e.target.value)}
-              className="w-24 bg-transparent text-right text-[15px] text-white outline-none placeholder:text-muted"
-            />
-          </Row>
-          <Row label={t("brew.localBoil")}>
-            <span className="text-[15px] text-white">
-              {shown.boilC != null ? `${shown.boilC.toFixed(1)} °C` : t("brew.setAltitude")}
-            </span>
-            <WhyLink target={{ topic: "brew", section: "altitude" }} className="ml-3 text-[13px]" />
-          </Row>
-          {snap?.farmAltitudeM != null && (
-            <Row label={t("brew.sameLot")}>
-              <button
-                type="button"
-                className="text-[15px] font-medium text-blue"
-                onClick={() => patchKitchen(String(snap.farmAltitudeM))}
-              >
-                {t("brew.useM", { m: snap.farmAltitudeM })}
-              </button>
-            </Row>
-          )}
-          <Row label={t("brew.water")}>
+          <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-3">
+            <div className="min-w-0">
+              <div className="text-[15px] text-white">{t("brew.kitchenAlt")}</div>
+              <div className={`mt-0.5 text-[12px] leading-snug ${shown.boilC != null ? "text-muted" : "text-orange"}`}>
+                {shown.boilC != null ? t("brew.boilsAt", { c: shown.boilC.toFixed(1) }) : t("brew.altHint")}{" "}
+                <WhyLink target={{ topic: "brew", section: "altitude" }} />
+              </div>
+            </div>
+            <label className="flex shrink-0 items-baseline gap-1 rounded-lg bg-card2 px-2.5 py-1.5">
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={4500}
+                step={50}
+                placeholder="—"
+                value={kitchenM ?? ""}
+                onChange={(e) => patchKitchen(e.target.value)}
+                aria-label={t("studio.altitude")}
+                className="w-16 bg-transparent text-right text-[15px] text-white outline-none placeholder:text-muted"
+              />
+              <span className="text-[13px] text-muted">m</span>
+            </label>
+          </div>
+          <Row inline label={t("brew.water")}>
             <Select
               value={water}
               onChange={(v) => {
@@ -822,29 +834,29 @@ export default function BrewPage({
               ))}
             </Select>
           </Row>
-          <Row label={t("grinders.label")} last>
+          <Row inline label={t("grinders.label")} last>
             <GrinderPicker value={grinderId} onChange={patchGrinder} method={method} />
           </Row>
         </Card>
-        <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{t("brew.kitchenHelp")}</p>
         {kitchenGrinder?.note && <p className="mt-1 px-1 text-[12px] leading-relaxed text-muted">{kitchenGrinder.note}</p>}
         {kitchenGrinder && !grinderFitsMethod(kitchenGrinder, method) && (
           <p className="mt-1 px-1 text-[12px] leading-relaxed text-orange">
             {t("grinders.notEspresso", { name: `${kitchenGrinder.brand} ${kitchenGrinder.name}` })}
           </p>
         )}
-        {shown.boilC == null && method !== "espresso" && method !== "coldbrew" && (
-          <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">{t("brew.warnAltitude")}</p>
-        )}
-        {shown.boilC != null && shown.boilC < 92 && method !== "espresso" && method !== "coldbrew" && (
-          <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">
-            {t("brew.warnSca", { boil: shown.boilC.toFixed(1) })}
-          </p>
-        )}
-        {shown.cappedByBoil && (
+        {shown.cappedByBoil ? (
           <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">
             {t("brew.warnCapped", { wanted: shown.wantedC.toFixed(0) })}
           </p>
+        ) : (
+          shown.boilC != null &&
+          shown.boilC < 92 &&
+          method !== "espresso" &&
+          method !== "coldbrew" && (
+            <p className="mt-2 px-1 text-[12px] leading-relaxed text-orange">
+              {t("brew.warnSca", { boil: shown.boilC.toFixed(1) })}
+            </p>
+          )
         )}
       </section>
 
@@ -941,6 +953,7 @@ export default function BrewPage({
           <div className="min-w-0">
             <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.steps")}</h3>
             {shown.origin && <p className="mt-0.5 text-[12px] leading-snug text-muted">{shown.origin}</p>}
+            {aboutRecipe && <p className="mt-1 text-[13px] leading-relaxed text-label">{aboutRecipe}</p>}
           </div>
           <button
             type="button"
@@ -951,7 +964,7 @@ export default function BrewPage({
           </button>
         </div>
         <Card className="divide-y divide-line">
-          {shown.steps.map((step) => (
+          {steps.map((step) => (
             <div key={`${step.at}-${step.title}`} className="flex gap-3 px-4 py-3">
               <div className="w-16 shrink-0 text-[12px] font-semibold text-blue">{step.at}</div>
               <div>
@@ -996,7 +1009,8 @@ export default function BrewPage({
           subtitle={`${shown.coffeeG} g · ${shown.waterG + (shown.bypassG ?? 0)} g · ${shown.kettleC.toFixed(0)} °C · ${grindLabel(shown.grind, t)}${
             grindSetting ? ` · ${grindSetting.label}` : ""
           }`}
-          steps={shown.steps}
+          about={aboutRecipe}
+          steps={steps}
           totalS={shown.timeS}
           onClose={() => setTimerOpen(false)}
           onDone={() => {
