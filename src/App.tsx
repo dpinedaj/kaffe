@@ -100,7 +100,9 @@ export default function App() {
               </div>
             </div>
           </div>
-          <SectionSwitch mode={mode} onChange={(m) => go(m)} />
+          <div className="hidden md:block">
+            <SectionSwitch mode={mode} onChange={(m) => go(m)} />
+          </div>
           <div className="flex flex-1 items-center justify-end gap-2">
             {import.meta.env.DEV && (
               <span className="hidden rounded-lg bg-card2 px-2 py-1 text-[11px] text-orange lg:inline">Local AI</span>
@@ -114,6 +116,9 @@ export default function App() {
               setMode(null);
             }} />
           </div>
+        </div>
+        <div className="px-4 pb-3 md:hidden">
+          <SectionSwitch mode={mode} onChange={(m) => go(m)} full />
         </div>
         {roast && (
           <div className="hidden items-center justify-between gap-3 border-t border-line/60 px-4 py-2 md:flex">
@@ -239,14 +244,18 @@ export default function App() {
   );
 }
 
-function SectionSwitch({ mode, onChange }: { mode: AppMode; onChange: (m: AppMode) => void }) {
+function SectionSwitch({ mode, onChange, full = false }: { mode: AppMode; onChange: (m: AppMode) => void; full?: boolean }) {
   const { t } = useI18n();
   const items: [AppMode, string, ReactNode][] = [
     ["brew", t("mode.brew"), <CupGlyph key="c" />],
     ["roast", t("mode.roast"), <BeanGlyph key="b" />],
   ];
   return (
-    <div className="flex shrink-0 rounded-xl bg-card p-1" role="tablist" aria-label={t("mode.label")}>
+    <div
+      className={`rounded-xl bg-card p-1 ${full ? "grid w-full grid-cols-2" : "flex shrink-0"}`}
+      role="tablist"
+      aria-label={t("mode.label")}
+    >
       {items.map(([id, label, glyph]) => (
         <button
           key={id}
@@ -255,14 +264,23 @@ function SectionSwitch({ mode, onChange }: { mode: AppMode; onChange: (m: AppMod
           aria-selected={mode === id}
           title={label}
           onClick={() => mode !== id && onChange(id)}
-          className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-semibold ${
-            mode === id ? "bg-card2 text-white" : "text-muted"
-          }`}
+          className={`flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-semibold ${
+            full ? "px-3 py-2 text-[14px]" : "px-2.5 py-1.5 text-[13px]"
+          } ${mode === id ? "bg-card2 text-white" : "text-muted"}`}
         >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            className={`h-4 w-4 ${mode === id ? "text-blue" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             {glyph}
           </svg>
-          <span className="hidden min-[360px]:inline">{label}</span>
+          <span>{label}</span>
         </button>
       ))}
     </div>

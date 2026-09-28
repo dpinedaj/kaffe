@@ -2,10 +2,12 @@
 
 Local-first coffee studio for **brewing** and **roasting**. Nothing is uploaded; it works offline.
 
-- **Brew** — for any coffee: recipes from world champions and the best community guides for 15 brewers, grinder clicks for ~210 mills, a step timer, and two-tap tasting that says what to change next.
-- **Roast & brew** — design roast profiles for your roaster, overlay them with your logs, then brew what you roasted. Today that roaster is [Kaffelogic Nano 7](https://www.kaffelogic.com/) (`.kpro` profiles, `.klog` logs); more machines can be added one by one through `src/lib/roasters.ts`.
+Kaffe has two sections, switched from the top bar:
 
-On first launch Kaffe asks which one you want; switch anytime from the top bar.
+- **Brew** — for any coffee, whether you bought it or roasted it: recipes from world champions and the best community guides for 15 brewers, grinder clicks for ~210 mills, a step timer, and two-tap tasting that says what to change next.
+- **Roast** — design roast profiles for your roaster, overlay them with your logs, and keep a roast library; any roast opens in Brew with one tap. Today the roaster is [Kaffelogic Nano 7](https://www.kaffelogic.com/) (`.kpro` profiles, `.klog` logs). More machines can be added one by one in `src/lib/roasters.ts` — each needs its own calibration; Kaffe does not translate profiles between roasters.
+
+On first launch Kaffe asks whether you brew or also roast (and which roaster). The **⋯ menu** holds the roaster, language, **Show welcome screen**, and the version.
 
 **Roast science** (equations, boosts, RTD/Rest, flavors, citations) lives in **[docs/ROAST-MODEL.md](docs/ROAST-MODEL.md)**. **Brew science** (SCA / UC Davis, altitude, WBrC / WAC / WBC, Hoffmann skeletons) lives in **[docs/BREW.md](docs/BREW.md)**. A short roast version is below.
 
@@ -60,10 +62,20 @@ Live: [https://dpinedaj.github.io/kaffe/](https://dpinedaj.github.io/kaffe/)
 
 ## What it does
 
+### Brew
+
+- **Your coffee** — starts on **This bag** (origin, variety, process, farm metres, up to two flavor icons); the **Profile** tab attaches a Generate roast, a library profile, or a dropped `.kpro`
+- **Recipes** — 15 brewers (incl. siphon and batch brew) with championship and well-documented community recipes (WBrC 2013–2026, WAC, Hoffmann, Wendelboe, Rao…), suggested from roast, rest days and flavor
+- **Kitchen** — altitude caps the kettle at local boil; water type; grinder clicks for your mill (espresso lists only espresso-capable mills)
+- **Cup** — dose, ratio, or the cup you want (**In the cup**)
+- **Brew timer** — every step as a card: read ahead, countdowns, chimes, Jump here
+- **After brew** — Brix/TDS on a brew control chart (extraction on total water for immersion, drained cup for percolation), plus two-tap **Taste** with next-cup advice
+
+### Roast (Kaffelogic Nano 7)
+
 - **Generate** — origin, variety (~100 cultivars grouped into roast families), process, altitude, typed g/L, or vessel mass/volume, moisture, brew, roast style, **Rest / RTD** cup timing, up to two flavor goals, recommended boost zones, live Bézier preview (add / delete / smooth spikes / reset), download `.kpro`
 - **Overlay** — compare profiles, design vs actual from a `.klog` with RoR and a ±3 °C band, zone/scalar diff, phases, send a logged first crack back to Generate. Local `npm run dev` only: Cursor overlay coach (off on GitHub Pages).
-- **Library** — save, rename, favorite, roast date and notes, export JSON (this device only)
-- **Brew** — 15 brewers (incl. siphon and batch brew) with championship and well-documented community recipes (WBrC 2013–2026, WAC, Hoffmann, Wendelboe, Rao…). Starting card from a Generate roast, a library profile, a dropped `.kpro`, or This bag. Kitchen altitude caps kettle temperature at local boil; water type and grinder clicks. After brew takes a measured Brix/TDS and places the cup on a brew control chart (extraction on total water for immersion, drained cup for percolation).
+- **Library** — save, rename, favorite, roast date and notes (Brew counts rest days from the date), last tasted cup, export JSON (this device only)
 
 `.kpro` is plain `key:value` ASCII, LF, no checksum. Curves are cubic Bézier groups of three pairs. A `.klog` already contains the design curve in the `=profile` column — Overlay uses that when a log is present, and only analyses samples up to `roast_end`.
 
@@ -145,3 +157,7 @@ Up to two goals share one budget. Floral / fruity / bright / juicy steepen the f
 | Origins, varieties, flavor copy | `src/lib/knowledge.ts` |
 | Brew starting card + After brew | `src/lib/brew.ts` → `recommendBrew` · `src/lib/extract.ts` · [docs/BREW.md](docs/BREW.md) |
 | Grind clicks (HCG charts) | `src/lib/grinders.ts` · `src/lib/grinders.catalog.ts` |
+| Brew timer · Taste | `src/lib/brewTimer.ts` · `src/lib/taste.ts` |
+| Brew / Roast sections, welcome, menu | `src/App.tsx` · `src/lib/appMode.ts` · `src/components/Welcome.tsx` · `src/components/AppMenu.tsx` |
+| Supported roasters | `src/lib/roasters.ts` |
+| Installable app (PWA) | `vite/pwa.ts` · `src/lib/pwa.ts` · `public/manifest.webmanifest` |

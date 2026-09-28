@@ -698,7 +698,7 @@ export default function Studio({
         <Card className="p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-[15px] font-semibold">{t("studio.curvePreview")}</h2>
-            <span className="text-[12px] text-muted">{t("studio.curveHint")}</span>
+            <span className="hidden text-[12px] text-muted sm:inline">{t("studio.curveHint")}</span>
           </div>
           <InteractiveCurve
             poly={generated.roastPoly}
