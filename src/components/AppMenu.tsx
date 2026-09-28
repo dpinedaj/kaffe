@@ -3,6 +3,8 @@ import { LocaleSwitch, useI18n } from "../i18n/LocaleContext";
 import type { MessageKey } from "../i18n/en";
 import { applyUpdate, installHelp, promptInstall, pwaState, subscribePwa, type PwaState } from "../lib/pwa";
 import type { RoasterId } from "../lib/roasters";
+import { openScience } from "../lib/science";
+import { InstallGuide, isIosGuide } from "./InstallGuide";
 import { RoasterSelect } from "./RoasterSelect";
 
 export function AppMenu({
@@ -18,6 +20,8 @@ export function AppMenu({
   const [open, setOpen] = useState(false);
   const [pwa, setPwa] = useState<PwaState>(() => pwaState());
   const [howTo, setHowTo] = useState(false);
+  const [guide, setGuide] = useState(false);
+  const help = installHelp();
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => subscribePwa(setPwa), []);
   const canInstall = !pwa.installed && (!pwa.chromium || pwa.canPrompt);
@@ -82,6 +86,9 @@ export function AppMenu({
                   if (pwa.canPrompt) {
                     setOpen(false);
                     await promptInstall();
+                  } else if (isIosGuide(help)) {
+                    setOpen(false);
+                    setGuide(true);
                   } else setHowTo((v) => !v);
                 }}
                 className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-[14px] text-white hover:bg-card2"
@@ -91,11 +98,26 @@ export function AppMenu({
               </button>
               {howTo && (
                 <p className="px-3 pb-2 text-[12px] leading-relaxed text-muted">
-                  {t(`install.${installHelp()}` as MessageKey)}
+                  {t(`install.${help}` as MessageKey)}
                 </p>
               )}
             </div>
           )}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              openScience();
+            }}
+            className="mb-1 flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-card2"
+          >
+            <span className="min-w-0">
+              <span className="block text-[14px] text-white">{t("science.title")}</span>
+              <span className="block text-[12px] text-muted">{t("science.menuBody")}</span>
+            </span>
+            <span className="text-muted" aria-hidden="true">→</span>
+          </button>
           <div className="rounded-xl px-3 py-2.5">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{t("roaster.label")}</div>
             <div className="mt-1 flex items-center justify-between gap-2">
@@ -125,6 +147,7 @@ export function AppMenu({
           </div>
         </div>
       )}
+      {guide && <InstallGuide kind={help} onClose={() => setGuide(false)} />}
     </div>
   );
 }

@@ -13,7 +13,19 @@ export interface PwaState {
   chromium: boolean;
 }
 
-export type InstallHelp = "ios" | "macSafari" | "firefox" | "other";
+export type InstallHelp =
+  | "ios"
+  | "iosChrome"
+  | "iosEdge"
+  | "iosFirefox"
+  | "iosInApp"
+  | "macSafari"
+  | "firefox"
+  | "androidFirefox"
+  | "other";
+
+/** Apps whose built-in browser has no “Add to Home Screen” (the page must be opened in a real browser). */
+const IN_APP = /FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|Line\/|MicroMessenger|Snapchat|TikTok|musical_ly|Twitter|GSA\//;
 
 let deferred: InstallPromptEvent | null = null;
 let installedElsewhere = false;
@@ -38,9 +50,20 @@ function isChromium(): boolean {
   return Array.isArray(brands) && brands.some((b) => /Chromium|Google Chrome|Microsoft Edge/i.test(b.brand));
 }
 
-export function installHelp(): InstallHelp {
-  if (isIos()) return "ios";
-  const ua = navigator.userAgent;
+/**
+ * Which install steps to show. iOS has no install API in any browser: every iOS
+ * browser adds to the Home Screen through its own Share sheet, so the steps name
+ * where Share lives in that browser.
+ */
+export function installHelp(ua = navigator.userAgent, ios = isIos()): InstallHelp {
+  if (ios) {
+    if (IN_APP.test(ua)) return "iosInApp";
+    if (/CriOS\//.test(ua)) return "iosChrome";
+    if (/EdgiOS\//.test(ua)) return "iosEdge";
+    if (/FxiOS\//.test(ua)) return "iosFirefox";
+    return "ios";
+  }
+  if (/Android/.test(ua) && /Firefox\//.test(ua)) return "androidFirefox";
   if (/Firefox\//.test(ua)) return "firefox";
   if (/Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome|Chromium|Edg\//.test(ua)) return "macSafari";
   return "other";

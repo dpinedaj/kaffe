@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.1 — 2026-09-28
+
+The science behind Kaffe, one tap away, and an easier install on iPhone.
+
+### Added
+- **How Kaffe works** in the ⋯ menu: Brew and Roast tabs with plain-language sections, numbered sources, the limits, and a link to the full analysis. **Why?** links next to the local boil, the recipe sources and the roast result open the matching section. English and Spanish, works offline
+- **Install on iPhone** in any browser opens a two-step guide with an arrow pointing at that browser’s Share button (Safari, Chrome, Edge, Firefox). In-app browsers (Instagram, Facebook…) get “Open in Safari” and a Copy link button
+- Link previews: shared links show the Kaffe name, a description and a preview image in chats and social apps
+
+### Fixed
+- Chrome on iPhone no longer shows Safari-only install text
+- Firefox on Android gets its own install steps instead of “Firefox cannot install”
+- Page and install descriptions no longer name one roaster
+
 ## 1.4.0 — 2026-09-27
 
 Kaffe is now a roast **and** brew studio, and brewing no longer needs a roaster.

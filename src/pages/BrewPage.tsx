@@ -80,6 +80,7 @@ import {
   saveKitchenGrinder,
 } from "../lib/grinders";
 import { daysSinceRoast, type SavedProfile } from "../lib/storage";
+import { WhyLink } from "../components/WhyLink";
 
 export default function BrewPage({
   attach,
@@ -792,6 +793,7 @@ export default function BrewPage({
             <span className="text-[15px] text-white">
               {shown.boilC != null ? `${shown.boilC.toFixed(1)} °C` : t("brew.setAltitude")}
             </span>
+            <WhyLink target={{ topic: "brew", section: "altitude" }} className="ml-3 text-[13px]" />
           </Row>
           {snap?.farmAltitudeM != null && (
             <Row label={t("brew.sameLot")}>
@@ -1026,7 +1028,9 @@ export default function BrewPage({
         ))}
       </Card>
 
-      <p className="px-1 text-[11px] leading-relaxed text-muted">{shown.sources.join(" · ")}</p>
+      <p className="px-1 text-[11px] leading-relaxed text-muted">
+        {shown.sources.join(" · ")} · <WhyLink target={{ topic: "brew", section: "competition" }} />
+      </p>
 
       {sheet && (
         <BrewRecipeSheet
