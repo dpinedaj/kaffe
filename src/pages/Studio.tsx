@@ -1,5 +1,6 @@
 import { useMemo, useRef, type ReactNode } from "react";
 import { BoostZones } from "../components/BoostZones";
+import { WhyLink } from "../components/WhyLink";
 import { InteractiveCurve } from "../components/InteractiveCurve";
 import { Card, Field, Pill, Row, Select, Toggle } from "../components/ui";
 import { formatClock, levelToTemp, sampleAtTime, timeAtValue } from "../lib/curve";
@@ -749,7 +750,10 @@ export default function Studio({
         </Card>
 
         <Card>
-          <h2 className="px-4 pt-3 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("studio.result")}</h2>
+          <div className="flex items-center justify-between gap-3 px-4 pt-3">
+            <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">{t("studio.result")}</h2>
+            <WhyLink target={{ topic: "roast", section: "development" }} className="text-[13px]" />
+          </div>
           <Field
             label={t("studio.cupTiming")}
             value={(intent.drinkPlan ?? "rest") === "rtd" ? t("studio.cupRtd") : t("studio.cupRest")}

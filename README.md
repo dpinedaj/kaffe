@@ -9,7 +9,7 @@ Kaffe has two sections, switched from the top bar:
 
 On first launch Kaffe asks whether you brew or also roast (and which roaster). The **⋯ menu** holds the roaster, language, **Show welcome screen**, and the version.
 
-**Roast science** (equations, boosts, RTD/Rest, flavors, citations) lives in **[docs/ROAST-MODEL.md](docs/ROAST-MODEL.md)**. **Brew science** (SCA / UC Davis, altitude, WBrC / WAC / WBC, Hoffmann skeletons) lives in **[docs/BREW.md](docs/BREW.md)**. A short roast version is below.
+**Roast science** (equations, boosts, RTD/Rest, flavors, citations) lives in **[docs/ROAST-MODEL.md](docs/ROAST-MODEL.md)**. **Brew science** (SCA / UC Davis, altitude, WBrC / WAC / WBC, Hoffmann skeletons) lives in **[docs/BREW.md](docs/BREW.md)**. In the app, **⋯ → How Kaffe works** has a plain-language version with the sources. A short roast version is below.
 
 ## Install
 
@@ -160,4 +160,5 @@ Up to two goals share one budget. Floral / fruity / bright / juicy steepen the f
 | Brew timer · Taste | `src/lib/brewTimer.ts` · `src/lib/taste.ts` |
 | Brew / Roast sections, welcome, menu | `src/App.tsx` · `src/lib/appMode.ts` · `src/components/Welcome.tsx` · `src/components/AppMenu.tsx` |
 | Supported roasters | `src/lib/roasters.ts` |
-| Installable app (PWA) | `vite/pwa.ts` · `src/lib/pwa.ts` · `public/manifest.webmanifest` |
+| Installable app (PWA), iPhone install guide | `vite/pwa.ts` · `src/lib/pwa.ts` · `src/components/InstallGuide.tsx` · `public/manifest.webmanifest` |
+| How Kaffe works (in-app science, EN/ES) | `src/science/content.ts` · `src/pages/SciencePage.tsx` — keep in step with the two docs |

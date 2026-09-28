@@ -9,11 +9,13 @@ import {
   subscribePwa,
   type PwaState,
 } from "../lib/pwa";
+import { InstallGuide, isIosGuide } from "./InstallGuide";
 
 export function InstallButton() {
   const { t } = useI18n();
   const [state, setState] = useState<PwaState>(() => pwaState());
   const [open, setOpen] = useState(false);
+  const [guide, setGuide] = useState(false);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => subscribePwa(setState), []);
@@ -52,6 +54,10 @@ export function InstallButton() {
       await promptInstall();
       return;
     }
+    if (isIosGuide(installHelp())) {
+      setGuide(true);
+      return;
+    }
     setOpen((v) => !v);
   }
 
@@ -83,6 +89,7 @@ export function InstallButton() {
           <p className="mt-2 text-[11px] text-muted">{t("install.version", { v: __APP_VERSION__ })}</p>
         </div>
       )}
+      {guide && <InstallGuide kind={installHelp()} onClose={() => setGuide(false)} />}
     </div>
   );
 }

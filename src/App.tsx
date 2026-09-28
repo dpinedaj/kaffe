@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useCollapseOnScroll } from "./lib/useCollapseOnScroll";
 import BrewPage from "./pages/BrewPage";
 import LibraryPage from "./pages/LibraryPage";
@@ -14,6 +14,7 @@ import { AppMenu } from "./components/AppMenu";
 import { RoasterSelect } from "./components/RoasterSelect";
 import { clearMode, loadMode, loadRoaster, saveMode, saveRoaster, type AppMode } from "./lib/appMode";
 import { roasterById, type RoasterId } from "./lib/roasters";
+import { onOpenScience, type ScienceTarget } from "./lib/science";
 import {
   intentFromSaved,
   loadLibrary,
@@ -23,6 +24,8 @@ import {
   type SavedProfile,
   upsertProfile,
 } from "./lib/storage";
+
+const SciencePage = lazy(() => import("./pages/SciencePage").then((m) => ({ default: m.SciencePage })));
 
 type RoastRoute = "studio" | "overlay" | "library";
 type StudioTab = "parameters" | "flavor" | "curve";
@@ -42,6 +45,9 @@ export default function App() {
   const [overlaySyncLevels, setOverlaySyncLevels] = useState(false);
   const [brewAttach, setBrewAttach] = useState<BrewAttach>({ kind: "generate" });
   const [brewSource, setBrewSource] = useState<BrewSource>("bag");
+  const [science, setScience] = useState<ScienceTarget | null>(null);
+  const closeScience = useCallback(() => setScience(null), []);
+  useEffect(() => onOpenScience(setScience), []);
   const collapsed = useCollapseOnScroll();
   const headerRef = useRef<HTMLElement>(null);
   const [headerH, setHeaderH] = useState(120);
@@ -287,6 +293,11 @@ export default function App() {
             </TabIcon>
           </div>
         </nav>
+      )}
+      {science && (
+        <Suspense fallback={null}>
+          <SciencePage topic={science.topic ?? (mode === "roast" ? "roast" : "brew")} section={science.section} onClose={closeScience} />
+        </Suspense>
       )}
     </div>
   );
