@@ -50,6 +50,7 @@ import { useI18n } from "../i18n/LocaleContext";
 import {
   defText,
   flavorLabel,
+  grindLabel,
   originLabel,
   processLabel,
   restLabelFor,
@@ -935,9 +936,9 @@ export default function BrewPage({
 
       <section>
         <div className="mb-2 flex items-center justify-between gap-3 px-1">
-          <div className="flex min-w-0 items-baseline gap-3">
+          <div className="min-w-0">
             <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.steps")}</h3>
-            {shown.origin && <span className="min-w-0 truncate text-[12px] text-muted">{shown.origin}</span>}
+            {shown.origin && <p className="mt-0.5 text-[12px] leading-snug text-muted">{shown.origin}</p>}
           </div>
           <button
             type="button"
@@ -990,7 +991,9 @@ export default function BrewPage({
           title={`${methodInfo?.name ?? method}${
             shown.technique ? ` · ${techniques.find((x) => x.id === shown.technique)?.name ?? ""}` : ""
           }`}
-          subtitle={`${shown.coffeeG} g · ${shown.waterG + (shown.bypassG ?? 0)} g · ${shown.kettleC.toFixed(0)} °C · ${grindShown}`}
+          subtitle={`${shown.coffeeG} g · ${shown.waterG + (shown.bypassG ?? 0)} g · ${shown.kettleC.toFixed(0)} °C · ${grindLabel(shown.grind, t)}${
+            grindSetting ? ` · ${grindSetting.label}` : ""
+          }`}
           steps={shown.steps}
           totalS={shown.timeS}
           onClose={() => setTimerOpen(false)}

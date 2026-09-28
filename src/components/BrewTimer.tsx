@@ -191,12 +191,22 @@ export function BrewTimer({
     <div className="fixed inset-0 z-[70] flex flex-col bg-black text-left">
       <div className="flex items-start justify-between gap-3 px-5 pt-[calc(env(safe-area-inset-top)+16px)] pb-2">
         <div className="min-w-0">
-          <h3 className="truncate text-[18px] font-semibold text-white">{title}</h3>
-          <p className="truncate text-[12px] text-muted">{subtitle}</p>
+          <h3 className="line-clamp-2 text-[17px] font-semibold leading-snug text-white">{title}</h3>
+          <p className="mt-0.5 text-[12px] leading-snug text-muted">{subtitle}</p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <button type="button" className="text-[13px] font-medium text-muted" onClick={toggleSound}>
-            {sound ? t("timer.soundOn") : t("timer.soundOff")}
+          <button
+            type="button"
+            className={`flex h-8 w-8 items-center justify-center rounded-lg bg-card2 ${sound ? "text-white" : "text-muted"}`}
+            onClick={toggleSound}
+            aria-pressed={sound}
+            aria-label={sound ? t("timer.soundOn") : t("timer.soundOff")}
+            title={sound ? t("timer.soundOn") : t("timer.soundOff")}
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+              {sound ? <path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11" /> : <path d="M16 9.5l5 5M21 9.5l-5 5" />}
+            </svg>
           </button>
           <button type="button" className="text-[15px] font-medium text-blue" onClick={onClose}>
             {t("common.close")}
