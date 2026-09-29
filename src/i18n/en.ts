@@ -437,7 +437,11 @@ export const en = {
   "brew.iWant": "I want",
   "brew.bagHelp":
     "What the bag says, not a roast file. Origin and variety adjust density, bean size and flavor lean — they fine-tune the recipe, not swap in a different one per country. Farm altitude refines density.",
-  "brew.days": "Days since roast",
+  "brew.days": "Roasted",
+  "brew.roastDate": "Roast date",
+  "brew.dayLess": "One day less",
+  "brew.dayMore": "One day more",
+  "brew.today": "Today",
   "brew.mine": "My recipes",
   "brew.newRecipe": "New Recipe",
   "brew.exportAll": "Export all",

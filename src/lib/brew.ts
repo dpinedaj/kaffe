@@ -184,6 +184,8 @@ export interface BrewBag {
   flavors: FlavorId[];
   originId?: string;
   varietyId?: string;
+  /** Roast day printed on the bag (YYYY-MM-DD), so the rest days count up on their own. */
+  roastedOn?: string;
 }
 
 export function defaultBrewBag(): BrewBag {
@@ -289,6 +291,10 @@ export function loadBrewBag(): BrewBag {
       varietyId:
         typeof parsed.varietyId === "string" && varietyIds.has(parsed.varietyId)
           ? parsed.varietyId
+          : undefined,
+      roastedOn:
+        typeof parsed.roastedOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.roastedOn)
+          ? parsed.roastedOn
           : undefined,
     };
   } catch {

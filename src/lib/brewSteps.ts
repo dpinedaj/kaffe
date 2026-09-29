@@ -67,6 +67,31 @@ function clock(sec: number): string {
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 }
 
+/** Running totals for `count` equal pours from `before` g up to `total` g; the last one lands on `total`. */
+function evenTargets(before: number, total: number, count: number): number[] {
+  return Array.from({ length: count }, (_, i) =>
+    i === count - 1 ? total : Math.round(before + ((total - before) * (i + 1)) / count),
+  );
+}
+
+/** One card per pour, so the timer warns before each one instead of hiding pours 3–5 in a single card. */
+function pourSeries(
+  times: number[],
+  targets: number[],
+  before: number,
+  title: (n: number) => string,
+  detail: (i: number, g: number, to: number) => string,
+  firstN: number,
+): BrewStep[] {
+  let prev = before;
+  return times.map((sec, i) => {
+    const to = targets[i];
+    const g = to - prev;
+    prev = to;
+    return { at: clock(sec), title: title(firstN + i), detail: detail(i, g, to) };
+  });
+}
+
 function switchSteps(ctx: BrewStepCtx, bloom: number, temp: string, t: string, stall: string): BrewStep[] {
   const w = ctx.waterG;
   const mode = ctx.technique ?? ctx.switchMode ?? "steep";
@@ -102,7 +127,8 @@ function switchSteps(ctx: BrewStepCtx, bloom: number, temp: string, t: string, s
     return [
       prep(ctx, "step.switch.hybrid.prep"),
       { at: "0:00", title: tx(ctx, "step.switch.hybrid.bloom.title"), detail: tx(ctx, "step.switch.hybrid.bloom.detail", { bloom: bloomG, temp, wait: bloomWait }) },
-      { at: clock(bloomWait), title: tx(ctx, "step.switch.hybrid.mid.title"), detail: tx(ctx, "step.switch.hybrid.mid.detail", { a: Math.round(w * 0.4), b: Math.round(w * (2 / 3)) }) },
+      { at: clock(bloomWait), title: tx(ctx, "step.switch.hybrid.open.title"), detail: tx(ctx, "step.switch.hybrid.open.detail", { a: Math.round(w * 0.4) }) },
+      { at: clock(bloomWait + 45), title: tx(ctx, "step.switch.hybrid.second.title"), detail: tx(ctx, "step.switch.hybrid.second.detail", { b: Math.round(w * (2 / 3)) }) },
       { at: clock(bloomWait + 90), title: tx(ctx, "step.switch.hybrid.last.title"), detail: tx(ctx, "step.switch.hybrid.last.detail", { w }) },
       { at: clock(bloomWait + 135), title: tx(ctx, "step.switch.hybrid.drain.title"), detail: tx(ctx, "step.switch.hybrid.drain.detail", { t }) },
     ];
@@ -143,7 +169,6 @@ function v60Steps(ctx: BrewStepCtx, bloom: number, pour60: number, temp: string,
     const first40 = Math.round(w * 0.4);
     const pour1 = Math.round(first40 * (mode === "kasuya-acid" ? 0.58 : 0.42));
     const pour2 = first40 - pour1;
-    const later = Math.round((w - first40) / 3);
     return [
       prep(ctx, "step.v60.kasuya.prep"),
       {
@@ -152,7 +177,14 @@ function v60Steps(ctx: BrewStepCtx, bloom: number, pour60: number, temp: string,
         detail: tx(ctx, "step.v60.kasuya.p1.detail", { pour1, temp }),
       },
       { at: "0:45", title: tx(ctx, "step.v60.kasuya.p2.title"), detail: tx(ctx, "step.v60.kasuya.p2.detail", { pour2, first40 }) },
-      { at: "1:30", title: tx(ctx, "step.v60.kasuya.later.title"), detail: tx(ctx, "step.v60.kasuya.later.detail", { later, w }) },
+      ...pourSeries(
+        [90, 135, 165],
+        evenTargets(first40, w, 3),
+        first40,
+        (n) => tx(ctx, "step.pour.title", { n }),
+        (i, g, to) => tx(ctx, i === 0 ? "step.v60.kasuya.later.first" : "step.v60.kasuya.later.detail", { g, to }),
+        3,
+      ),
       { at: "3:30", title: tx(ctx, "step.v60.kasuya.lift.title"), detail: tx(ctx, "step.v60.kasuya.lift.detail", { t, stall }) },
     ];
   }
@@ -192,7 +224,14 @@ function v60Steps(ctx: BrewStepCtx, bloom: number, pour60: number, temp: string,
     return [
       prep(ctx, "step.v60.winton.prep", { cool }),
       { at: "0:00", title: tx(ctx, "step.v60.winton.bloom.title"), detail: tx(ctx, "step.v60.winton.bloom.detail", { pour, temp }) },
-      { at: "0:30", title: tx(ctx, "step.v60.winton.pours.title"), detail: tx(ctx, "step.v60.winton.pours.detail", { pour, cool, w }) },
+      ...pourSeries(
+        [30, 60, 90, 120],
+        evenTargets(pour, w, 4),
+        pour,
+        (n) => tx(ctx, "step.pour.title", { n }),
+        (i, g, to) => tx(ctx, i === 0 ? "step.v60.winton.pour.first" : "step.v60.winton.pour.detail", { g, to, cool }),
+        2,
+      ),
       { at: t, title: tx(ctx, "step.v60.winton.swirl.title"), detail: tx(ctx, "step.v60.winton.swirl.detail", { t, stall }) },
     ];
   }
@@ -201,11 +240,14 @@ function v60Steps(ctx: BrewStepCtx, bloom: number, pour60: number, temp: string,
     return [
       prep(ctx, "step.v60.hoffmann1.prep"),
       { at: "0:00", title: tx(ctx, "step.v60.hoffmann1.bloom.title"), detail: tx(ctx, "step.v60.hoffmann1.bloom.detail", { pulse, temp }) },
-      {
-        at: "0:45",
-        title: tx(ctx, "step.v60.hoffmann1.pulses.title"),
-        detail: tx(ctx, "step.v60.hoffmann1.pulses.detail", { a: pulse * 2, b: pulse * 3, c: pulse * 4, w }),
-      },
+      ...pourSeries(
+        [45, 70, 90, 110],
+        [pulse * 2, pulse * 3, pulse * 4, w],
+        pulse,
+        (n) => tx(ctx, "step.pulse.title", { n }),
+        (_, g, to) => tx(ctx, "step.v60.hoffmann1.pulse.detail", { g, to }),
+        1,
+      ),
       { at: "2:00", title: tx(ctx, "step.v60.hoffmann1.swirl.title"), detail: tx(ctx, "step.v60.hoffmann1.swirl.detail", { t, stall }) },
     ];
   }
@@ -356,10 +398,20 @@ function kalitaSteps(ctx: BrewStepCtx, bloom: number, temp: string, t: string, s
       { at: t, title: tx(ctx, "step.kalita.mccarthy.draw.title"), detail: tx(ctx, "step.kalita.mccarthy.draw.detail", { t, stall }) },
     ];
   }
+  // ~50 g centre pulses, spaced to finish pouring well before the drawdown target.
+  const pulses = Math.max(2, Math.min(6, Math.round((w - bloom) / 50)));
+  const every = Math.max(15, Math.min(30, Math.round((ctx.timeS - 75) / pulses / 5) * 5));
   return [
     prep(ctx, "step.kalita.wave.prep"),
     { at: "0:00", title: tx(ctx, "step.kalita.wave.bloom.title"), detail: tx(ctx, "step.kalita.wave.bloom.detail", { bloom }) },
-    { at: "0:45", title: tx(ctx, "step.kalita.wave.pulses.title"), detail: tx(ctx, "step.kalita.wave.pulses.detail", { w: ctx.waterG }) },
+    ...pourSeries(
+      Array.from({ length: pulses }, (_, i) => 45 + i * every),
+      evenTargets(bloom, w, pulses),
+      bloom,
+      (n) => tx(ctx, "step.pulse.title", { n }),
+      (i, g, to) => tx(ctx, i === 0 ? "step.kalita.wave.pulse.first" : "step.kalita.wave.pulse.detail", { g, to }),
+      1,
+    ),
     { at: t, title: tx(ctx, "step.kalita.wave.draw.title"), detail: tx(ctx, "step.kalita.wave.draw.detail", { t, stall }) },
   ];
 }
@@ -378,7 +430,14 @@ function origamiSteps(ctx: BrewStepCtx, temp: string, t: string, stall: string):
   return [
     prep(ctx, "step.origami.medina.prep"),
     { at: "0:00", title: tx(ctx, "step.origami.medina.p1.title"), detail: tx(ctx, "step.origami.medina.p1.detail", { pulse, temp }) },
-    { at: "0:30", title: tx(ctx, "step.origami.medina.later.title"), detail: tx(ctx, "step.origami.medina.later.detail", { pulse, w }) },
+    ...pourSeries(
+      [30, 60, 90, 120],
+      evenTargets(pulse, w, 4),
+      pulse,
+      (n) => tx(ctx, "step.pulse.title", { n }),
+      (_, g, to) => tx(ctx, "step.origami.medina.later.detail", { g, to }),
+      2,
+    ),
     { at: t, title: tx(ctx, "step.origami.medina.draw.title"), detail: tx(ctx, "step.origami.medina.draw.detail", { t }) },
   ];
 }
@@ -391,7 +450,14 @@ function oreaSteps(ctx: BrewStepCtx, temp: string, t: string, stall: string): Br
     return [
       prep(ctx, "step.orea.hsu.prep", { cool }),
       { at: "0:00", title: tx(ctx, "step.orea.hsu.p1.title"), detail: tx(ctx, "step.orea.hsu.p1.detail", { pulse, cool }) },
-      { at: "0:30", title: tx(ctx, "step.orea.hsu.later.title"), detail: tx(ctx, "step.orea.hsu.later.detail", { pulse, temp, w }) },
+      ...pourSeries(
+        [30, 60, 90],
+        evenTargets(pulse, w, 3),
+        pulse,
+        (n) => tx(ctx, "step.orea.hsu.hot.title", { n }),
+        (i, g, to) => tx(ctx, i === 0 ? "step.orea.hsu.hot.first" : "step.orea.hsu.hot.detail", { g, to, temp }),
+        2,
+      ),
       { at: t, title: tx(ctx, "step.orea.hsu.draw.title"), detail: tx(ctx, "step.orea.hsu.draw.detail", { t, stall }) },
     ];
   }
@@ -431,7 +497,12 @@ function espressoSteps(ctx: BrewStepCtx, temp: string): BrewStep[] {
   const ratio = formatRatio(ctx.waterG / ctx.coffeeG);
   const time = Math.round(ctx.timeS);
   const flow = tx(ctx, "step.espresso.flow");
-  const prep = tx(ctx, "step.espresso.prepBase", { coffee: ctx.coffeeG, temp, flow });
+  const prep = tx(ctx, "step.espresso.prepBase", {
+    coffee: ctx.coffeeG,
+    temp,
+    flow,
+    grind: tx(ctx, `step.grind.${ctx.grind}` as RecipeKey),
+  });
 
   if (mode === "blooming") {
     return [
@@ -657,10 +728,14 @@ export function withGrindSetting(
   const prepAt = recipeText(locale, "step.at.prep");
   const word = recipeText(locale, `step.grind.${grind}` as RecipeKey);
   const note = recipeText(locale, setting.clicks ? "step.grind.clicks" : "step.grind.setting", { n: setting.value });
-  let done = false;
-  return steps.map((step) => {
-    if (done || step.at !== prepAt || !step.detail.includes(word)) return step;
-    done = true;
-    return { ...step, detail: step.detail.replace(word, `${word} (${note})`) };
+  const prepIdx = steps.findIndex((step) => step.at === prepAt);
+  if (prepIdx < 0) return steps;
+  return steps.map((step, i) => {
+    if (i !== prepIdx) return step;
+    // A Prep text that never names the grind (e.g. a hand-written Mine recipe) still gets the setting.
+    const detail = step.detail.includes(word)
+      ? step.detail.replace(word, `${word} (${note})`)
+      : `${step.detail}${recipeText(locale, "step.grind.grinder", { note })}`;
+    return { ...step, detail };
   });
 }

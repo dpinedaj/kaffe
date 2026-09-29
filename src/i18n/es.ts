@@ -439,7 +439,11 @@ export const es: Record<MessageKey, string> = {
   "brew.iWant": "Quiero",
   "brew.bagHelp":
     "Lo que dice la bolsa, no un archivo de tueste. El origen y la variedad ajustan la densidad, el tamaño del grano y la tendencia de sabor: afinan la receta, no la cambian por una distinta para cada país. La altitud de la finca afina la densidad.",
-  "brew.days": "Días desde el tueste",
+  "brew.days": "Tostado",
+  "brew.roastDate": "Fecha de tueste",
+  "brew.dayLess": "Un día menos",
+  "brew.dayMore": "Un día más",
+  "brew.today": "Hoy",
   "brew.mine": "Mis recetas",
   "brew.newRecipe": "Nueva receta",
   "brew.exportAll": "Exportar todas",
