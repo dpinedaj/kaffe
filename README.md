@@ -1,0 +1,164 @@
+# Kaffe
+
+Local-first coffee studio for **brewing** and **roasting**. Nothing is uploaded; it works offline.
+
+Kaffe has two sections, switched from the top bar:
+
+- **Brew** — for any coffee, whether you bought it or roasted it: recipes from world champions and the best community guides for 15 brewers, grinder clicks for ~210 mills, a step timer, and two-tap tasting that says what to change next.
+- **Roast** — design roast profiles for your roaster, overlay them with your logs, and keep a roast library; any roast opens in Brew with one tap. Today the roaster is [Kaffelogic Nano 7](https://www.kaffelogic.com/) (`.kpro` profiles, `.klog` logs). More machines can be added one by one in `src/lib/roasters.ts` — each needs its own calibration; Kaffe does not translate profiles between roasters.
+
+On first launch Kaffe asks whether you brew or also roast (and which roaster). The **⋯ menu** holds the roaster, language, **Show welcome screen**, and the version.
+
+**Roast science** (equations, boosts, RTD/Rest, flavors, citations) lives in **[docs/ROAST-MODEL.md](docs/ROAST-MODEL.md)**. **Brew science** (SCA / UC Davis, altitude, WBrC / WAC / WBC, Hoffmann skeletons) lives in **[docs/BREW.md](docs/BREW.md)**. In the app, **⋯ → How Kaffe works** has a plain-language version with the sources. A short roast version is below.
+
+## Install
+
+Kaffe is an installable web app (PWA): it works offline and keeps everything on your device.
+
+- **Chrome / Edge / Android** — open the site and tap **Install** in the top bar (or “Install app” in the browser menu).
+- **iPhone / iPad** — Safari → Share → **Add to Home Screen**.
+
+Updates arrive on their own: when a new version is deployed, the top bar shows **Update ready**.
+
+## Run locally
+
+You need Node 22+ (or Docker).
+
+```bash
+npm install
+npm test
+npm run dev
+```
+
+Open http://localhost:5173
+
+### Local overlay coach (dev only)
+
+GitHub Pages never ships this. `npm run build` / `npm run preview` keep Overlay as it is today.
+
+1. Copy `.env.example` to `.env`
+2. Paste a Cursor API key from [Integrations](https://cursor.com/dashboard/integrations) as `CURSOR_API_KEY`
+3. `npm run dev` — Overlay shows a **Local Cursor coach** box
+4. Ask about a loaded `.klog` / `.kpro`. If the coach proposes parameters, open them in Generate or add the regenerated `.kpro` to the overlay
+
+The key is read by the Vite **dev server** only (`CURSOR_API_KEY`, no `VITE_` prefix), so it is not baked into the browser bundle. The agent is called with an empty tool list so it cannot edit the repo.
+
+Production preview (what GitHub Pages serves):
+
+```bash
+npm run build
+npm run preview
+```
+
+Open http://localhost:4173
+
+Docker:
+
+```bash
+docker compose up --build
+```
+
+Live: [https://dpinedaj.github.io/kaffe/](https://dpinedaj.github.io/kaffe/)
+
+## What it does
+
+### Brew
+
+- **Your coffee** — starts on **This bag** (origin, variety, process, farm metres, up to two flavor icons); the **Profile** tab attaches a Generate roast, a library profile, or a dropped `.kpro`
+- **Recipes** — 15 brewers (incl. siphon and batch brew) with championship and well-documented community recipes (WBrC 2013–2026, WAC, Hoffmann, Wendelboe, Rao…), suggested from roast, rest days and flavor
+- **Kitchen** — altitude caps the kettle at local boil; water type; grinder clicks for your mill (espresso lists only espresso-capable mills)
+- **Cup** — dose, ratio, or the cup you want (**In the cup**)
+- **Brew timer** — every step as a card: read ahead, countdowns, chimes, Jump here
+- **After brew** — Brix/TDS on a brew control chart (extraction on total water for immersion, drained cup for percolation), plus two-tap **Taste** with next-cup advice
+
+### Roast (Kaffelogic Nano 7)
+
+- **Generate** — origin, variety (~100 cultivars grouped into roast families), process, altitude, typed g/L, or vessel mass/volume, moisture, brew, roast style, **Rest / RTD** cup timing, up to two flavor goals, recommended boost zones, live Bézier preview (add / delete / smooth spikes / reset), download `.kpro`
+- **Overlay** — compare profiles, design vs actual from a `.klog` with RoR and a ±3 °C band, zone/scalar diff, phases, send a logged first crack back to Generate. Local `npm run dev` only: Cursor overlay coach (off on GitHub Pages).
+- **Library** — save, rename, favorite, roast date and notes (Brew counts rest days from the date), last tasted cup, export JSON (this device only)
+
+`.kpro` is plain `key:value` ASCII, LF, no checksum. Curves are cubic Bézier groups of three pairs. A `.klog` already contains the design curve in the `=profile` column — Overlay uses that when a log is present, and only analyses samples up to `roast_end`.
+
+---
+
+## Roast model (short)
+
+Kaffe times the roast from **slopes**, not from a family bucket. Nordic / classic / slow is a **label on total time** after the curve is built.
+
+### Equations (reduced form)
+
+Literature moisture loss (Schwartzberg 2002; Hernández et al. 2007, *J. Food Eng.*):
+
+$$
+\frac{dX}{dt} \propto -\frac{X^{2}}{d_{p}^{2}}\exp\left(\frac{-E_{a}}{T+273}\right)
+$$
+
+Kaffe keeps those dependencies as drying / Maillard / development RoR (°C/min), calibrated to a Nano 7 fluid bed:
+
+$$
+k_{\mathrm{bean}} = (680/\rho)^{0.5}\,(11/X)^{0.45}\,k_{\mathrm{size}}\,k_{\mathrm{process}}
+$$
+
+$$
+\mathrm{RoR}_{\mathrm{dry}} = 40\cdot k_{\mathrm{bean}}\cdot k_{\mathrm{dry}}
+$$
+
+$$
+\mathrm{RoR}_{\mathrm{mail}} = 12\cdot k_{\mathrm{bean}}^{0.5}\cdot k_{\mathrm{mail}}
+$$
+
+$$
+T_{\mathrm{FC}} = 203.5 + 3.8\cdot(\rho-680)/80 + \mathrm{adj}
+$$
+
+$$
+t_{\mathrm{dry}} = 60\cdot(150-50)/\mathrm{RoR}_{\mathrm{dry}}
+$$
+
+$$
+t_{\mathrm{mail}} = 60\cdot(T_{\mathrm{FC}}-150)/\mathrm{RoR}_{\mathrm{mail}}
+$$
+
+Development mixes that slope with a **15–27%** DTR band (Rao’s 20–25% is drum-and-load craft; high energy-to-batch machines sit lower; Hilder: default KL ~20% at light). Yellow / first crack / drop are pinned on the Bézier so Studio DTR is the time you actually roast. Density from altitude uses Nepal 2021 (~0.11 g/L per metre). Beans **always start at room temperature**; the machine preheats the empty chamber (~250 °C).
+
+Steeper dry + Maillard → acidity and aroma; shallower → body and caramel (van Boekel 2006; [Royal Coffee aW / Maillard](https://royalcoffee.com/the-relationship-between-water-activity-and-the-maillard-reaction-in-roasting/)).
+
+### Boosts
+
+A **boost** is not the BOOST kit. Chris Hilder: it is **°C/min added to RoR-error** so the PID pretends the roast is off-course and feeds extra (or less) heat through an endotherm or exotherm. The Nano has three slots. Rest only turns a zone on when the bean needs it (wet drying, Maillard stall, runaway dark espresso). Rest does **not** auto-add Nordic’s **+3 °C/min into crack**.
+
+### Rest vs RTD
+
+| | Rest (default) | RTD |
+|---|---|---|
+| Drink | Peak **3–5 days** | **1–3 days** |
+| Idea | CO₂ degasses in the bag | Force CO₂ out **in the roast** |
+| Boosts | Only if needed | Maillard RoR step + energy **through** first crack; no negative after-crack brake |
+
+Official: [RTD](https://kaffelogicjp.com/en/pages/kl-rtd), [Rest](https://kaffelogicjp.com/en/pages/rest). Fluid-bed lots often need more rest than drum coffee unless you use RTD.
+
+### Fan
+
+Stock Nano 7 profiles hold **14 700 RPM** through drying and most of Maillard, then ease ~**1 500 RPM** down so development sits near **13 200**. Kaffe times that drop from **yellow → first crack → drop** (plus the official 10 min clock), and shifts RPM from density, moisture, process, size, roast style, Rest/RTD, and brew. BOOST load size stays a firmware offset on a 120 g curve. Equation: [docs/ROAST-MODEL.md](docs/ROAST-MODEL.md#9-fan).
+
+### Flavors
+
+Up to two goals share one budget. Floral / fruity / bright / juicy steepen the front and shorten development. Body / deep sweet lengthen Maillard and DTR. That follows roasting practice (Rao; volatile loss vs heat/time), not a single published “flavor → curve” paper. Full table and citations: [docs/ROAST-MODEL.md](docs/ROAST-MODEL.md).
+
+### Code
+
+| Piece | Where |
+|---|---|
+| Phase times, FC, DTR, RTD slopes | `src/lib/generate.ts` → `durationPlan` |
+| Boost recommendations | `suggestedZones` / `suggestedRtdZones` |
+| Flavor deltas | `FLAVOR_DELTA` |
+| Density from altitude | `densityFromAltitude` |
+| Fan Bézier | `planFanSchedule` / `buildOfficialFanCurve` |
+| Origins, varieties, flavor copy | `src/lib/knowledge.ts` |
+| Brew starting card + After brew | `src/lib/brew.ts` → `recommendBrew` · `src/lib/extract.ts` · [docs/BREW.md](docs/BREW.md) |
+| Grind clicks (HCG charts) | `src/lib/grinders.ts` · `src/lib/grinders.catalog.ts` |
+| Brew timer · Taste | `src/lib/brewTimer.ts` · `src/lib/taste.ts` |
+| Brew / Roast sections, welcome, menu | `src/App.tsx` · `src/lib/appMode.ts` · `src/components/Welcome.tsx` · `src/components/AppMenu.tsx` |
+| Supported roasters | `src/lib/roasters.ts` |
+| Installable app (PWA), iPhone install guide | `vite/pwa.ts` · `src/lib/pwa.ts` · `src/components/InstallGuide.tsx` · `public/manifest.webmanifest` |
+| How Kaffe works (in-app science, EN/ES) | `src/science/content.ts` · `src/pages/SciencePage.tsx` — keep in step with the two docs |
