@@ -73,7 +73,7 @@ Live: [https://dpinedaj.github.io/kaffe/](https://dpinedaj.github.io/kaffe/)
 
 ### Roast (Kaffelogic Nano 7)
 
-- **Generate** — origin, variety (~100 cultivars grouped into roast families), process, altitude, typed g/L, or vessel mass/volume, moisture, brew, roast style, **Rest / RTD** cup timing, up to two flavor goals, recommended boost zones, live Bézier preview (add / delete / smooth spikes / reset), download `.kpro`
+- **Generate** — origin, variety (~110 cultivars and species grouped into roast families), process, altitude, typed g/L, or vessel mass/volume, moisture, brew, roast style, **Rest / RTD** cup timing, up to two flavor goals, recommended boost zones, live Bézier preview (add / delete / smooth spikes / reset), download `.kpro`
 - **Overlay** — compare profiles, design vs actual from a `.klog` with RoR and a ±3 °C band, zone/scalar diff, phases, send a logged first crack back to Generate. Local `npm run dev` only: Cursor overlay coach (off on GitHub Pages).
 - **Library** — save, rename, favorite, roast date and notes (Brew counts rest days from the date), last tasted cup, export JSON (this device only)
 

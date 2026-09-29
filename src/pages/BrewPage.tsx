@@ -81,7 +81,8 @@ import {
   saveKitchenGrinder,
 } from "../lib/grinders";
 import { withGrindSetting } from "../lib/brewSteps";
-import { daysSinceRoast, type SavedProfile } from "../lib/storage";
+import { daysSinceRoast, roastDateFor, type SavedProfile } from "../lib/storage";
+import { RoastDateField } from "../components/RoastDateField";
 import { WhyLink } from "../components/WhyLink";
 
 export default function BrewPage({
@@ -120,7 +121,7 @@ export default function BrewPage({
   const [grinderId, setGrinderId] = useState<string | undefined>(() => loadKitchenGrinder());
   const [water, setWater] = useState<WaterId>(() => loadKitchenWater());
   const [method, setMethod] = useState<BrewMethod>(() => defaultMethod(snap?.brew ?? "filter"));
-  const [days, setDays] = useState(() => daysSinceRoast(snap?.roastedOn) ?? defaultDays(snap?.drinkPlan ?? "rest"));
+  const [daysTyped, setDaysTyped] = useState(() => daysSinceRoast(snap?.roastedOn) ?? defaultDays(snap?.drinkPlan ?? "rest"));
   const [looseStyle, setLooseStyle] = useState<RoastStyleId>(snap?.roastStyle ?? "light");
   const [doseTyped, setDoseTyped] = useState<number | undefined>();
   const [cupTarget, setCupTarget] = useState<number | undefined>();
@@ -136,7 +137,7 @@ export default function BrewPage({
   useEffect(() => {
     const next = resolveSnap(attach, studioSnap, library);
     setMethod(defaultMethod(next?.brew ?? "filter"));
-    setDays(daysSinceRoast(next?.roastedOn) ?? defaultDays(next?.drinkPlan ?? "rest"));
+    setDaysTyped(daysSinceRoast(next?.roastedOn) ?? defaultDays(next?.drinkPlan ?? "rest"));
     setLooseStyle(next?.roastStyle ?? "light");
     setDose(undefined);
     setRatio(undefined);
@@ -150,6 +151,16 @@ export default function BrewPage({
   }
 
   const usingBag = roastTab === "bag";
+  // A bag's roast date is saved, so its rest days count up on their own from one day to the next.
+  const bagDays = daysSinceRoast(bag.roastedOn);
+  const days = usingBag && bagDays != null ? Math.min(60, bagDays) : daysTyped;
+  function setDays(next: number) {
+    setDaysTyped(next);
+    if (!usingBag) return;
+    const nextBag = { ...bag, roastedOn: roastDateFor(next) };
+    setBag(nextBag);
+    saveBrewBag(nextBag);
+  }
   const style = usingBag ? bag.roastStyle : (snap?.roastStyle ?? looseStyle);
   const bagFields = bagBrewFields(bag);
   const cardRatio = useMemo(
@@ -618,13 +629,8 @@ export default function BrewPage({
           </>
         )}
         <Card className="mt-2">
-          <Row label={t("brew.days")} last>
-            <DraftNumber
-              value={days}
-              step={1}
-              onChange={(n) => setDays(Math.max(0, Math.min(60, n)))}
-              className="w-16 bg-transparent text-right text-[15px] text-white outline-none"
-            />
+          <Row label={t("brew.days")} last inline>
+            <RoastDateField days={days} onChange={setDays} />
           </Row>
         </Card>
         <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">{restShown.restLabel}</p>

@@ -25,6 +25,13 @@ export function daysSinceRoast(roastedOn: string | undefined, now = new Date()):
   return days >= 0 ? days : undefined;
 }
 
+/** The YYYY-MM-DD roast day that is `days` whole days before today (local time). */
+export function roastDateFor(days: number, now = new Date()): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - Math.max(0, Math.round(days)));
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 const KEY = "kaffe.library.v1";
 
 export function loadLibrary(): SavedProfile[] {

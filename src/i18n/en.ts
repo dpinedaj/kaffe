@@ -167,7 +167,7 @@ export const en = {
   "originRegion.colombia-sierra": "Santa Marta / Arhuaco / Kogi lands",
 
   "variety.unknown": "Unknown / mix",
-  "variety.heirloom": "Ethiopian landrace",
+  "variety.heirloom": "Heirloom (Ethiopian landrace)",
   "variety.yellow-bourbon": "Yellow Bourbon",
   "variety.pink-bourbon": "Pink Bourbon",
   "variety.colombia-var": "Colombia (variety)",
@@ -188,6 +188,8 @@ export const en = {
   "variety.striped-bourbon": "Striped Bourbon",
   "variety.yellow-caturra": "Yellow Caturra",
   "variety.red-catuai": "Red Catuai",
+  "variety.timor-hybrid": "Timor Hybrid",
+  "variety.selection-9": "Selection 9",
 
   "pace.nordic": "Nordic · ~6–7 min",
   "pace.slow": "Slow · ~11 min",
@@ -437,7 +439,11 @@ export const en = {
   "brew.iWant": "I want",
   "brew.bagHelp":
     "What the bag says, not a roast file. Origin and variety adjust density, bean size and flavor lean — they fine-tune the recipe, not swap in a different one per country. Farm altitude refines density.",
-  "brew.days": "Days since roast",
+  "brew.days": "Roasted",
+  "brew.roastDate": "Roast date",
+  "brew.dayLess": "One day less",
+  "brew.dayMore": "One day more",
+  "brew.today": "Today",
   "brew.mine": "My recipes",
   "brew.newRecipe": "New Recipe",
   "brew.exportAll": "Export all",
@@ -1004,6 +1010,45 @@ export const en = {
   "varietyCup.jaadi": "Dried cherry, wine, spice",
   "varietyNote.jaadi":
     "Yemen landrace (Haraz / Bani Matar). Mokka-family heat; keep some winey fruit.",
+  "varietyCup.timor-hybrid": "Cocoa, spice, heavy body",
+  "varietyNote.timor-hybrid":
+    "Natural Arabica × Robusta cross from Timor, the parent of Catimor and Sarchimor. Body family — give Maillard time.",
+  "varietyCup.selection-9": "Chocolate, nutty, round",
+  "varietyNote.selection-9":
+    "India (Tafarikela × Timor Hybrid). Rust-tolerant; body family — longer mid, a little more development.",
+  "varietyCup.cauvery": "Cocoa, malt, low acidity",
+  "varietyNote.cauvery":
+    "India's Catimor (Caturra × Timor Hybrid). Same heat as Catimor — give Maillard time.",
+  "varietyCup.arusha": "Clean, citrus, black tea",
+  "varietyNote.arusha":
+    "Typica-type selection from Mount Meru (Tanzania), also planted in Papua New Guinea. Typica heat with a firmer charge for the dense seed.",
+  "varietyCup.french-mission": "Red fruit, cane sugar, juicy",
+  "varietyNote.french-mission":
+    "Bourbon brought to East Africa by French missionaries; an SL28 ancestor. Bourbon-family sweetness with a firmer charge for highland seed.",
+  "varietyCup.milenio": "Sweet, citrus, round",
+  "varietyNote.milenio":
+    "F1 hybrid (H10, Sarchimor × Rume Sudan) from Central America. Vigorous and sweet — near-neutral heat, stop a little early.",
+  "varietyCup.aramosa": "Sweet, mild, low bitterness",
+  "varietyNote.aramosa":
+    "Brazil (Arabica × C. racemosa), naturally lower in caffeine. Gentle, near-neutral heat so the sweetness does not flatten.",
+  "varietyCup.yemenia": "Dried fruit, spice, winey",
+  "varietyNote.yemenia":
+    "Yemen-only genetic group identified in 2020 (Qima / Montagnon). Mokka-family heat — small dense seed, do not over-cook.",
+  "varietyCup.eugenioides": "Cane sugar, cereal, very low acidity",
+  "varietyNote.eugenioides":
+    "C. eugenioides, a parent species of Arabica, now grown for competition in Colombia. Small, naturally sweet seed with little acid — keep it light so the sugar reads.",
+  "varietyCup.stenophylla": "Elderflower, stone fruit, tea",
+  "varietyNote.stenophylla":
+    "C. stenophylla from Sierra Leone, rediscovered in 2020 with an Arabica-like cup at lowland heat. Small seed — short drying, short development.",
+  "varietyCup.liberica": "Jackfruit, smoke, woody",
+  "varietyNote.liberica":
+    "C. liberica (Philippines “Barako”, Malaysia, West Africa). Huge, uneven seed: extra drying to cook the core, then an even finish so it does not taste raw.",
+  "varietyCup.excelsa": "Tart dark fruit, tamarind, winey",
+  "varietyNote.excelsa":
+    "C. liberica var. dewevrei (Southeast Asia). Smaller than Liberica, tart and fruity — a little more drying, modest development.",
+  "varietyCup.robusta": "Cocoa, nutty, heavy body, bitter edge",
+  "varietyNote.robusta":
+    "C. canephora, including fine Robusta from Uganda, India and Vietnam. Low sugar, double the caffeine — body-family heat: give Maillard time, do not rush the finish.",
 
   "methodBlurb.v60":
     "Hoffmann, 4:6, Peng, Winton, Rao spin, Hedrick double bloom, Hoffmann 1-cup, Japanese iced. Suggested from roast and flavor.",

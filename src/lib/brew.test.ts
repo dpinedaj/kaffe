@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { withGrindSetting } from "./brewSteps";
+import { stepSeconds } from "./brewTimer";
+import { daysSinceRoast, roastDateFor } from "./storage";
 import {
   boilingPointC,
   bagBrewFields,
@@ -1292,5 +1294,62 @@ describe("withGrindSetting", () => {
     const rec = recommendBrew({ method: "v60", roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 14, locale: "es" });
     expect(withGrindSetting(rec.steps, "es", rec.grind, { value: "18", clicks: true })[0].detail).toMatch(/\(18 clics\)/);
     expect(withGrindSetting(rec.steps, "es", rec.grind, { value: "2.5", clicks: false })[0].detail).toMatch(/\(posición 2\.5\)/);
+  });
+
+  it("names the grinder setting in the Prep card of every recipe, in both languages", () => {
+    for (const locale of ["en", "es"] as const) {
+      const clicks = locale === "en" ? "(22 clicks)" : "(22 clics)";
+      for (const { id: method } of BREW_METHODS) {
+        const techs = techniquesFor(method, locale).map((t) => t.id);
+        for (const technique of techs.length ? techs : [undefined]) {
+          const rec = recommendBrew({ method, roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 14, locale, technique });
+          const prep = withGrindSetting(rec.steps, locale, rec.grind, { value: "22", clicks: true })[0];
+          expect(prep.at, `${locale} ${method}/${technique}`).toBe("Prep");
+          expect(prep.detail, `${locale} ${method}/${technique}`).toContain(clicks);
+        }
+      }
+    }
+  });
+
+  it("still adds the setting when the Prep text never names the grind", () => {
+    const steps = [{ at: "Prep", title: "Setup", detail: "Weigh the coffee." }];
+    expect(withGrindSetting(steps, "en", "medium", { value: "22", clicks: true })[0].detail).toBe(
+      "Weigh the coffee. Grinder: 22 clicks.",
+    );
+  });
+});
+
+describe("one card per pour", () => {
+  it("never groups several pours in one step, and timed steps run in order", () => {
+    for (const locale of ["en", "es"] as const) {
+      for (const { id: method } of BREW_METHODS) {
+        const techs = techniquesFor(method, locale).map((t) => t.id);
+        for (const technique of techs.length ? techs : [undefined]) {
+          const rec = recommendBrew({ method, roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 14, locale, technique });
+          const label = `${locale} ${method}/${technique}`;
+          for (const step of rec.steps) {
+            expect(step.title, label).not.toMatch(/\d\s*[–-]\s*\d|^(Pours|Pulses|Vertidos|Pulsos)\b|\b(Four|Three|Cuatro|Tres)\b/);
+          }
+          const times = rec.steps.map((s) => stepSeconds(s.at)).filter((n): n is number => n != null);
+          expect(times, label).toEqual([...times].sort((a, b) => a - b));
+        }
+      }
+    }
+  });
+
+  it("splits Kasuya 4:6 pours 3–5 into three timed cards that add up to the water", () => {
+    const rec = recommendBrew({ method: "v60", roastStyle: "light", drinkPlan: "rest", daysSinceRoast: 14, technique: "kasuya-acid" });
+    const later = rec.steps.filter((s) => /^Pour [345]$/.test(s.title));
+    expect(later.map((s) => s.at)).toEqual(["1:30", "2:15", "2:45"]);
+    expect(later[2].detail).toContain(`to ${rec.waterG} g`);
+  });
+});
+
+describe("roast date ↔ rest days", () => {
+  it("turns a day count into the roast date and back, across month ends", () => {
+    const now = new Date(2026, 2, 3, 15, 30);
+    expect(roastDateFor(0, now)).toBe("2026-03-03");
+    expect(roastDateFor(5, now)).toBe("2026-02-26");
+    for (const days of [0, 1, 9, 31, 60]) expect(daysSinceRoast(roastDateFor(days, now), now)).toBe(days);
   });
 });

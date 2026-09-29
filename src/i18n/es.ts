@@ -169,7 +169,7 @@ export const es: Record<MessageKey, string> = {
   "originRegion.colombia-sierra": "Santa Marta / Arhuaco / territorio Kogi",
 
   "variety.unknown": "Desconocido / mezcla",
-  "variety.heirloom": "Landrace etíope",
+  "variety.heirloom": "Heirloom (landrace etíope)",
   "variety.yellow-bourbon": "Borbón Amarillo",
   "variety.pink-bourbon": "Borbón Rosado",
   "variety.colombia-var": "Colombia (variedad)",
@@ -190,6 +190,8 @@ export const es: Record<MessageKey, string> = {
   "variety.striped-bourbon": "Borbón Rayado",
   "variety.yellow-caturra": "Caturra Amarillo",
   "variety.red-catuai": "Catuai Rojo",
+  "variety.timor-hybrid": "Híbrido de Timor",
+  "variety.selection-9": "Selección 9",
 
   "pace.nordic": "Nordic · ~6–7 min",
   "pace.slow": "Lento · ~11 min",
@@ -439,7 +441,11 @@ export const es: Record<MessageKey, string> = {
   "brew.iWant": "Quiero",
   "brew.bagHelp":
     "Lo que dice la bolsa, no un archivo de tueste. El origen y la variedad ajustan la densidad, el tamaño del grano y la tendencia de sabor: afinan la receta, no la cambian por una distinta para cada país. La altitud de la finca afina la densidad.",
-  "brew.days": "Días desde el tueste",
+  "brew.days": "Tostado",
+  "brew.roastDate": "Fecha de tueste",
+  "brew.dayLess": "Un día menos",
+  "brew.dayMore": "Un día más",
+  "brew.today": "Hoy",
   "brew.mine": "Mis recetas",
   "brew.newRecipe": "Nueva receta",
   "brew.exportAll": "Exportar todas",
@@ -1014,6 +1020,45 @@ export const es: Record<MessageKey, string> = {
   "varietyCup.jaadi": "Cereza seca, vino, especia",
   "varietyNote.jaadi":
     "Landrace de Yemen (Haraz / Bani Matar). Familia Mokka; conserva algo de la fruta avinada.",
+  "varietyCup.timor-hybrid": "Cacao, especia, cuerpo pesado",
+  "varietyNote.timor-hybrid":
+    "Cruce natural Arábica × Robusta de Timor, padre del Catimor y el Sarchimor. Familia de cuerpo: dale tiempo a la Maillard.",
+  "varietyCup.selection-9": "Chocolate, nueces, redondo",
+  "varietyNote.selection-9":
+    "India (Tafarikela × Híbrido de Timor). Tolerante a la roya; familia de cuerpo: fase media más larga y algo más de desarrollo.",
+  "varietyCup.cauvery": "Cacao, malta, poca acidez",
+  "varietyNote.cauvery":
+    "El Catimor de la India (Caturra × Híbrido de Timor). Mismo calor que el Catimor: dale tiempo a la Maillard.",
+  "varietyCup.arusha": "Limpio, cítricos, té negro",
+  "varietyNote.arusha":
+    "Selección tipo Typica del monte Meru (Tanzania), también sembrada en Papúa Nueva Guinea. Calor de Typica con una carga más firme para la semilla densa.",
+  "varietyCup.french-mission": "Fruta roja, panela, jugoso",
+  "varietyNote.french-mission":
+    "Bourbon que los misioneros franceses llevaron a África Oriental; ancestro del SL28. Dulzor de familia Bourbon con una carga más firme para semilla de altura.",
+  "varietyCup.milenio": "Dulce, cítricos, redondo",
+  "varietyNote.milenio":
+    "Híbrido F1 (H10, Sarchimor × Rume Sudan) de Centroamérica. Vigoroso y dulce: calor casi neutro, detente un poco antes.",
+  "varietyCup.aramosa": "Dulce, suave, poco amargor",
+  "varietyNote.aramosa":
+    "Brasil (Arábica × C. racemosa), con menos cafeína de forma natural. Calor suave y casi neutro para que el dulzor no se aplane.",
+  "varietyCup.yemenia": "Fruta seca, especia, avinado",
+  "varietyNote.yemenia":
+    "Grupo genético exclusivo de Yemen, identificado en 2020 (Qima / Montagnon). Familia Mokka: semilla pequeña y densa, no la sobrecocines.",
+  "varietyCup.eugenioides": "Panela, cereal, muy poca acidez",
+  "varietyNote.eugenioides":
+    "C. eugenioides, una de las especies padre del Arábica, hoy cultivada para competencia en Colombia. Semilla pequeña y dulce con poca acidez: mantenla clara para que se note el azúcar.",
+  "varietyCup.stenophylla": "Flor de saúco, fruta de hueso, té",
+  "varietyNote.stenophylla":
+    "C. stenophylla de Sierra Leona, redescubierta en 2020 con una taza parecida al Arábica en zonas bajas. Semilla pequeña: secado corto y desarrollo corto.",
+  "varietyCup.liberica": "Jaca, ahumado, madera",
+  "varietyNote.liberica":
+    "C. liberica (el “Barako” de Filipinas, Malasia, África Occidental). Semilla enorme e irregular: secado extra para cocinar el centro y un final parejo para que no sepa crudo.",
+  "varietyCup.excelsa": "Fruta oscura ácida, tamarindo, avinado",
+  "varietyNote.excelsa":
+    "C. liberica var. dewevrei (Sudeste Asiático). Más pequeña que la Liberica, ácida y frutal: un poco más de secado y desarrollo moderado.",
+  "varietyCup.robusta": "Cacao, nueces, cuerpo pesado, borde amargo",
+  "varietyNote.robusta":
+    "C. canephora, incluido el Robusta fino de Uganda, India y Vietnam. Poco azúcar y el doble de cafeína: calor de familia de cuerpo, dale tiempo a la Maillard y no apures el final.",
 
   "methodBlurb.v60":
     "Hoffmann, 4:6, Peng, Winton, Rao spin, Hedrick double bloom, Hoffmann 1 taza, Japanese iced. Se sugiere una según el tueste y el sabor.",

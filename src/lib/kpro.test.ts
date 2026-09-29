@@ -742,6 +742,18 @@ describe("arabica varieties", () => {
     expect(names.indexOf("Chiroso")).toBeLessThan(names.indexOf("Gesha / Geisha"));
   });
 
+  it("lists Heirloom under H, the word Ethiopian bags print, in both languages", () => {
+    const en = varietiesForSelect((v) => translate("en", `variety.${v.id}` as MessageKey), "en").map((v) =>
+      translate("en", `variety.${v.id}` as MessageKey),
+    );
+    const heirloom = en.findIndex((n) => n.startsWith("Heirloom"));
+    expect(heirloom).toBeGreaterThan(en.findIndex((n) => n.startsWith("Gesha")));
+    expect(translate("es", "variety.heirloom" as MessageKey)).toMatch(/^Heirloom/);
+    for (const id of ["eugenioides", "liberica", "excelsa", "stenophylla", "robusta", "yemenia", "timor-hybrid"]) {
+      expect(VARIETIES.some((v) => v.id === id), id).toBe(true);
+    }
+  });
+
   it("gives every listed cultivar a complete roast, brew lean, and a generatable curve", () => {
     const ids = new Set<string>();
     for (const v of VARIETIES) {

@@ -213,19 +213,21 @@ Dark roast style marks floral/fruit/bright as **avoid** (those notes are already
 
 ### Variety families
 
-About 100 cultivars live in `VARIETIES` (`src/lib/knowledge.ts`). Each one reuses a small set of heat templates instead of inventing its own numbers. The `roast` deltas stack on origin / process / density / moisture exactly like the rest of the model. A variety also gives density (±6 g/L and a one-step brew density bump), seed size (drying `sizeK`), and up to two `flavorLean` icons that This bag uses when no flavor is picked. `kpro.test.ts` checks every row against its family.
+About 110 cultivars and species live in `VARIETIES` (`src/lib/knowledge.ts`). Each one reuses a small set of heat templates instead of inventing its own numbers. The `roast` deltas stack on origin / process / density / moisture exactly like the rest of the model. A variety also gives density (±6 g/L and a one-step brew density bump), seed size (drying `sizeK`), and up to two `flavorLean` icons that This bag uses when no flavor is picked. `kpro.test.ts` checks every row against its family.
 
 | Family | Examples | Roast deltas | Style |
 |---|---|---|---|
-| Gesha / landrace (volatile) | Gesha, Pink Bourbon, Chiroso, Sidra, Ethiopian landrace, JARC 741xx, Kurume, Typica Mejorado, Bourbon Ají, Casiopea | Lower FC, preheat up, **mid and development negative** | Light |
+| Gesha / landrace (volatile) | Gesha, Pink Bourbon, Chiroso, Sidra, Heirloom (Ethiopian landrace), JARC 741xx, Kurume, Typica Mejorado, Bourbon Ají, Casiopea | Lower FC, preheat up, **mid and development negative** | Light |
 | Kenya dense | SL28, SL34, SL14, K7 | Preheat +8…12, drying +2…4, restrained development | Light |
-| Bourbon sweet | Bourbon, Red / Yellow / Orange / Striped Bourbon, Tekisic, Jackson, Mibirizi | Longer mid, a little more development, fan −40…−50 | Light–medium |
+| Bourbon sweet | Bourbon, Red / Yellow / Orange / Striped Bourbon, Tekisic, Jackson, Mibirizi, French Mission | Longer mid, a little more development, fan −40…−50 | Light–medium |
 | Compact dwarf | Caturra, Villa Sarchi, Pacas, Villalobos, San Ramón | Preheat −2, drying −3, small negatives | Light |
-| Typica / clean | Typica, Java, Pache, Kent, Tabi, Marsellesa, Mundo Maya | Small negatives, modest development | Light |
+| Typica / clean | Typica, Java, Pache, Kent, Tabi, Marsellesa, Mundo Maya, Arusha | Small negatives, modest development | Light |
 | Catuai baseline | Catuai, Red / Yellow Catuai, Topázio, Paraíso | Near zero, a little extra mid | Medium |
-| Body (Catimor / Sarchimor / Timor) | Castillo, Cenicafé 1, Catimor, Lempira, IHCAFE 90, Obatã, Tupi, Tim Tim, Ateng, S795 | **Mid and development positive**, fan −60…−80 | Medium |
-| Large seed | Pacamara, Maragogipe, Maracaturra, Maragesha, Blue Mountain, Chandragiri | Preheat ≥ +10, drying ≥ +8, fan up | By cup |
-| Mokka / Yemen | Mokka, Udaini, Tuffahi, Dawairi, Jaadi | Small dense seed: firm charge, short drying, modest development | Medium |
+| Body (Catimor / Sarchimor / Timor) | Castillo, Cenicafé 1, Catimor, Lempira, IHCAFE 90, Obatã, Tupi, Tim Tim, Ateng, S795, Timor Hybrid, Selection 9, Cauvery, Robusta | **Mid and development positive**, fan −60…−80 | Medium |
+| Large seed | Pacamara, Maragogipe, Maracaturra, Maragesha, Blue Mountain, Chandragiri, Liberica | Preheat ≥ +10, drying ≥ +8, fan up | By cup |
+| Mokka / Yemen | Mokka, Udaini, Tuffahi, Dawairi, Jaadi, Yemenia | Small dense seed: firm charge, short drying, modest development | Medium |
+| Other species | Eugenioides, Stenophylla, Excelsa (Liberica and Robusta sit in Large seed / Body above) | Small seeds: short drying, light finish; Excelsa: a little more drying | Light–medium |
+| F1 / low-caffeine | Milenio (H10), Aramosa | Near zero, stop a little early | Light |
 
 The volatile and body sets (`VOLATILE_VARIETIES` / `BODY_VARIETIES`) also drive `recommendFlavor`. Volatile cultivars recommend floral / fruity / bright and mark body / deep sweet as **avoid** on Light. Body cultivars recommend body / balance / deep sweet. These are craft groupings from cultivar lineage and seed size (WCR Varieties catalogue), not measured per-cultivar kinetics.
 
