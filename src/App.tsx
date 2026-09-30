@@ -35,7 +35,7 @@ type StudioTab = "parameters" | "flavor" | "curve";
 export type BrewSource = "bag" | "profile";
 
 export default function App() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [mode, setMode] = useState<AppMode | null>(() => loadMode());
   const [roasterId, setRoasterId] = useState(() => loadRoaster());
   const [roastRoute, setRoastRoute] = useState<RoastRoute>("studio");
@@ -60,11 +60,12 @@ export default function App() {
       if (!code) return;
       // Drop the recipe from the address bar so a reload or a re-share does not ask again.
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      void decodeRecipe(code).then((recipe) => setIncoming({ recipe }));
+      void decodeRecipe(code, locale).then((recipe) => setIncoming({ recipe }));
     }
     readHash();
     window.addEventListener("hashchange", readHash);
     return () => window.removeEventListener("hashchange", readHash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => onOpenScience(setScience), []);
   const collapsed = useCollapseOnScroll();

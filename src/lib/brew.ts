@@ -154,6 +154,9 @@ export interface BrewRecipe {
   suggestedTechnique?: string;
   /** SproFiler / Gaggiuino profile to load, when the script is one. */
   gaggiuino?: string;
+  /** Step inputs beyond the numbers above, so a shared card rebuilds the same steps. */
+  gassy?: boolean;
+  natural?: boolean;
   /** Short competition or document credit for the selected recipe. */
   origin?: string;
   /**
@@ -1748,6 +1751,8 @@ export function recommendBrew(query: BrewQuery): BrewRecipe {
     gaggiuino: tech?.gaggiuino,
     origin: recipeOrigin(query.method, tech?.id),
     grindNudgeT: grindNudgeT || undefined,
+    gassy: ctx.gassy,
+    natural: ctx.natural,
     steps: buildBrewSteps(ctx),
     why,
     sources,
