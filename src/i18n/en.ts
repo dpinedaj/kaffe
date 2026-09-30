@@ -643,6 +643,8 @@ export const en = {
   "sheet.stepTitle": "Title",
   "sheet.stepDetail": "What to do",
   "sheet.remove": "Remove",
+  "sheet.moveUp": "Move step up",
+  "sheet.moveDown": "Move step down",
 
   "flavorWhy.fruity":
     "Longer development drifts toward nutty, roasty and bitter notes; short development preserves fruity, sweet and acidic characters.",

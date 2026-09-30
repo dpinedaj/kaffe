@@ -273,6 +273,15 @@ export function newRecipeId(): string {
 
 export const GRIND_OPTIONS: Grind[] = GRINDS;
 
+/** The steps with the one at `from` moved to `to`; out-of-range moves return the list unchanged. */
+export function moveStep<T>(steps: T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || to < 0 || from >= steps.length || to >= steps.length) return steps;
+  const next = [...steps];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
 export function normalizeRecipe(raw: unknown): UserBrewRecipe | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
