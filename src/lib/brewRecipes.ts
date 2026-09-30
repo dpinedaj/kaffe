@@ -11,6 +11,7 @@ import {
   type BrewStep,
   type Grind,
 } from "./brew";
+import { cardBody } from "./cardCode";
 
 export const USER_RECIPE_KIND = "kaffe.brew-recipe";
 export const USER_RECIPE_PACK = "kaffe.brew-recipe-pack";
@@ -27,6 +28,8 @@ export interface UserBrewRecipe {
   mechanic: string;
   origin: string;
   forkedFrom?: string;
+  /** Card code (see cardCode.ts) this recipe started from, so a share can send only what you changed. */
+  base?: string;
   coffeeG: number;
   ratioN: number;
   wantedC: number;
@@ -80,6 +83,7 @@ export function cloneFromCard(recipe: BrewRecipe, name?: string): UserBrewRecipe
     mechanic: "",
     origin: youOrigin(),
     forkedFrom: recipe.origin,
+    base: cardBody(recipe),
     coffeeG: recipe.coffeeG,
     ratioN: recipe.ratioN,
     wantedC: recipe.wantedC,
@@ -316,6 +320,7 @@ export function normalizeRecipe(raw: unknown): UserBrewRecipe | null {
     mechanic: typeof o.mechanic === "string" ? o.mechanic : "",
     origin: typeof o.origin === "string" && o.origin.trim() ? o.origin.trim() : youOrigin(),
     forkedFrom: typeof o.forkedFrom === "string" ? o.forkedFrom : undefined,
+    base: typeof o.base === "string" && /^[a-z0-9.~-]{8,160}$/i.test(o.base) ? o.base : undefined,
     coffeeG: clampDose(coffeeG),
     ratioN: clampRatio(ratioN, method as BrewMethod),
     wantedC: Math.max(8, Math.min(100, Math.round(wantedC * 10) / 10)),
