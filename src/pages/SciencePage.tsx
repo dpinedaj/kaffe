@@ -3,9 +3,6 @@ import { createPortal } from "react-dom";
 import { useI18n } from "../i18n/LocaleContext";
 import { SCIENCE, type ScienceTopic } from "../science/content";
 
-const DOCS = "https://github.com/dpinedaj/kaffe/blob/main/docs/";
-const FULL: Record<ScienceTopic, string> = { brew: `${DOCS}BREW.md`, roast: `${DOCS}ROAST-MODEL.md` };
-
 /** `**bold**` is the only markup the curated text uses. */
 function rich(text: string): ReactNode {
   return text.split(/\*\*(.+?)\*\*/g).map((part, i) =>
@@ -174,20 +171,6 @@ export function SciencePage({
             ))}
           </section>
 
-          <a
-            href={FULL[topic]}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-6 flex items-center justify-between rounded-2xl bg-card px-4 py-3 text-[14px] font-medium text-white ring-1 ring-line"
-          >
-            <span>
-              {t("science.full")}
-              <span className="mt-0.5 block text-[12px] font-normal text-muted">{t("science.fullBody")}</span>
-            </span>
-            <span className="text-blue" aria-hidden="true">
-              ↗
-            </span>
-          </a>
         </div>
       </div>
     </div>,

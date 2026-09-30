@@ -67,6 +67,8 @@ import {
   STYLES,
   varietiesForSelect,
   originById,
+  recommendFlavor,
+  varietyById,
   type FlavorId,
   type RoastStyleId,
 } from "../lib/knowledge";
@@ -167,6 +169,10 @@ export default function BrewPage({
   }
   const style = usingBag ? bag.roastStyle : (snap?.roastStyle ?? looseStyle);
   const bagFields = bagBrewFields(bag);
+  // Flavor pills score the bag like Generate scores a roast; with no origin picked, nothing origin-specific applies.
+  const bagOrigin = bag.originId
+    ? originById(bag.originId)
+    : { ...ORIGINS[0], id: "unknown", density: bagFields.densityClass ?? "medium" };
   const cardRatio = useMemo(
     () =>
       recommendBrew({
@@ -668,6 +674,14 @@ export default function BrewPage({
                 {FLAVORS.map((f) => {
                   const idx = bag.flavors.indexOf(f.id);
                   const selected = idx >= 0;
+                  const rec = recommendFlavor(
+                    f.id,
+                    bag.process,
+                    bag.roastStyle,
+                    bagOrigin,
+                    bag.varietyId ? varietyById(bag.varietyId) : undefined,
+                    bagFields.densityClass,
+                  );
                   return (
                     <button
                       key={f.id}
@@ -684,6 +698,13 @@ export default function BrewPage({
                       )}
                       <div className="text-xl">{f.icon}</div>
                       <div className="mt-1 text-[13px] font-semibold">{flavorLabel(f.id, t)}</div>
+                      <Pill tone={rec === "recommended" ? "green" : rec === "avoid" ? "orange" : "muted"}>
+                        {rec === "recommended"
+                          ? t("common.recommended")
+                          : rec === "avoid"
+                            ? t("common.notRecommended")
+                            : t("common.neutral")}
+                      </Pill>
                     </button>
                   );
                 })}
