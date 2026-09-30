@@ -83,7 +83,7 @@ import {
 import { withGrindSetting } from "../lib/brewSteps";
 import { daysSinceRoast, roastDateFor, type SavedProfile } from "../lib/storage";
 import { RoastDateField } from "../components/RoastDateField";
-import { recipeLink, recipeSummary } from "../lib/shareRecipe";
+import { cardLink, recipeLink, recipeSummary } from "../lib/shareRecipe";
 import { WhyLink } from "../components/WhyLink";
 
 export default function BrewPage({
@@ -237,13 +237,18 @@ export default function BrewPage({
   const [shareUrl, setShareUrl] = useState<string>();
   const [shareNote, setShareNote] = useState<string>();
   useEffect(() => {
+    // A built-in card shares only its numbers; My recipes carry their own step text.
+    if (!mine) {
+      setShareUrl(cardLink(recipe, window.location.href));
+      return;
+    }
     let live = true;
     setShareUrl(undefined);
-    void recipeLink(shareItem, window.location.href).then((url) => live && setShareUrl(url));
+    void recipeLink(mine, window.location.href).then((url) => live && setShareUrl(url));
     return () => {
       live = false;
     };
-  }, [shareItem]);
+  }, [mine, recipe]);
   useEffect(() => {
     if (!shareNote) return;
     const id = window.setTimeout(() => setShareNote(undefined), 3500);
