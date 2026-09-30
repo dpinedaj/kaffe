@@ -273,7 +273,7 @@ export function newRecipeId(): string {
 
 export const GRIND_OPTIONS: Grind[] = GRINDS;
 
-function normalizeRecipe(raw: unknown): UserBrewRecipe | null {
+export function normalizeRecipe(raw: unknown): UserBrewRecipe | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   const method = o.method;

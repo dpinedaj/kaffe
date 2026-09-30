@@ -4,7 +4,7 @@ import BrewPage from "./pages/BrewPage";
 import LibraryPage from "./pages/LibraryPage";
 import OverlayPage from "./pages/OverlayPage";
 import Studio from "./pages/Studio";
-import type { BrewAttach } from "./lib/brew";
+import type { BrewAttach, BrewMethod } from "./lib/brew";
 import { defaultIntent, generateProfile, type RoastIntent } from "./lib/generate";
 import type { OverlayTrack } from "./lib/overlay";
 import { LocaleSwitch, LocaleToggle, useI18n } from "./i18n/LocaleContext";
@@ -15,6 +15,9 @@ import { RoasterSelect } from "./components/RoasterSelect";
 import { clearMode, loadMode, loadRoaster, saveMode, saveRoaster, type AppMode } from "./lib/appMode";
 import { roasterById, type RoasterId } from "./lib/roasters";
 import { onOpenScience, type ScienceTarget } from "./lib/science";
+import { upsertMine, type UserBrewRecipe } from "./lib/brewRecipes";
+import { asReceived, decodeRecipe, sharedCodeFromHash } from "./lib/shareRecipe";
+import { SharedRecipeDialog } from "./components/SharedRecipeDialog";
 import {
   intentFromSaved,
   loadLibrary,
@@ -47,6 +50,22 @@ export default function App() {
   const [brewSource, setBrewSource] = useState<BrewSource>("bag");
   const [science, setScience] = useState<ScienceTarget | null>(null);
   const closeScience = useCallback(() => setScience(null), []);
+  /** A recipe link that opened the app: `recipe: null` means the link was broken. */
+  const [incoming, setIncoming] = useState<{ recipe: UserBrewRecipe | null } | null>(null);
+  const [openMine, setOpenMine] = useState<{ id: string; method: BrewMethod } | undefined>();
+
+  useEffect(() => {
+    function readHash() {
+      const code = sharedCodeFromHash(window.location.hash);
+      if (!code) return;
+      // Drop the recipe from the address bar so a reload or a re-share does not ask again.
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      void decodeRecipe(code).then((recipe) => setIncoming({ recipe }));
+    }
+    readHash();
+    window.addEventListener("hashchange", readHash);
+    return () => window.removeEventListener("hashchange", readHash);
+  }, []);
   useEffect(() => onOpenScience(setScience), []);
   const collapsed = useCollapseOnScroll();
   const headerRef = useRef<HTMLElement>(null);
@@ -92,17 +111,31 @@ export default function App() {
     go("brew");
   }
 
+  function addShared(recipe: UserBrewRecipe) {
+    const saved = asReceived(recipe);
+    upsertMine(saved);
+    setIncoming(null);
+    setOpenMine({ id: saved.id, method: saved.method });
+    go("brew");
+  }
+
   const roast = mode === "roast";
   const roaster = roasterById(roasterId);
+  const sharedDialog = incoming && (
+    <SharedRecipeDialog recipe={incoming.recipe} onAdd={addShared} onClose={() => setIncoming(null)} />
+  );
 
   if (mode == null) {
     return (
-      <Welcome
-        onDone={(next, rid) => {
-          if (rid) pickRoaster(rid);
-          go(next, "studio");
-        }}
-      />
+      <>
+        <Welcome
+          onDone={(next, rid) => {
+            if (rid) pickRoaster(rid);
+            go(next, "studio");
+          }}
+        />
+        {sharedDialog}
+      </>
     );
   }
 
@@ -273,9 +306,11 @@ export default function App() {
             setSource={setBrewSource}
             studioIntent={intent}
             library={library}
+            openMine={openMine}
           />
         </div>
       </main>
+      {sharedDialog}
 
       {roast && (
         <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-ink/95 px-2 pt-1 pb-[max(0.4rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
