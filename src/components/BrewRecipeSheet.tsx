@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n/LocaleContext";
 import { grindLabel } from "../i18n/labels";
 import { DraftNumber } from "./ui";
 import { BREW_METHODS, type BrewMethod, type BrewStep } from "../lib/brew";
 import {
   GRIND_OPTIONS,
+  moveStep,
   type UserBrewRecipe,
 } from "../lib/brewRecipes";
 
@@ -39,6 +40,28 @@ export default function BrewRecipeSheet({
 
   function patch(partial: Partial<UserBrewRecipe>) {
     setRec((prev) => ({ ...prev, ...partial }));
+  }
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const [moved, setMoved] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (moved == null) return;
+    const id = window.setTimeout(() => setMoved(null), 700);
+    return () => window.clearTimeout(id);
+  }, [moved]);
+
+  /** Move a step and keep the focus on the card that moved, so repeated taps keep moving it. */
+  function move(from: number, to: number) {
+    setRec((prev) => ({ ...prev, steps: moveStep(prev.steps, from, to) }));
+    setMoved(to);
+    const dir = to < from ? "up" : "down";
+    requestAnimationFrame(() => {
+      const card = listRef.current?.querySelector<HTMLElement>(`[data-step="${to}"]`);
+      card?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      const button = card?.querySelector<HTMLButtonElement>(`[data-move="${dir}"]`);
+      (button && !button.disabled ? button : card?.querySelector<HTMLButtonElement>("[data-move]"))?.focus();
+    });
   }
 
   function patchStep(i: number, partial: Partial<BrewStep>) {
@@ -169,10 +192,16 @@ export default function BrewRecipeSheet({
                 {t("sheet.addStep")}
               </button>
             </div>
-            <div className="space-y-2">
+            <div ref={listRef} className="space-y-2">
               {rec.steps.map((step, i) => (
-                <div key={i} className="rounded-2xl bg-card2 p-3">
-                  <div className="mb-2 flex gap-2">
+                <div
+                  key={i}
+                  data-step={i}
+                  className={`rounded-2xl bg-card2 p-3 motion-safe:transition-shadow motion-safe:duration-300 ${
+                    moved === i ? "ring-2 ring-blue" : ""
+                  }`}
+                >
+                  <div className="mb-2 flex items-center gap-2">
                     <input
                       value={step.at}
                       onChange={(e) => patchStep(i, { at: e.target.value })}
@@ -185,9 +214,39 @@ export default function BrewRecipeSheet({
                       placeholder={t("sheet.stepTitle")}
                       className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-white outline-none"
                     />
+                    {rec.steps.length > 1 && (
+                      <div className="flex shrink-0 items-center rounded-lg bg-card">
+                        <button
+                          type="button"
+                          data-move="up"
+                          className="flex h-7 w-7 items-center justify-center text-blue disabled:text-muted/40"
+                          disabled={i === 0}
+                          onClick={() => move(i, i - 1)}
+                          aria-label={t("sheet.moveUp")}
+                          title={t("sheet.moveUp")}
+                        >
+                          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M4 10l4-4 4 4" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          data-move="down"
+                          className="flex h-7 w-7 items-center justify-center text-blue disabled:text-muted/40"
+                          disabled={i === rec.steps.length - 1}
+                          onClick={() => move(i, i + 1)}
+                          aria-label={t("sheet.moveDown")}
+                          title={t("sheet.moveDown")}
+                        >
+                          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M4 6l4 4 4-4" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                     <button
                       type="button"
-                      className="text-[12px] text-muted"
+                      className="shrink-0 text-[12px] text-muted"
                       onClick={() => patch({ steps: rec.steps.filter((_, j) => j !== i) })}
                     >
                       {t("sheet.remove")}

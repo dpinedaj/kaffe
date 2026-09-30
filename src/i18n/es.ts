@@ -645,6 +645,8 @@ export const es: Record<MessageKey, string> = {
   "sheet.stepTitle": "Título",
   "sheet.stepDetail": "Qué hacer",
   "sheet.remove": "Quitar",
+  "sheet.moveUp": "Subir paso",
+  "sheet.moveDown": "Bajar paso",
 
   "flavorWhy.fruity":
     "Un development largo lleva a notas tostadas, a nuez y amargas; uno corto conserva lo afrutado, lo dulce y la acidez.",

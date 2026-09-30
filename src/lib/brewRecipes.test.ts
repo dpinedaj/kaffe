@@ -6,6 +6,7 @@ import {
   blankRecipe,
   cloneFromCard,
   importRecipes,
+  moveStep,
   loadMine,
   parseRecipeFile,
   removeMine,
@@ -178,5 +179,19 @@ describe("device storage", () => {
     removeMine(mine.id);
     expect(loadMine().some((r) => r.id === mine.id)).toBe(false);
     expect(loadMine()).toHaveLength(1);
+  });
+});
+
+describe("moveStep", () => {
+  it("moves one step up or down and leaves the rest in order", () => {
+    expect(moveStep(["a", "b", "c", "d"], 2, 1)).toEqual(["a", "c", "b", "d"]);
+    expect(moveStep(["a", "b", "c", "d"], 0, 3)).toEqual(["b", "c", "d", "a"]);
+  });
+
+  it("ignores moves past either end", () => {
+    const steps = ["a", "b"];
+    expect(moveStep(steps, 0, -1)).toBe(steps);
+    expect(moveStep(steps, 1, 2)).toBe(steps);
+    expect(moveStep(steps, 1, 1)).toBe(steps);
   });
 });
