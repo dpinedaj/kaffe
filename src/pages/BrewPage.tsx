@@ -83,6 +83,7 @@ import {
 import { withGrindSetting } from "../lib/brewSteps";
 import { daysSinceRoast, roastDateFor, type SavedProfile } from "../lib/storage";
 import { RoastDateField } from "../components/RoastDateField";
+import { recipeLink, recipeSummary } from "../lib/shareRecipe";
 import { WhyLink } from "../components/WhyLink";
 
 export default function BrewPage({
@@ -92,6 +93,7 @@ export default function BrewPage({
   library,
   source,
   setSource,
+  openMine,
 }: {
   /** Which coffee the card is for: the bag you bought (default) or one of your roast profiles. */
   source: "bag" | "profile";
@@ -100,6 +102,8 @@ export default function BrewPage({
   setAttach: (next: BrewAttach) => void;
   studioIntent: RoastIntent;
   library: SavedProfile[];
+  /** A recipe that just arrived from a shared link: select it once it is saved. */
+  openMine?: { id: string; method: BrewMethod };
 }) {
   const { t, locale } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -222,6 +226,61 @@ export default function BrewPage({
   const techniques = techniquesFor(method, locale);
   const aboutRecipe = mine ? undefined : techniques.find((x) => x.id === recipe.technique)?.blurb;
   const methodInfo = BREW_METHODS.find((m) => m.id === method);
+
+  // The link is built ahead of the tap: Safari only opens the share sheet straight from a click.
+  const shareItem = useMemo(() => {
+    if (mine) return mine;
+    const tech = techniquesFor(recipe.method, locale).find((x) => x.id === recipe.technique);
+    const name = tech?.name ?? BREW_METHODS.find((m) => m.id === recipe.method)?.name ?? recipe.method;
+    return { ...cloneFromCard(recipe, name), flavor: tech?.flavor ?? "", mechanic: tech?.mechanic ?? "" };
+  }, [mine, recipe, locale]);
+  const [shareUrl, setShareUrl] = useState<string>();
+  const [shareNote, setShareNote] = useState<string>();
+  useEffect(() => {
+    let live = true;
+    setShareUrl(undefined);
+    void recipeLink(shareItem, window.location.href).then((url) => live && setShareUrl(url));
+    return () => {
+      live = false;
+    };
+  }, [shareItem]);
+  useEffect(() => {
+    if (!shareNote) return;
+    const id = window.setTimeout(() => setShareNote(undefined), 3500);
+    return () => window.clearTimeout(id);
+  }, [shareNote]);
+
+  function shareRecipe() {
+    if (!shareUrl) return;
+    const text = t("share.text", { summary: recipeSummary(shareItem) });
+    if (typeof navigator.share === "function") {
+      navigator.share({ title: shareItem.name, text, url: shareUrl }).catch((e: unknown) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        void copyShare(text, shareUrl);
+      });
+      return;
+    }
+    void copyShare(text, shareUrl);
+  }
+
+  async function copyShare(text: string, url: string) {
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      setShareNote(t("share.copied"));
+    } catch {
+      setShareNote(t("share.failed"));
+    }
+  }
+
+  const openMineKey = openMine?.id;
+  useEffect(() => {
+    if (!openMine) return;
+    setMineItems(loadMine());
+    setMethod(openMine.method);
+    setTechnique(undefined);
+    setMineId(openMine.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openMineKey]);
 
   function patchKitchen(raw: string) {
     if (raw === "") {
@@ -961,14 +1020,33 @@ export default function BrewPage({
             {shown.origin && <p className="mt-0.5 text-[12px] leading-snug text-muted">{shown.origin}</p>}
             {aboutRecipe && <p className="mt-1 text-[13px] leading-relaxed text-label">{aboutRecipe}</p>}
           </div>
-          <button
-            type="button"
-            className="shrink-0 rounded-full bg-blue px-4 py-1.5 text-[13px] font-semibold text-white"
-            onClick={() => setTimerOpen(true)}
-          >
-            ▶ {t("timer.start")}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-card text-blue disabled:text-muted"
+              onClick={shareRecipe}
+              disabled={!shareUrl}
+              aria-label={t("share.button")}
+              title={t("share.button")}
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="rounded-full bg-blue px-4 py-1.5 text-[13px] font-semibold text-white"
+              onClick={() => setTimerOpen(true)}
+            >
+              ▶ {t("timer.start")}
+            </button>
+          </div>
         </div>
+        {shareNote && (
+          <p role="status" className="mb-2 px-1 text-[12px] text-green">
+            {shareNote}
+          </p>
+        )}
         <Card className="divide-y divide-line">
           {steps.map((step) => (
             <div key={`${step.at}-${step.title}`} className="flex gap-3 px-4 py-3">
