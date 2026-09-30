@@ -15,6 +15,8 @@ export const es: Record<MessageKey, string> = {
   "science.limits": "Lo que Kaffe no puede saber",
   "science.references": "Referencias",
   "science.open": "Abrir",
+  "science.full": "Leer el análisis completo",
+  "science.fullBody": "Ecuaciones y notas de trabajo en GitHub (en inglés)",
   "science.why": "¿Por qué?",
   "menu.label": "Menú",
   "roaster.help": "Los perfiles, los formatos de archivo y los ajustes de tueste dependen de esta máquina.",

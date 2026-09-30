@@ -13,6 +13,8 @@ export const en = {
   "science.limits": "What Kaffe can’t know",
   "science.references": "References",
   "science.open": "Open",
+  "science.full": "Read the full analysis",
+  "science.fullBody": "Equations and working notes on GitHub (English)",
   "science.why": "Why?",
   "menu.label": "Menu",
   "roaster.help": "Profiles, file formats and roast adjustments follow this machine.",
