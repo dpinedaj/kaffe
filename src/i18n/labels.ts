@@ -1,0 +1,91 @@
+import type { MessageKey } from "./en";
+import type { Locale } from "./translate";
+import { translate } from "./translate";
+import type { FlavorId, ProcessId, RoastStyleId, BrewId, DensityClass, BeanSize } from "../lib/knowledge";
+import { restWindows, type BrewMethod, type Grind } from "../lib/brew";
+
+type TFn = (key: MessageKey, vars?: Record<string, string | number>) => string;
+
+export function flavorLabel(id: FlavorId, t: TFn): string {
+  return t(`flavor.${id}` as MessageKey);
+}
+
+export function processLabel(id: ProcessId, t: TFn): string {
+  return t(`process.${id}` as MessageKey);
+}
+
+export function styleLabel(id: RoastStyleId, t: TFn): string {
+  return t(`style.${id}` as MessageKey);
+}
+
+export function brewLabel(id: BrewId, t: TFn): string {
+  return t(`brew.${id}` as MessageKey);
+}
+
+export function densityLabel(id: DensityClass, t: TFn): string {
+  return t(`density.${id}` as MessageKey);
+}
+
+export function sizeLabel(id: BeanSize, t: TFn): string {
+  return t(`size.${id}` as MessageKey);
+}
+
+export function grindLabel(id: Grind, t: TFn): string {
+  return t(`grind.${id}` as MessageKey);
+}
+
+/** The `{grind}` in a next-cup tip: the setting to go to on your grinder, or the grind word without one. */
+export function grindTipLabel(vars: Record<string, string | number>, t: TFn): string {
+  if (vars.setting != null) {
+    return t(vars.clicks ? "grinders.stepClicks" : "grinders.step", { to: vars.setting, from: vars.from });
+  }
+  return grindLabel(String(vars.grind) as Grind, t);
+}
+
+export function originLabel(id: string, t: TFn, fallback: string): string {
+  const key = `origin.${id}` as MessageKey;
+  const hit = t(key);
+  return hit === key ? fallback : hit;
+}
+
+export function originRegionLabel(id: string, t: TFn, fallback: string): string {
+  const key = `originRegion.${id}` as MessageKey;
+  const hit = t(key);
+  return hit === key ? fallback : hit;
+}
+
+export function varietyLabel(id: string, t: TFn, fallback: string): string {
+  const key = `variety.${id}` as MessageKey;
+  const hit = t(key);
+  return hit === key ? fallback : hit;
+}
+
+export function defText(key: MessageKey, t: TFn, fallback?: string): string {
+  const hit = t(key);
+  return hit === key ? (fallback ?? "") : hit;
+}
+
+export function restLabelFor(
+  locale: Locale,
+  plan: "rest" | "rtd",
+  days: number,
+  style: RoastStyleId,
+  method?: BrewMethod,
+): { restLabel: string; restWarn?: string } {
+  const t = (key: MessageKey, vars?: Record<string, string | number>) => translate(locale, key, vars);
+  if (plan === "rtd") {
+    if (days <= 3) return { restLabel: t("rest.rtdWindow", { days }) };
+    return { restLabel: t("rest.rtdPast", { days }), restWarn: t("rest.rtdWarn") };
+  }
+  const { gas, good, aging } = restWindows(style, method);
+  if (days <= 2) {
+    return {
+      restLabel: t("rest.degassing", { days }),
+      restWarn: days <= 1 ? t("rest.gasWarn") : undefined,
+    };
+  }
+  if (days <= gas) return { restLabel: t("rest.bloomingGood", { days }) };
+  if (days <= good) return { restLabel: t("rest.stillGood", { days }) };
+  if (days <= aging) return { restLabel: t("rest.aging", { days }) };
+  return { restLabel: t("rest.fading", { days }), restWarn: t("rest.fadeWarn") };
+}
