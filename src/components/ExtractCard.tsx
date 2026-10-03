@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n/LocaleContext";
 import type { MessageKey } from "../i18n/en";
-import { grindLabel } from "../i18n/labels";
-import type { Grind } from "../lib/brew";
+import { grindTipLabel } from "../i18n/labels";
 import {
   EXTRACT_TARGETS,
   clipRatioLine,
@@ -71,11 +70,6 @@ export default function ExtractCard({ recipe }: { recipe: ExtractRecipe }) {
         : reading?.verdict === "out"
           ? "text-muted"
           : "text-blue";
-
-  function withGrind(vars?: Record<string, string | number>) {
-    if (!vars?.grind) return vars;
-    return { ...vars, grind: grindLabel(String(vars.grind) as Grind, t) };
-  }
 
   return (
     <section>
@@ -172,12 +166,12 @@ export default function ExtractCard({ recipe }: { recipe: ExtractRecipe }) {
             {reading.tips[0] && (
               <p className="text-[13px] leading-relaxed text-white">
                 {t("extract.next")}{" "}
-                {t(reading.tips[0].id, withGrind(reading.tips[0].vars))}
+                {t(reading.tips[0].id, withGrind(reading.tips[0].vars, t))}
               </p>
             )}
             {reading.tips.slice(1).map((tip) => (
               <p key={tip.id} className="text-[12px] leading-relaxed text-muted">
-                {t(tip.id, withGrind(tip.vars))}
+                {t(tip.id, withGrind(tip.vars, t))}
               </p>
             ))}
           </div>
@@ -625,7 +619,7 @@ function ExtractChart({
               className={`px-3 leading-relaxed ${i === 0 ? "mt-1.5 text-[13px] text-white" : "mt-1 text-[12px] text-muted"}`}
             >
               {i === 0 ? `${t("extract.next")} ` : ""}
-              {t(tip.id, withGrindChart(tip.vars, t))}
+              {t(tip.id, withGrind(tip.vars, t))}
             </p>
           ))}
         </div>
@@ -649,12 +643,12 @@ function LegendDot({ color, label, dashed }: { color: string; label: string; das
   );
 }
 
-function withGrindChart(
+function withGrind(
   vars: Record<string, string | number> | undefined,
   t: (key: MessageKey, vars?: Record<string, string | number>) => string,
 ) {
   if (!vars?.grind) return vars;
-  return { ...vars, grind: grindLabel(String(vars.grind) as Grind, t) };
+  return { ...vars, grind: grindTipLabel(vars, t) };
 }
 
 function Stat({ label, value }: { label: string; value: string }) {

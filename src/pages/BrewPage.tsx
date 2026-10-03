@@ -1132,6 +1132,7 @@ export default function BrewPage({
           bypassG: shown.bypassG,
           technique: shown.technique,
           grind: shown.grind,
+          grindSetting,
           timeS: shown.timeS,
           kettleC: shown.kettleC,
           boilC: shown.boilC,
@@ -1146,6 +1147,7 @@ export default function BrewPage({
         method={method}
         technique={shown.technique}
         grind={shown.grind}
+        setting={grindSetting}
         ratioN={shown.ratioN}
       />
 

@@ -15,6 +15,7 @@ import {
   resolveGrindSetting,
   searchGrinders,
   settingAt,
+  stepGrindSetting,
 } from "./grinders";
 
 describe("grinders", () => {
@@ -343,5 +344,24 @@ describe("grind size across every method and flavor bag", () => {
         );
       }
     }
+  });
+
+  it("turns one grind step into a setting on the kitchen grinder", () => {
+    const now = resolveGrindSetting("timemore-c3s-pro", "v60", "medium");
+    expect(formatSetting(now!.at, "clicks")).toBe("15");
+    expect(stepGrindSetting(now!, 1)).toEqual({ from: "15", to: "14", clicks: true });
+    expect(stepGrindSetting(now!, -1)).toEqual({ from: "15", to: "16", clicks: true });
+  });
+
+  it("moves at least one notch and stops at the edge of the band", () => {
+    const now = resolveGrindSetting("timemore-c3s-pro", "v60", "fine")!;
+    const tight = { ...now, lo: 10, hi: 11, at: 10.4 };
+    expect(stepGrindSetting(tight, -1)?.to).toBe("11");
+    expect(stepGrindSetting(tight, 1)).toBeUndefined();
+  });
+
+  it("steps a numbered dial in half numbers", () => {
+    const now = resolveGrindSetting("flair-royal", "v60", "medium")!;
+    expect(stepGrindSetting(now, -1)).toEqual({ from: "14.5", to: "15.5", clicks: false });
   });
 });

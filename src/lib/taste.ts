@@ -1,4 +1,5 @@
 import type { BrewMethod, Grind } from "./brew";
+import { grindStepVars, type GrindSetting } from "./grinders";
 
 /**
  * Two-axis cup check after Barista Hustle’s Coffee Compass (Perger): sour ↔ bitter is
@@ -36,16 +37,23 @@ function step(grind: Grind, dir: 1 | -1): Grind {
   return GRINDS[i];
 }
 
-/** Next-cup moves: extraction first (grind / time / temperature), then strength (ratio). */
+/**
+ * Next-cup moves: extraction first (grind / time / temperature), then strength (ratio).
+ * With the kitchen grinder's `setting`, a grind move also names the setting to go to.
+ */
 export function tasteTips(
   balance: TasteBalance,
   strength: TasteStrength,
-  recipe: { grind: Grind; ratioN: number; method: BrewMethod },
+  recipe: { grind: Grind; ratioN: number; method: BrewMethod; setting?: GrindSetting },
 ): TasteTip[] {
   const tips: TasteTip[] = [];
   const shot = recipe.method === "espresso";
-  if (balance === "sour") tips.push({ key: "taste.tip.finer", vars: { grind: step(recipe.grind, 1) } });
-  if (balance === "bitter") tips.push({ key: "taste.tip.coarser", vars: { grind: step(recipe.grind, -1) } });
+  if (balance === "sour") {
+    tips.push({ key: "taste.tip.finer", vars: grindStepVars(step(recipe.grind, 1), recipe.setting, 1) });
+  }
+  if (balance === "bitter") {
+    tips.push({ key: "taste.tip.coarser", vars: grindStepVars(step(recipe.grind, -1), recipe.setting, -1) });
+  }
   const r = recipe.ratioN;
   const fmt = (n: number) => `1:${Math.round(n * 10) / 10}`;
   if (strength === "weak") tips.push({ key: "taste.tip.stronger", vars: { ratio: fmt(shot ? r * 0.9 : r * 0.93) } });

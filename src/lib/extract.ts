@@ -1,4 +1,5 @@
 import type { BrewMethod, Grind } from "./brew";
+import { grindStepVars, type GrindSetting } from "./grinders";
 
 /** SCA / coffee-industry sucrose Brix → beverage TDS. DiFluid R2 can skip this and send TDS. */
 export const BRIX_TO_TDS = 0.85;
@@ -83,6 +84,8 @@ export interface ExtractRecipe {
   bypassG?: number;
   technique?: string;
   grind: Grind;
+  /** Kitchen grinder setting for `grind`; tips then name the setting to go to. */
+  grindSetting?: GrindSetting;
   timeS: number;
   kettleC: number;
   boilC?: number;
@@ -418,10 +421,11 @@ function keepVars(
   recipe: ExtractRecipe,
   yieldG: number,
   grind: Grind,
+  dir: -1 | 1,
   time: string,
 ): Record<string, string | number> {
   return {
-    grind,
+    ...grindStepVars(grind, recipe.grindSetting, dir),
     time,
     cup: Math.round(yieldG),
     ratio: formatBrewRatio((recipe.waterG + (recipe.bypassG ?? 0)) / recipe.coffeeG),
@@ -449,7 +453,7 @@ function tipsFor(
   if (reading.eyBand === "under") {
     tips.push({
       id: espresso ? "extract.tip.underShot" : "extract.tip.underKeep",
-      vars: keepVars(recipe, reading.yieldG, finer, nextLonger),
+      vars: keepVars(recipe, reading.yieldG, finer, 1, nextLonger),
     });
     if (reading.tdsBand === "weak") tips.push({ id: "extract.tip.tighterCup", vars: shiftBrew(recipe, -1) });
     else if (reading.tdsBand === "strong") tips.push({ id: "extract.tip.looserCup", vars: shiftBrew(recipe, 1) });
@@ -458,7 +462,7 @@ function tipsFor(
   } else if (reading.eyBand === "over") {
     tips.push({
       id: espresso ? "extract.tip.overShot" : "extract.tip.overKeep",
-      vars: keepVars(recipe, reading.yieldG, coarser, nextShorter),
+      vars: keepVars(recipe, reading.yieldG, coarser, -1, nextShorter),
     });
     if (reading.tdsBand === "weak") tips.push({ id: "extract.tip.tighterCup", vars: shiftBrew(recipe, -1) });
     else if (reading.tdsBand === "strong") tips.push({ id: "extract.tip.looserCup", vars: shiftBrew(recipe, 1) });

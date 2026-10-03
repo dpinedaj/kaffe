@@ -327,6 +327,51 @@ export function resolveGrindSetting(
   return { grinder, band: bandId, lo: range.lo, hi: range.hi, at, label };
 }
 
+/** One named grind (fine … coarse) is about this much of a method band. */
+const GRIND_STEP_T = 0.14;
+
+/** Smallest move the grinder's own scale can show. */
+function notchFor(kind: SettingKind): number {
+  return kind === "dial" || kind === "rotation" ? 0.5 : 1;
+}
+
+export interface GrindStep {
+  from: string;
+  to: string;
+  clicks: boolean;
+}
+
+/**
+ * Where "one step finer / coarser" lands on the kitchen grinder (`dir` 1 = finer).
+ * At least one notch, never past the band or the burr-safe stop.
+ */
+export function stepGrindSetting(setting: GrindSetting, dir: -1 | 1): GrindStep | undefined {
+  const { grinder, lo, hi } = setting;
+  const notch = notchFor(grinder.kind);
+  const snap = (v: number) => Math.round(v / notch) * notch;
+  const from = snap(setting.at);
+  let to = snap(from - dir * GRIND_STEP_T * (hi - lo));
+  if (to === from) to = from - dir * notch;
+  to = Math.min(hi, Math.max(lo, grinder.minSafe ?? lo, to));
+  if (Math.abs(to - from) < notch / 2) return undefined;
+  return {
+    from: formatSetting(from, grinder.kind, grinder),
+    to: formatSetting(to, grinder.kind, grinder),
+    clicks: grinder.kind === "clicks",
+  };
+}
+
+/** Tip vars for a grind step: the grind word, plus the setting when a grinder is set. */
+export function grindStepVars(
+  grind: Grind,
+  setting: GrindSetting | undefined,
+  dir: -1 | 1,
+): Record<string, string | number> {
+  const step = setting && stepGrindSetting(setting, dir);
+  if (!step) return { grind };
+  return { grind, setting: step.to, from: step.from, clicks: step.clicks ? 1 : 0 };
+}
+
 export function grindNoteWithSetting(grindNote: string, setting: GrindSetting | undefined): string {
   if (!setting) return grindNote;
   return `${grindNote} · ${setting.label}`;

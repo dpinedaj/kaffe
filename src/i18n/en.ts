@@ -467,6 +467,8 @@ export const en = {
   "grinders.n": "{n} grinders",
   "grinders.nEspresso": "{n} espresso-capable grinders. Filter-only mills are hidden on espresso.",
   "grinders.emptyEspresso": "No espresso-capable mill matches that. Filter-only mills are hidden on espresso.",
+  "grinders.step": "{to}, from {from}",
+  "grinders.stepClicks": "{to} clicks, from {from}",
   "grinders.notEspresso": "{name} is a filter mill, so the espresso card keeps the grind word. Pick an espresso-capable grinder for clicks.",
   "grinders.help":
     "Starting clicks from Honest Coffee Guide micron charts. Zero is burrs touching. On pour-over, Switch, Clever, espresso, and moka a bigger dose moves a click coarser so the drain does not stall. Dial in from there.",

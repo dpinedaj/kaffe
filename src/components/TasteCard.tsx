@@ -1,8 +1,9 @@
 import { forwardRef, useMemo, useState } from "react";
 import { useI18n } from "../i18n/LocaleContext";
 import type { MessageKey } from "../i18n/en";
-import { grindLabel } from "../i18n/labels";
+import { grindTipLabel } from "../i18n/labels";
 import type { BrewMethod, Grind } from "../lib/brew";
+import type { GrindSetting } from "../lib/grinders";
 import {
   BALANCES,
   STRENGTHS,
@@ -52,9 +53,11 @@ export const TasteCard = forwardRef<
     method: BrewMethod;
     technique?: string;
     grind: Grind;
+    /** Kitchen grinder setting for `grind`, so a grind tip can name the setting to go to. */
+    setting?: GrindSetting;
     ratioN: number;
   }
->(function TasteCard({ lot, lotLabel, method, technique, grind, ratioN }, ref) {
+>(function TasteCard({ lot, lotLabel, method, technique, grind, setting, ratioN }, ref) {
   const { t, locale } = useI18n();
   const [balance, setBalance] = useState<TasteBalance | undefined>();
   const [strength, setStrength] = useState<TasteStrength | undefined>();
@@ -64,7 +67,7 @@ export const TasteCard = forwardRef<
   const [saved, setSaved] = useState(false);
   const history = useMemo(() => tastesForLot(lot, items).slice(0, 3), [lot, items]);
   const ready = balance != null && strength != null;
-  const tips = ready ? tasteTips(balance, strength, { grind, ratioN, method }) : [];
+  const tips = ready ? tasteTips(balance, strength, { grind, ratioN, method, setting }) : [];
 
   function save() {
     if (!ready) return;
@@ -123,7 +126,7 @@ export const TasteCard = forwardRef<
           <div className="space-y-1">
             {tips.map((tip) => (
               <p key={tip.key} className="text-[13px] leading-relaxed text-white">
-                {t(tip.key, tip.vars?.grind ? { ...tip.vars, grind: grindLabel(tip.vars.grind as Grind, t) } : tip.vars)}
+                {t(tip.key, tip.vars?.grind ? { ...tip.vars, grind: grindTipLabel(tip.vars, t) } : tip.vars)}
               </p>
             ))}
           </div>

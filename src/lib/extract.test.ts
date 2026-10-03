@@ -17,6 +17,7 @@ import {
   tdsFromInput,
   tdsFromPe,
 } from "./extract";
+import { resolveGrindSetting } from "./grinders";
 
 const v60 = {
   method: "v60" as const,
@@ -192,3 +193,22 @@ describe("extraction basis per brew", () => {
     expect(r?.tips.some((t) => t.id === "extract.tip.hotter")).toBe(true);
   });
 });
+
+describe("next-cup grind on the kitchen grinder", () => {
+  const grindSetting = resolveGrindSetting("timemore-c3s-pro", "v60", "medium");
+
+  it("names the click to go to for a sour cup", () => {
+    const tip = readExtract("tds", 1.05, 210, { ...v60, grindSetting })?.tips[0];
+    expect(tip?.vars).toMatchObject({ grind: "medium-fine", setting: "14", from: "15", clicks: 1 });
+  });
+
+  it("names the click to go to for a bitter cup", () => {
+    const tip = readExtract("tds", 1.55, 220, { ...v60, grindSetting })?.tips[0];
+    expect(tip?.vars).toMatchObject({ grind: "medium-coarse", setting: "16", from: "15", clicks: 1 });
+  });
+
+  it("keeps the grind word alone with no grinder set", () => {
+    expect(readExtract("tds", 1.05, 210, v60)?.tips[0]?.vars?.setting).toBeUndefined();
+  });
+});
+

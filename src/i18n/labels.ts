@@ -34,6 +34,14 @@ export function grindLabel(id: Grind, t: TFn): string {
   return t(`grind.${id}` as MessageKey);
 }
 
+/** The `{grind}` in a next-cup tip: the setting to go to on your grinder, or the grind word without one. */
+export function grindTipLabel(vars: Record<string, string | number>, t: TFn): string {
+  if (vars.setting != null) {
+    return t(vars.clicks ? "grinders.stepClicks" : "grinders.step", { to: vars.setting, from: vars.from });
+  }
+  return grindLabel(String(vars.grind) as Grind, t);
+}
+
 export function originLabel(id: string, t: TFn, fallback: string): string {
   const key = `origin.${id}` as MessageKey;
   const hit = t(key);

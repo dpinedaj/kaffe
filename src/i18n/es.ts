@@ -469,6 +469,8 @@ export const es: Record<MessageKey, string> = {
   "grinders.n": "{n} molinillos",
   "grinders.nEspresso": "{n} molinillos aptos para espresso. En espresso se ocultan los que son solo para filtro.",
   "grinders.emptyEspresso": "Ningún molinillo apto para espresso coincide. En espresso se ocultan los que son solo para filtro.",
+  "grinders.step": "{to}, desde {from}",
+  "grinders.stepClicks": "{to} clics, desde {from}",
   "grinders.notEspresso": "{name} es un molinillo de filtro, así que la ficha de espresso describe la molienda con palabras. Elige uno apto para espresso para ver clics.",
   "grinders.help":
     "Clics de partida según las tablas de micras de Honest Coffee Guide. Cero es con las muelas tocándose. En pour-over, Switch, Clever, espresso y moka, una dosis mayor mueve un clic hacia grueso para que el drenaje no se atasque. A partir de ahí, ajusta a tu gusto.",
