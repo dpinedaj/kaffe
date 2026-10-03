@@ -20,8 +20,9 @@ export function Row({
   if (inline) {
     return (
       <div className={`flex items-center justify-between gap-4 px-4 py-3 ${border}`}>
-        <span className="shrink-0 text-[15px] text-white">{label}</span>
-        <div className="min-w-0 truncate text-right [&>*]:text-right">{children}</div>
+        {/* A long label wraps; the control keeps its size so switches and inputs are never clipped. */}
+        <span className="min-w-0 text-[15px] leading-snug text-white">{label}</span>
+        <div className="max-w-[75%] shrink-0 truncate text-right [&>*]:text-right">{children}</div>
       </div>
     );
   }
@@ -132,12 +133,16 @@ export function DraftNumber({
 export function Field({
   label,
   value,
+  className = "",
 }: {
   label: string;
   value: string;
+  className?: string;
 }) {
   return (
-    <div className="flex flex-col items-start gap-0.5 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <div
+      className={`flex min-w-0 flex-col items-start gap-0.5 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${className}`}
+    >
       <span className="shrink-0 text-[13px] text-muted sm:text-[15px] sm:text-label">{label}</span>
       <span className="min-w-0 w-full text-[15px] font-medium leading-snug break-words text-white sm:flex-1 sm:text-right">
         {value}

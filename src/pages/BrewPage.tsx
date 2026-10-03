@@ -136,7 +136,9 @@ export default function BrewPage({
   const roastTab = source;
   const setRoastTab = setSource;
   const [timerOpen, setTimerOpen] = useState(false);
+  const [allTechniques, setAllTechniques] = useState(false);
   const tasteRef = useRef<HTMLElement>(null);
+  const brewerRowRef = useRef<HTMLDivElement>(null);
   const [bag, setBag] = useState<BrewBag>(() => loadBrewBag());
 
   const attachKey = attachKeyOf(attach);
@@ -282,6 +284,16 @@ export default function BrewPage({
       setShareNote(t("share.failed"));
     }
   }
+
+  // Keep the picked brewer in view on the phone row, also when a shared recipe switches it.
+  // Scrolls the row only: scrollIntoView would also jump the page.
+  useEffect(() => {
+    const row = brewerRowRef.current;
+    const tile = row?.querySelector<HTMLElement>("[data-on]");
+    if (!row || !tile || row.scrollWidth <= row.clientWidth) return;
+    const left = tile.offsetLeft - (row.clientWidth - tile.offsetWidth) / 2;
+    row.scrollTo({ left: Math.max(0, left) });
+  }, [method]);
 
   const openMineKey = openMine?.id;
   useEffect(() => {
@@ -442,6 +454,9 @@ export default function BrewPage({
   }
 
   const selectValue = attach.kind === "library" ? attach.id : attach.kind;
+  const brewTitle = `${methodInfo?.name ?? method}${
+    shown.technique ? ` · ${techniques.find((x) => x.id === shown.technique)?.name ?? ""}` : ""
+  }`;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4 p-4">
@@ -454,13 +469,19 @@ export default function BrewPage({
 
       <section>
         <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.brewer")}</h3>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {BREW_METHODS.map((m) => {
+        {/* One swipeable row on phones; fifteen tiles in a grid would fill the whole first screen. */}
+        <div
+          ref={brewerRowRef}
+          className="relative -mx-4 flex snap-x scroll-px-4 gap-2 overflow-x-auto px-4 py-0.5 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0"
+        >
+          {BREW_METHODS.map((m) => {
             const on = method === m.id;
             return (
               <button
                 key={m.id}
                 type="button"
+                data-on={on || undefined}
+                aria-pressed={on}
                 onClick={() => {
                   setMethod(m.id);
                   setDose(undefined);
@@ -468,11 +489,11 @@ export default function BrewPage({
                   setTechnique(undefined);
                   setMineId(undefined);
                 }}
-                className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 ${
-                  on ? "bg-card2 text-white ring-1 ring-blue" : "bg-card text-muted"
+                className={`flex w-[76px] shrink-0 snap-start flex-col items-center gap-1.5 rounded-2xl px-1.5 py-2.5 sm:w-auto sm:px-2 sm:py-3 ${
+                  on ? "bg-card2 text-white ring-1 ring-blue ring-inset" : "bg-card text-muted"
                 }`}
               >
-                <BrewIcon id={m.id} className={`h-10 w-10 ${on ? "text-blue" : "text-label"}`} />
+                <BrewIcon id={m.id} className={`h-8 w-8 sm:h-10 sm:w-10 ${on ? "text-blue" : "text-label"}`} />
                 <span className="text-center text-[11px] font-semibold leading-tight">{m.name}</span>
               </button>
             );
@@ -643,7 +664,7 @@ export default function BrewPage({
                   ))}
                 </Select>
               </Row>
-              <Row label={t("brew.farmM")} last>
+              <Row label={t("brew.farmM")} last inline>
                 <input
                   type="number"
                   min={0}
@@ -686,8 +707,9 @@ export default function BrewPage({
                     <button
                       key={f.id}
                       type="button"
+                      aria-pressed={selected}
                       onClick={() => toggleBagFlavor(f.id)}
-                      className={`relative rounded-2xl bg-card p-3 text-left ${
+                      className={`relative flex items-center gap-2.5 rounded-2xl bg-card py-2.5 pr-7 pl-3 text-left sm:block sm:p-3 ${
                         selected ? "ring-2 ring-blue" : ""
                       }`}
                     >
@@ -696,15 +718,17 @@ export default function BrewPage({
                           {idx + 1}
                         </span>
                       )}
-                      <div className="text-xl">{f.icon}</div>
-                      <div className="mt-1 text-[13px] font-semibold">{flavorLabel(f.id, t)}</div>
-                      <Pill tone={rec === "recommended" ? "green" : rec === "avoid" ? "orange" : "muted"}>
-                        {rec === "recommended"
-                          ? t("common.recommended")
-                          : rec === "avoid"
-                            ? t("common.notRecommended")
-                            : t("common.neutral")}
-                      </Pill>
+                      <div className="text-xl leading-none">{f.icon}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] leading-tight font-semibold sm:mt-1">{flavorLabel(f.id, t)}</div>
+                        <Pill tone={rec === "recommended" ? "green" : rec === "avoid" ? "orange" : "muted"}>
+                          {rec === "recommended"
+                            ? t("common.recommended")
+                            : rec === "avoid"
+                              ? t("common.notRecommended")
+                              : t("common.neutral")}
+                        </Pill>
+                      </div>
                     </button>
                   );
                 })}
@@ -826,10 +850,14 @@ export default function BrewPage({
             {techniques.map((m) => {
               const on = !mine && recipe.technique === m.id;
               const suggested = recipe.suggestedTechnique === m.id;
+              // Phones show the pick and the suggestion first; the rest wait behind "Show all".
+              const tucked = !allTechniques && !on && !suggested;
               return (
                 <div
                   key={m.id}
-                  className={`rounded-2xl px-3 py-3 ${on ? "bg-blue text-white" : "bg-card text-label"}`}
+                  className={`rounded-2xl px-3 py-3 ${on ? "bg-blue text-white" : "bg-card text-label"} ${
+                    tucked ? "hidden sm:block" : ""
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <button
@@ -876,6 +904,16 @@ export default function BrewPage({
               );
             })}
           </div>
+          {techniques.length > 2 && (
+            <button
+              type="button"
+              aria-expanded={allTechniques}
+              onClick={() => setAllTechniques((v) => !v)}
+              className="mt-2 w-full rounded-xl bg-card px-3 py-2.5 text-[13px] font-semibold text-blue sm:hidden"
+            >
+              {allTechniques ? t("brew.showFewer") : t("brew.showAllRecipes", { n: techniques.length })}
+            </button>
+          )}
           <p className="mt-2 px-1 text-[12px] leading-relaxed text-muted">
             {techniques.length > 1 ? t("brew.compHelpMany") : t("brew.compHelpOne")}
           </p>
@@ -954,7 +992,7 @@ export default function BrewPage({
       <section>
         <h3 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("brew.cup")}</h3>
         <Card>
-          <Row label={t("brew.dose")}>
+          <Row label={t("brew.dose")} inline>
             <DraftNumber
               key={`${method}-dose`}
               value={mine ? shown.coffeeG : (dose ?? recipe.coffeeG)}
@@ -965,7 +1003,7 @@ export default function BrewPage({
               className="w-20 bg-transparent text-right text-[15px] text-white outline-none disabled:text-muted"
             />
           </Row>
-          <Row label={t("brew.ratio")}>
+          <Row label={t("brew.ratio")} inline>
             <DraftNumber
               key={`${method}-ratio`}
               value={mine ? shown.ratioN : (ratio ?? recipe.ratioN)}
@@ -976,7 +1014,7 @@ export default function BrewPage({
               className="w-20 bg-transparent text-right text-[15px] text-white outline-none disabled:text-muted"
             />
           </Row>
-          <Row label={t("brew.inCup")} last>
+          <Row label={t("brew.inCup")} last inline>
             <span className="flex items-baseline gap-1">
               <DraftNumber
                 key={`${method}-cup`}
@@ -1076,7 +1114,7 @@ export default function BrewPage({
         <Card className="divide-y divide-line">
           {steps.map((step) => (
             <div key={`${step.at}-${step.title}`} className="flex gap-3 px-4 py-3">
-              <div className="w-16 shrink-0 text-[12px] font-semibold text-blue">{step.at}</div>
+              <div className="w-11 shrink-0 text-[12px] font-semibold text-blue sm:w-16">{step.at}</div>
               <div>
                 <div className="text-[15px] font-medium text-white">{step.title}</div>
                 <p className="mt-0.5 text-[13px] leading-relaxed text-label">{step.detail}</p>
@@ -1113,9 +1151,7 @@ export default function BrewPage({
 
       {timerOpen && (
         <BrewTimer
-          title={`${methodInfo?.name ?? method}${
-            shown.technique ? ` · ${techniques.find((x) => x.id === shown.technique)?.name ?? ""}` : ""
-          }`}
+          title={brewTitle}
           subtitle={`${shown.coffeeG} g · ${shown.waterG + (shown.bypassG ?? 0)} g · ${shown.kettleC.toFixed(0)} °C · ${grindLabel(shown.grind, t)}${
             grindSetting ? ` · ${grindSetting.label}` : ""
           }`}
@@ -1129,6 +1165,26 @@ export default function BrewPage({
           }}
         />
       )}
+
+      {/* Phones: the recipe and Start stay under your thumb instead of five screens down. */}
+      <div className="fixed inset-x-0 bottom-0 z-20 m-0 border-t border-line bg-ink/95 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-3xl items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[14px] font-semibold text-white">{brewTitle}</div>
+            <div className="truncate text-[12px] text-muted">
+              {shown.coffeeG} g · {shown.waterG + (shown.bypassG ?? 0)} g · {shown.kettleC.toFixed(0)} °C ·{" "}
+              {shown.timeLabel}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="shrink-0 rounded-full bg-blue px-5 py-2.5 text-[15px] font-semibold text-white"
+            onClick={() => setTimerOpen(true)}
+          >
+            ▶ {t("timer.start")}
+          </button>
+        </div>
+      </div>
 
       {otherWarnings.length > 0 && (
         <Card className="space-y-2 p-4">

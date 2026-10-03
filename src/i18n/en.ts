@@ -262,6 +262,9 @@ export const en = {
   "studio.legendFc": "First crack · line",
   "studio.legendDrop": "Drop · line",
   "studio.result": "Result",
+  "studio.seeCurve": "See curve ↓",
+  "studio.moreNotes": "More notes",
+  "studio.fewerNotes": "Fewer notes",
   "studio.cupRest": "Rest · peak 3–5 days",
   "studio.cupRtd": "RTD · brew 1–3 days",
   "studio.curveName": "Curve name",
@@ -334,7 +337,7 @@ export const en = {
   "curve.reset": "Reset",
   "curve.hint": "Walk, then Add point · Smooth eases spikes · first/last stay fixed in time",
   "curve.walk": "Walk curve",
-  "curve.walkHint": "hover or drag the slider",
+  "curve.walkHint": "drag the slider or the chart",
   "curve.bean": "Bean",
 
   "library.title": "Library",
@@ -359,7 +362,7 @@ export const en = {
   "overlay.blurb":
     "Files stay in this browser. Compare several .kpro files, or drop a .klog to overlay measured temperature on the machine’s own design curve.",
   "overlay.drop": "Drop .kpro or .klog here",
-  "overlay.orClick": "or click to choose files",
+  "overlay.orClick": "or tap to choose files",
   "overlay.exampleProfiles": "Example profiles",
   "overlay.exampleLog": "Example log",
   "overlay.fromLibrary": "From library",
@@ -435,7 +438,7 @@ export const en = {
   "brew.plannedAs": "Planned as",
   "brew.flavorGoal": "Flavor goal",
   "brew.dropKpro": "Drop a .kpro here",
-  "brew.orImport": "or click to import a roast file",
+  "brew.orImport": "or tap to import a roast file",
   "brew.iWant": "I want",
   "brew.bagHelp":
     "What the bag says, not a roast file. Origin and variety adjust density, bean size and flavor lean — they fine-tune the recipe, not swap in a different one per country. Farm altitude refines density.",
@@ -454,6 +457,8 @@ export const en = {
   "brew.compHelpMany":
     "Named championship or shop scripts that aim at a flavor. The orange tag is the pick for this roast; tap another to override.",
   "brew.compHelpOne": "The published script for this method. The orange tag is the pick for this roast.",
+  "brew.showAllRecipes": "Show all {n} recipes",
+  "brew.showFewer": "Show fewer",
   "brew.kitchen": "Kitchen",
   "grinders.label": "Grinder",
   "grinders.none": "None",
