@@ -1,4 +1,4 @@
-import { useMemo, useRef, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { BoostZones } from "../components/BoostZones";
 import { WhyLink } from "../components/WhyLink";
 import { InteractiveCurve } from "../components/InteractiveCurve";
@@ -102,6 +102,8 @@ export default function Studio({
   const origin = originById(intent.originId);
   const variety = varietyById(intent.varietyId);
   const preManual = useRef<{ flavors: RoastIntent["flavors"]; roastStyle: RoastIntent["roastStyle"] } | null>(null);
+  const curveRef = useRef<HTMLDivElement>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   function patch(partial: Partial<RoastIntent>) {
     const next: RoastIntent = { ...intent, ...partial };
@@ -170,6 +172,32 @@ export default function Studio({
             </button>
           ))}
         </div>
+        {/* Phones: the curve and full result sit three screens below the inputs, so the headline numbers live here. */}
+        <button
+          type="button"
+          onClick={() => curveRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className="block w-full rounded-2xl bg-card p-3 text-left lg:hidden"
+        >
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className="min-w-0 truncate text-[13px] font-semibold text-white">{generated.curveName}</span>
+            <span className="shrink-0 text-[12px] font-semibold text-blue">{t("studio.seeCurve")}</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {(
+              [
+                [t("studio.drop"), `L${Number(generated.profile.raw.recommended_level).toFixed(1)}`],
+                [t("studio.fcTime"), formatClock(generated.firstCrackTime)],
+                [t("studio.totalTime"), formatClock(generated.totalTime)],
+                [t("studio.dtr"), `${(generated.dtr * 100).toFixed(1)}%`],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} className="flex min-w-0 flex-col justify-between gap-0.5">
+                <div className="text-[11px] leading-tight text-muted">{label}</div>
+                <div className="text-[15px] font-semibold text-white">{value}</div>
+              </div>
+            ))}
+          </div>
+        </button>
         <div className="grid grid-cols-3 gap-2 lg:hidden">
           <button
             type="button"
@@ -197,7 +225,7 @@ export default function Studio({
         {tab === "parameters" ? (
           <div className="space-y-4">
             <Card className="md:hidden">
-              <Row label={t("roaster.label")} last>
+              <Row label={t("roaster.label")} last inline>
                 {roasterSelect}
               </Row>
             </Card>
@@ -239,7 +267,7 @@ export default function Studio({
                     ))}
                   </Select>
                 </Row>
-                <Row label={t("studio.altitude")}>
+                <Row label={t("studio.altitude")} inline>
                   <input
                     type="number"
                     value={intent.altitudeM}
@@ -374,7 +402,7 @@ export default function Studio({
                     )}
                   </div>
                 </Row>
-                <Row label={t("studio.moisture")}>
+                <Row label={t("studio.moisture")} inline>
                   <input
                     type="number"
                     min={6}
@@ -424,7 +452,11 @@ export default function Studio({
                   </div>
                 </Row>
               </Card>
-              <div className="mt-2 space-y-2 px-1 text-[12px] leading-relaxed text-muted">
+              <div
+                className={`mt-2 space-y-2 px-1 text-[12px] leading-relaxed text-muted ${
+                  notesOpen ? "" : "max-sm:[&>p+p]:hidden"
+                }`}
+              >
                 {(origin.notes || origin.cup) && (
                   <p>
                     <span className="text-label">
@@ -506,15 +538,23 @@ export default function Studio({
                   </p>
                 )}
               </div>
+              <button
+                type="button"
+                aria-expanded={notesOpen}
+                onClick={() => setNotesOpen((v) => !v)}
+                className="mt-1 px-1 text-[12px] font-semibold text-blue sm:hidden"
+              >
+                {notesOpen ? t("studio.fewerNotes") : t("studio.moreNotes")}
+              </button>
             </section>
 
             <section>
               <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("studio.roastLevel")}</h2>
               <Card>
-                <Row label={t("studio.autoLevel")}>
+                <Row label={t("studio.autoLevel")} inline>
                   <Toggle on={intent.autoLevel} onChange={(on) => patch({ autoLevel: on })} />
                 </Row>
-                <Row label={t("studio.expectFc")} last>
+                <Row label={t("studio.expectFc")} last inline>
                   <input
                     type="number"
                     min={185}
@@ -696,119 +736,125 @@ export default function Studio({
       </div>
 
       <div className="space-y-4">
-        <Card className="p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold">{t("studio.curvePreview")}</h2>
-            <span className="hidden text-[12px] text-muted sm:inline">{t("studio.curveHint")}</span>
-          </div>
-          <InteractiveCurve
-            poly={generated.roastPoly}
-            anchors={generated.profile.roast.anchors}
-            ror={generated.rorPoly}
-            fan={generated.fanPoly}
-            yellowTime={timeAtValue(generated.roastPoly, YELLOW_TEMP) ?? undefined}
-            fcTime={generated.firstCrackTime}
-            endTime={generated.totalTime}
-            zones={activeZones(generated.profile.raw)}
-            canReset={generated.manual}
-            onReset={() => {
-              const snap = preManual.current;
-              preManual.current = null;
-              setIntent({
-                ...intent,
-                manualAnchors: undefined,
-                flavors: snap?.flavors ?? intent.flavors,
-                roastStyle: snap?.roastStyle ?? intent.roastStyle,
-              });
-            }}
-            onAnchorsChange={(anchors) => {
-              if (!intent.manualAnchors) {
-                preManual.current = { flavors: intent.flavors, roastStyle: intent.roastStyle };
-              }
-              const next: RoastIntent = { ...intent, manualAnchors: anchors };
-              const preview = generateProfile(next);
-              next.flavors = inferFlavorsFromAdjustment(preview.breakdown.flavor);
-              const dropTemp = sampleAtTime(preview.roastPoly, preview.totalTime) ?? anchors[anchors.length - 1]?.v ?? 212;
-              next.roastStyle = inferStyleFromCurve(preview.dtr, dropTemp);
-              setIntent(next);
-            }}
-          />
-          {generated.manual && (
-            <p className="mt-2 text-[12px] text-blue">
-              {t("studio.curveManual")}
-            </p>
-          )}
-          <div className="mt-2 flex flex-wrap gap-4 text-[12px] text-muted">
-            <span className="text-blue">{t("studio.legendBean")}</span>
-            <span className="text-orange">{t("studio.legendRor")}</span>
-            <span className="text-[#BF5AF2]">{t("studio.legendFan")}</span>
-            <span className="text-[#BF5AF2] opacity-70">{t("studio.legendBoost")}</span>
-            <span className="text-[#FFD60A]">{t("studio.legendColor")}</span>
-            <span className="text-red">{t("studio.legendFc")}</span>
-            <span className="text-green">{t("studio.legendDrop")}</span>
-          </div>
-        </Card>
+        <div ref={curveRef}>
+          <Card className="p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold">{t("studio.curvePreview")}</h2>
+              <span className="hidden text-[12px] text-muted sm:inline">{t("studio.curveHint")}</span>
+            </div>
+            <InteractiveCurve
+              poly={generated.roastPoly}
+              anchors={generated.profile.roast.anchors}
+              ror={generated.rorPoly}
+              fan={generated.fanPoly}
+              yellowTime={timeAtValue(generated.roastPoly, YELLOW_TEMP) ?? undefined}
+              fcTime={generated.firstCrackTime}
+              endTime={generated.totalTime}
+              zones={activeZones(generated.profile.raw)}
+              canReset={generated.manual}
+              onReset={() => {
+                const snap = preManual.current;
+                preManual.current = null;
+                setIntent({
+                  ...intent,
+                  manualAnchors: undefined,
+                  flavors: snap?.flavors ?? intent.flavors,
+                  roastStyle: snap?.roastStyle ?? intent.roastStyle,
+                });
+              }}
+              onAnchorsChange={(anchors) => {
+                if (!intent.manualAnchors) {
+                  preManual.current = { flavors: intent.flavors, roastStyle: intent.roastStyle };
+                }
+                const next: RoastIntent = { ...intent, manualAnchors: anchors };
+                const preview = generateProfile(next);
+                next.flavors = inferFlavorsFromAdjustment(preview.breakdown.flavor);
+                const dropTemp = sampleAtTime(preview.roastPoly, preview.totalTime) ?? anchors[anchors.length - 1]?.v ?? 212;
+                next.roastStyle = inferStyleFromCurve(preview.dtr, dropTemp);
+                setIntent(next);
+              }}
+            />
+            {generated.manual && (
+              <p className="mt-2 text-[12px] text-blue">
+                {t("studio.curveManual")}
+              </p>
+            )}
+            <div className="mt-2 flex flex-wrap gap-4 text-[12px] text-muted">
+              <span className="text-blue">{t("studio.legendBean")}</span>
+              <span className="text-orange">{t("studio.legendRor")}</span>
+              <span className="text-[#BF5AF2]">{t("studio.legendFan")}</span>
+              <span className="text-[#BF5AF2] opacity-70">{t("studio.legendBoost")}</span>
+              <span className="text-[#FFD60A]">{t("studio.legendColor")}</span>
+              <span className="text-red">{t("studio.legendFc")}</span>
+              <span className="text-green">{t("studio.legendDrop")}</span>
+            </div>
+          </Card>
+        </div>
 
         <Card>
           <div className="flex items-center justify-between gap-3 px-4 pt-3">
             <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">{t("studio.result")}</h2>
             <WhyLink target={{ topic: "roast", section: "development" }} className="text-[13px]" />
           </div>
-          <Field
-            label={t("studio.cupTiming")}
-            value={(intent.drinkPlan ?? "rest") === "rtd" ? t("studio.cupRtd") : t("studio.cupRest")}
-          />
-          <Field label={t("studio.curveName")} value={generated.curveName} />
-          <Field label={t("studio.onNano")} value={generated.profile.name} />
-          <Field
-            label={t("studio.drop")}
-            value={`L${Number(generated.profile.raw.recommended_level).toFixed(1)} · ${(levelToTemp(generated.profile.roastLevels, Number(generated.profile.raw.recommended_level)) ?? 0).toFixed(1)} °C`}
-          />
-          <Field
-            label={t("studio.colourChange")}
-            value={`${YELLOW_TEMP.toFixed(1)} °C · ${formatClock(timeAtValue(generated.roastPoly, YELLOW_TEMP) ?? generated.dryTime)}`}
-          />
-          <Field
-            label={t("studio.fcTemp")}
-            value={`${generated.firstCrackTemp.toFixed(1)} °C${intent.expectFc != null ? t("studio.fcSet") : ""}`}
-          />
-          <Field label={t("studio.fcTime")} value={formatClock(generated.firstCrackTime)} />
-          <Field label={t("studio.totalTime")} value={formatClock(generated.totalTime)} />
-          <Field
-            label={t("studio.pace")}
-            value={
-              generated.family === "nordic"
-                ? t("pace.nordic")
-                : generated.family === "slow"
-                  ? t("pace.slow")
-                  : t("pace.classic")
-            }
-          />
-          <Field label={t("studio.dtr")} value={`${(generated.dtr * 100).toFixed(1)}%`} />
-          <Field
-            label={t("studio.dehydration")}
-            value={`${formatClock(generated.dryTime)} · ${generated.drySlope.toFixed(1)} °C/min`}
-          />
-          <Field
-            label={t("studio.maillard")}
-            value={`${formatClock(generated.mailTime)} · ${generated.mailSlope.toFixed(1)} °C/min`}
-          />
-          <Field
-            label={t("studio.development")}
-            value={`${formatClock(generated.devTime)} · ${generated.devSlope.toFixed(1)} °C/min`}
-          />
-          <Field
-            label={t("studio.fan")}
-            value={`${Math.round(sampleAtTime(generated.fanPoly, 40) ?? 0).toLocaleString()} → ${Math.round(sampleAtTime(generated.fanPoly, generated.totalTime) ?? 0).toLocaleString()} RPM`}
-          />
-          <Field label={t("studio.preheat")} value={`${generated.preheatPower} W`} />
-          <Field
-            label={t("studio.density")}
-            value={`${generated.resolvedDensityGL} g/L · ${densityLabel(generated.densityClass, t)}`}
-          />
-          <Field label={t("studio.zone1")} value={formatZoneSummary(generated.zones.zone1, zoneRole, t("common.off"))} />
-          <Field label={t("studio.zone2")} value={formatZoneSummary(generated.zones.zone2, zoneRole, t("common.off"))} />
-          <Field label={t("studio.zone3")} value={formatZoneSummary(generated.zones.zone3, zoneRole, t("common.off"))} />
+          <div className="grid grid-cols-2 sm:block">
+            <Field
+              className="col-span-2"
+              label={t("studio.cupTiming")}
+              value={(intent.drinkPlan ?? "rest") === "rtd" ? t("studio.cupRtd") : t("studio.cupRest")}
+            />
+            <Field className="col-span-2" label={t("studio.curveName")} value={generated.curveName} />
+            <Field className="col-span-2" label={t("studio.onNano")} value={generated.profile.name} />
+            <Field
+              label={t("studio.drop")}
+              value={`L${Number(generated.profile.raw.recommended_level).toFixed(1)} · ${(levelToTemp(generated.profile.roastLevels, Number(generated.profile.raw.recommended_level)) ?? 0).toFixed(1)} °C`}
+            />
+            <Field
+              label={t("studio.colourChange")}
+              value={`${YELLOW_TEMP.toFixed(1)} °C · ${formatClock(timeAtValue(generated.roastPoly, YELLOW_TEMP) ?? generated.dryTime)}`}
+            />
+            <Field
+              label={t("studio.fcTemp")}
+              value={`${generated.firstCrackTemp.toFixed(1)} °C${intent.expectFc != null ? t("studio.fcSet") : ""}`}
+            />
+            <Field label={t("studio.fcTime")} value={formatClock(generated.firstCrackTime)} />
+            <Field label={t("studio.totalTime")} value={formatClock(generated.totalTime)} />
+            <Field
+              label={t("studio.pace")}
+              value={
+                generated.family === "nordic"
+                  ? t("pace.nordic")
+                  : generated.family === "slow"
+                    ? t("pace.slow")
+                    : t("pace.classic")
+              }
+            />
+            <Field label={t("studio.dtr")} value={`${(generated.dtr * 100).toFixed(1)}%`} />
+            <Field
+              label={t("studio.dehydration")}
+              value={`${formatClock(generated.dryTime)} · ${generated.drySlope.toFixed(1)} °C/min`}
+            />
+            <Field
+              label={t("studio.maillard")}
+              value={`${formatClock(generated.mailTime)} · ${generated.mailSlope.toFixed(1)} °C/min`}
+            />
+            <Field
+              label={t("studio.development")}
+              value={`${formatClock(generated.devTime)} · ${generated.devSlope.toFixed(1)} °C/min`}
+            />
+            <Field
+              className="col-span-2"
+              label={t("studio.fan")}
+              value={`${Math.round(sampleAtTime(generated.fanPoly, 40) ?? 0).toLocaleString()} → ${Math.round(sampleAtTime(generated.fanPoly, generated.totalTime) ?? 0).toLocaleString()} RPM`}
+            />
+            <Field label={t("studio.preheat")} value={`${generated.preheatPower} W`} />
+            <Field
+              label={t("studio.density")}
+              value={`${generated.resolvedDensityGL} g/L · ${densityLabel(generated.densityClass, t)}`}
+            />
+            <Field className="col-span-2" label={t("studio.zone1")} value={formatZoneSummary(generated.zones.zone1, zoneRole, t("common.off"))} />
+            <Field className="col-span-2" label={t("studio.zone2")} value={formatZoneSummary(generated.zones.zone2, zoneRole, t("common.off"))} />
+            <Field className="col-span-2" label={t("studio.zone3")} value={formatZoneSummary(generated.zones.zone3, zoneRole, t("common.off"))} />
+          </div>
         </Card>
 
         <Card className="p-4">

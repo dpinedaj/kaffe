@@ -264,6 +264,9 @@ export const es: Record<MessageKey, string> = {
   "studio.legendFc": "First crack · línea",
   "studio.legendDrop": "Drop · línea",
   "studio.result": "Resultado",
+  "studio.seeCurve": "Ver curva ↓",
+  "studio.moreNotes": "Más notas",
+  "studio.fewerNotes": "Menos notas",
   "studio.cupRest": "Rest · pico 3–5 días",
   "studio.cupRtd": "RTD · preparar en 1–3 días",
   "studio.curveName": "Nombre de la curva",
@@ -336,7 +339,7 @@ export const es: Record<MessageKey, string> = {
   "curve.reset": "Reset",
   "curve.hint": "Recorre la curva y luego Añadir punto · Suavizar elimina picos · el primer y el último punto quedan fijos en el tiempo",
   "curve.walk": "Recorrer curva",
-  "curve.walkHint": "pasa el cursor o arrastra",
+  "curve.walkHint": "arrastra el control o la gráfica",
   "curve.bean": "Grano",
 
   "library.title": "Biblioteca",
@@ -456,6 +459,8 @@ export const es: Record<MessageKey, string> = {
   "brew.compHelpMany":
     "Recetas de campeonato o de cafeterías, cada una orientada a un sabor. La etiqueta naranja es la elegida para este tueste; toca otra para cambiarla.",
   "brew.compHelpOne": "La receta publicada para este método. La etiqueta naranja es la elegida para este tueste.",
+  "brew.showAllRecipes": "Ver las {n} recetas",
+  "brew.showFewer": "Ver menos",
   "brew.kitchen": "Cocina",
   "grinders.label": "Molinillo",
   "grinders.none": "Ninguno",

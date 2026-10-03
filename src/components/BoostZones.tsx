@@ -67,7 +67,7 @@ export function BoostZones({
     <section>
       <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">{t("boost.title")}</h2>
       <Card>
-        <Row label={t("boost.recommend")} last>
+        <Row label={t("boost.recommend")} last inline>
           <Toggle
             on={auto}
             onChange={(on) =>

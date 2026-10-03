@@ -232,11 +232,8 @@ export default function App() {
       </header>
       <div aria-hidden="true" className="shrink-0 md:hidden" style={{ height: headerH }} />
 
-      <main
-        className={`flex min-h-0 flex-1 flex-col md:pb-0 ${
-          roast ? "pb-[calc(4.75rem+env(safe-area-inset-bottom))]" : "pb-[env(safe-area-inset-bottom)]"
-        }`}
-      >
+      {/* Both sections keep a bar fixed to the bottom on phones: Roast's tabs, Brew's Start. */}
+      <main className="flex min-h-0 flex-1 flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
         {roast && roastRoute === "studio" && (
           <Studio
             intent={intent}

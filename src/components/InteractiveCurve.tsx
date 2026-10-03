@@ -345,19 +345,13 @@ export function InteractiveCurve({
           </g>
         )}
         {anchors.map((p, i) => (
-          <circle
+          <g
             key={`${i}-${p.t}`}
-            cx={x(p.t)}
-            cy={y(p.v)}
-            r={drag === i || selected === i ? 8 : 6}
-            fill="#0A84FF"
-            stroke={selected === i ? "#FFD60A" : "#fff"}
-            strokeWidth="2"
             className={i === 0 || i === anchors.length - 1 ? "cursor-ns-resize" : "cursor-grab"}
             onPointerDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              (e.target as Element).setPointerCapture(e.pointerId);
+              e.currentTarget.setPointerCapture(e.pointerId);
               setDrag(i);
               setSelected(i);
               setWalkT(p.t);
@@ -377,7 +371,18 @@ export function InteractiveCurve({
               move(i, fromClient(e.clientX, e.clientY));
             }}
             onPointerUp={() => setDrag(null)}
-          />
+          >
+            {/* A finger-sized hit area around the small visible handle. */}
+            <circle cx={x(p.t)} cy={y(p.v)} r="20" fill="transparent" />
+            <circle
+              cx={x(p.t)}
+              cy={y(p.v)}
+              r={drag === i || selected === i ? 8 : 6}
+              fill="#0A84FF"
+              stroke={selected === i ? "#FFD60A" : "#fff"}
+              strokeWidth="2"
+            />
+          </g>
         ))}
       </svg>
 
